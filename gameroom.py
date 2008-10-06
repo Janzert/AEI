@@ -765,12 +765,16 @@ def main(args):
                     time.sleep(1)
                 else:
                     log.warn("Engine did not exit in 30 seconds, terminating process")
-                    if sys.platform == 'win32':
-                        import ctypes
-                        handle = int(engine_ctl.engine.proc._handle)
-                        ctypes.windll.kernel32.TerminateProcess(handle, 0)
-                    else:
-                        os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
+                    try:
+                        if sys.platform == 'win32':
+                            import ctypes
+                            handle = int(engine_ctl.engine.proc._handle)
+                            ctypes.windll.kernel32.TerminateProcess(handle, 0)
+                        else:
+                            os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
+                    except os.error:
+                        # don't worry about errors when trying to kill the engine
+                        pass
                 engine_ctl.cleanup()
                 time.sleep(1)
         except (KeyboardInterrupt, SystemExit):

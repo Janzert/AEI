@@ -22,6 +22,25 @@ import sys
 import random
 import time
 
+BB = long
+BITS_ON_OFF_1 = 0xAAAAAAAAAAAAAAAAL
+BITS_ON_OFF_2 = 0xCCCCCCCCCCCCCCCCL
+BITS_ON_OFF_4 = 0xF0F0F0F0F0F0F0F0L
+BITS_ON_OFF_8 = 0xFF00FF00FF00FF00L
+BITS_ON_OFF_16 = 0xFFFF0000FFFF0000L
+BITS_ON_OFF_32 = 0xFFFFFFFF00000000L
+
+def bitandix(bitboard):
+    """ get one set bit and the index of it from a 64bit int """
+    bit = bitboard & (-bitboard)
+    cnt = (bit & BITS_ON_OFF_1) != 0L
+    cnt |= ((bit & BITS_ON_OFF_2) != 0L) << 1
+    cnt |= ((bit & BITS_ON_OFF_4) != 0L) << 2
+    cnt |= ((bit & BITS_ON_OFF_8) != 0L) << 3
+    cnt |= ((bit & BITS_ON_OFF_16) != 0L) << 4
+    cnt |= ((bit & BITS_ON_OFF_32) != 0L) << 5
+    return (bit, cnt)
+
 COL_GOLD = 0
 COL_SILVER = 1
 

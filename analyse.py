@@ -19,10 +19,8 @@ plines = pfile.readlines()
 movenum, pos = board.parse_long_pos(plines)
 pfile.close()
 
-#eng = run_engine("./D/bot_opfor")
-
 #eng = EngineController(SocketEngine("./bot_opfor2008cc", legacy_mode=True))
-eng = EngineController(StdioEngine("./D/bot_opfor"))
+eng = EngineController(StdioEngine("../D/bot_opfor"))
 
 #eng.setoption("tcmove", 120)
 #eng.setoption("tcmax", 600)
@@ -33,7 +31,7 @@ eng = EngineController(StdioEngine("./D/bot_opfor"))
 #eng.setoption("use_lmr", 0)
 
 #eng.setoption("log_console", 1)
-eng.setoption("depth", "12")
+#eng.setoption("depth", "12")
 eng.setoption("hash", 500)
 print pos.to_long_str()
 eng.setposition(pos)
@@ -52,9 +50,8 @@ while True:
     except socket.timeout:
         pass
 
-eng.setoption("run_gc", 1)
 eng.quit()
-stop_waiting = time.time() + 200
+stop_waiting = time.time() + 60
 while time.time() < stop_waiting:
     try:
         resp = eng.get_response(1)
