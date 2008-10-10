@@ -591,14 +591,21 @@ def main(args):
         options = parseargs(args)
     except ValueError:
         print "Command not understood %s" % (" ".join(args))
-        sys.exit()
+        sys.exit(2)
 
     config = SafeConfigParser()
-    config.readfp(open('gameroom.cfg', 'rU'))
+    try:
+        config.readfp(open('gameroom.cfg', 'rU'))
+    except IOError:
+        print "Could not open 'gameroom.cfg' this file must be readable and contain the configuration for connecting to the gameroom."
+        sys.exit(1)
 
     aeilog = logging.getLogger("gameroom.aei")
     if config.has_section("Logging"):
         logdir = config.get("Logging", "directory")
+        if not os.path.exists(logdir):
+            print "Log directory '%s' not found, attempting to create it." % (logdir)
+            os.makedirs(logdir)
         logfilename = "%s-%s.log" % (time.strftime("%Y%m%d-%H%M"),
                     str(os.getpid()),
                     )
@@ -643,6 +650,9 @@ def main(args):
 
 
     run_dir = config.get("global", "run_dir")
+    if not os.path.exists(run_dir):
+        log.warn("Run file directory '%s' not found, attempting to create it." % (run_dir))
+        os.makedirs(run_dir)
     bot_count = how_many_bots(run_dir)
     if bot_count >= config.getint("global", "max_bots"):
         log.info("Max number of bot limit %d reached, need to wait until some bots finish."
@@ -664,6 +674,10 @@ def main(args):
                 engine_ctl = EngineController(StdioEngine(enginecmd, log=aeilog))
             else:
                 raise ValueError("Unrecognized communication method, %s" % (com_method))
+        except OSError, exc:
+            log.error("Could not start the engine; exception thrown: %s", exc)
+            sys.exit(1)
+        try:
             try:
                 for option in config.options(bot_section):
                     if option.startswith("bot_"):
@@ -745,8 +759,8 @@ def main(args):
                     table.sitdown()
                     table.updatestate()
                     touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
-                    time.sleep(1) # Give the server a small break.
                     try:
+                        time.sleep(1) # Give the server a small break.
                         log.info("Starting play")
                         table.playgame(engine_ctl, bot_greeting, options['onemove'])
                     finally:
@@ -757,7 +771,7 @@ def main(args):
             finally:
                 try:
                     engine_ctl.quit()
-                except socket.error:
+                except (socket.error, IOError):
                     pass
                 for i in range(30):
                     if engine_ctl.engine.proc.poll() is not None:
