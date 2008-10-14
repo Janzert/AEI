@@ -170,7 +170,10 @@ class Table:
         values = dict(sid = self.sid,
                 auth = self.auth,
                 action = "leave")
-        response = post(self.url, values, "Table.leave")
+        try:
+            response = post(self.url, values, "Table.leave")
+        except urllib2.URLError:
+            return False
         try:
             ret = bool(int(response.get('ok', 0)))
         except ValueError:
@@ -528,7 +531,10 @@ def touch_run_file(run_dir, rfile):
 
 def remove_run_files(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
-    os.remove(filename)
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
     log.info("Removed run file at %s" % filename)
 
 def how_many_bots(run_dir):
@@ -726,6 +732,7 @@ def main(args):
             if table == None:
                 log.error("Could not find game against %s with side '%s'", gameid_or_opponent, side)
                 break
+        # Set the game to play in to current game id in case of a restart
         gameid_or_opponent = table.gid
 
         if options['against'] != "":
@@ -761,15 +768,15 @@ def main(args):
                 table.reserveseat()
                 table.sitdown()
                 table.updatestate()
-                touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
                 try:
+                    touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
                     time.sleep(1) # Give the server a small break.
                     log.info("Starting play")
                     table.playgame(engine_ctl, bot_greeting, options['onemove'])
                 finally:
                     log.info("Leaving game")
-                    table.leave()
                     remove_run_files(run_dir, "%s%s.bot" % (table.gid, table.side))
+                    table.leave()
                 break
             finally:
                 try:
