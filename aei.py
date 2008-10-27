@@ -266,10 +266,6 @@ class EngineController:
             gocmd.append(" ponder")
         elif searchtype == "infinite":
             gocmd.append(" infinite")
-        elif searchtype == "movetime":
-            gocmd.append(" movetime %d" % searchvalue)
-        elif searchtype == "depth":
-            gocmd.append(" depth %d" % searchvalue)
         gocmd.append("\n")
         gocmd = "".join(gocmd)
         self.engine.send(gocmd)
