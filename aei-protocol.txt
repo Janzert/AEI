@@ -1,0 +1,189 @@
+=============================
+Arimaa Engine Interface (AEI)
+=============================
+
+Introduction
+============
+
+The Arimaa Engine Interface (AEI) is meant to provide a standard protocol of
+communication between an Arimaa engine and a controller. An engine is a program
+capable of taking the state of an Arimaa game and selecting a legal move to
+make. A controller is anything that wants to communicate with and control an
+engine. This could be anything from a simple script to have the engine analyse 
+a single position to a GUI program that allows games to be played with humans
+or other engines.
+
+AEI was based off of the Universal Chess Interface protocol and follows much of
+its general structure. One of the priorities in designing AEI was ease of
+implementation. This led to things like trying to make the parsing as simple as
+possible and keeping the raw protocol easily human readable to ease debugging.
+
+AEI does assume a real-time, full duplex, reliable communication channel but
+otherwise does not depend on a specific method. The current implementation
+works over standard input/output or socket based communication.
+
+AEI also tries to avoid making any assumption or restriction on the internal
+workings of an engine. At the same time it tries to provide the facilities to
+expose any interesting information to the user. As well as allow complete
+control of the engine.
+
+General Operation
+=================
+
+AEI is a text based, asynchronous protocol.
+
+An AEI message (command or response) is given as a single line of text. A line
+of text can end with either a line feed (0x0a) or the native line ending for
+operating system the program is running under. Controllers that are able to
+communicate with engines remotely should therefore correctly handle any of the
+common line ending styles. Multiple line ending styles should not be mixed
+within a single session.
+
+A message begins with a message type indicator. The type indicator extends to
+the first space character in the message. The format of the remainder of the
+message varies by message type.
+
+An engine upon receiving an unrecognized message should indicate an error and
+exit.
+
+A controller upon receiving an unrecognized message should indicate an error
+to the user and may end the session.
+
+If a message is received at an inappropriate time an error should be logged.
+
+An engine should try and process messages as soon as possible even while
+thinking.
+
+A session has two phases. The opening phase begins after communication has been
+established between the controller and engine with the controller sending the
+message "aei" to indicate the start of the session. The engine then replies
+with identification messages and ends the opening phase with the "aeiok"
+message. This signals the start of the main phase which continues until the
+controller sends the "quit" command or the communication channel is closed.
+
+Engines should start up and respond to the initial "aei" message as soon as
+possible and delay any lengthy initialisation until after the opening phase is
+complete.
+
+Engines should never start thinking until after a "go" command is received.
+
+Controller to Engine Messages
+=============================
+
+These are all the messages a controller can send to an engine.
+
+aei
+    First message sent to begin the opening phase. Waits for "id" messages and
+    an "aeiok" message back from the engine to end the opening phase.
+isready
+    Ping engine. Waits for engine to respond with "readyok"
+newgame    
+    Signals the start of a new game.
+setposition <position>  
+    Set the current position. Positions are given by the side to move (w/b)
+    and a string consisting of the piece letter or a space for each of the 64
+    squares.
+setoption name <id> [value <x>]
+    Set any engine configuration as well as various game state settings.
+    The standard game state options are (all times are given in seconds):
+    * tcmove - The per move time for the game.
+    * tcreserve - The starting reserve time.
+    * tcpercent - The percent of unused time added to the reserve.
+    * tcmax - The maximum reserve time.
+    * tctotal - Time limit for the total length of the game.
+    * tcturns - Maximum number of moves the game can last.
+    * tcturntime - Maximum time a single move can last.
+    * wreserve - Amount of reserve time for gold.
+    * breserve - Amount of reserve time for silver.
+    * wused - Amount of time used on gold's last turn.
+    * bused - Amount of time used on silver's last turn.
+    * lastmoveused - Amount of time used on the last turn.
+    * tcmoveused - Amount of time used so far on the current turn.
+    The following options are not required but if an engine does allow setting
+    the option described it should use the standard option name.
+    Other standard options:
+    * hash - Size in megabytes of the hash table.
+    * depth - If set to a positive number the depth in steps to search a
+        position. An engine may honor a minimum depth of 4. A value of zero (0)         or less indicates no fixed depth.
+    If an engine receives an unrecognized option it should log a warning.
+makemove <move>    
+    Make a move. Stop any current search in progress.
+go [ponder, infinite]
+    Start searching using the current position and game state. A plain go
+    command means the engine should send a bestmove according to its own time
+    management or other options already set (e.g. fixed depth). There are two
+    optional subcommands that change this:
+    * ponder - The engine should start pondering on the current position with
+    the expectation that it will later receive the opponents actual move.
+    * infinite - Search until either a forced win or loss is found or the
+    'stop' command is received.
+stop
+    Stop the current search. The engine should respond with the bestmove found.
+quit
+    Exit the session. In normal operation the engine should completely end
+    its program as quickly as possible. The controller may, but is not
+    required to, process further messages from the engine after sending a
+    "quit" message. The controller should not send any further messages after a
+    "quit" message.
+
+Engine to Controller Messages
+=============================
+
+id <type> <value>
+    Send engine identification during the opening phase of the session. Only
+    one identifier of each type may be sent.
+    The list of identifier types are:
+    * name
+    * author
+    * version
+aeiok
+    End opening phase and start the general phase of the session.
+readyok
+    Answer to "isready" message after all previous messages from the
+    controller have been processed.
+bestmove <move>
+    Best move found in search
+info <type> <value>
+    Information about the current search. In particular things that a GUI may
+    want to show to a user separately from a general log. An engine may send
+    any type, but the following have defined meanings and should not be used
+    differently:
+    * score <n> - The current score from the engines perspective (i.e. a
+    positive score is in favor of the current side making a move). The score
+    should be in centi-rabbits (i.e. scaled such that an initial rabbit
+    capture is worth 100).
+    * depth <n> - The depth in steps the search has finished. When in the
+    midst of searching the next step a plus sign (+) should be appended. For
+    example when sending immediately after finishing the search to depth 10 but
+    before the depth 11 search is started "info depth 10" could be sent. Once
+    depth 11 is started but not yet finished "info depth 10+" should be sent.
+    * nodes <n> - The number of nodes searched so far in the current search.
+    This should include any nodes in a quiescence search.
+    * pv <variation> - The current primary variation. After the first move,
+    subsequent moves are prefixed by the color to move (e.g. 
+    pv Ed2n Ed3n b ee7s ee6s w Ed4n).
+    * time <seconds> - Time in seconds the current search has lasted.
+    * currmovenumber <n> - The number of the root move currently, or just
+    finished, being searched.
+log <string>
+    Any information the engine wants to log. Log messages may start with
+    "Error:", "Warning:" or "Debug:" to indicate special handling by the
+    controller.
+
+Example Session
+===============
+
+
+
+Acknowledgements
+================
+
+Thanks first to Omar Syed not only for designing a great game but also for all
+the effort and expense in giving the community a great place to play.
+
+As mentioned before the structure of this protocol relies heavily on concepts
+from the Universal Chess Interface Protocol. Without it AEI would surely be
+much worse off.
+
+Oystein Gjerstad compiled the initial list of message types and descriptions 
+from my initial implementation.
