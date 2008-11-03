@@ -48,20 +48,11 @@ class _ProcCom(Thread):
         self.setDaemon(True)
 
     def run(self):
-        try:
-            while not self.stop.isSet() and self.proc.poll() is None:
-                msg = self.proc.stdout.readline()
-                if self.log:
-                    self.log.debug("Received from bot: %s" % (repr(msg)))
-                self.outq.put(msg.strip())
-        finally:
-            if self.proc.poll() is None:
-                if sys.platform == 'win32':
-                    import ctypes
-                    handle = int(self.proc._handle)
-                    ctypes.windll.kernel32.TerminateProcess(handle, 0)
-                else:
-                    os.kill(self.proc.pid, signal.SIGTERM)
+        while not self.stop.isSet() and self.proc.poll() is None:
+            msg = self.proc.stdout.readline()
+            if self.log:
+                self.log.debug("Received from bot: %s" % (repr(msg)))
+            self.outq.put(msg.strip())
 
 class StdioEngine:
     def __init__(self, cmdline, log=None):
@@ -103,6 +94,13 @@ class StdioEngine:
 
     def cleanup(self):
         self.proc_com.stop.set()
+        if self.proc.poll() is None:
+            if sys.platform == 'win32':
+                import ctypes
+                handle = int(self.proc._handle)
+                ctypes.windll.kernel32.TerminateProcess(handle, 0)
+            else:
+                os.kill(self.proc.pid, signal.SIGTERM)
 
 class SocketEngine:
     def __init__(self, con, proc=None, legacy_mode=False, log=None):
@@ -289,5 +287,4 @@ class EngineController:
 
     def quit(self):
         self.engine.send("quit\n")
-        print "Sent quit command"
 
