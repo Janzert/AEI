@@ -20,8 +20,10 @@
 
 import threading
 import time
+import signal
 import socket
 import sys
+import os
 
 from threading import Thread, Event
 from Queue import Queue, Empty

@@ -685,82 +685,109 @@ def main(args):
             log.error("Could not start the engine; exception thrown: %s", exc)
             sys.exit(1)
 
-        for option in config.options(bot_section):
-            if option.startswith("bot_"):
-                value = config.get(bot_section, option)
-                engine_ctl.setoption(option[4:], value)
-                log.info("Setting bot option %s = %s", option[4:], value)
-        engine_ctl.isready()
+        try:
+            for option in config.options(bot_section):
+                if option.startswith("bot_"):
+                    value = config.get(bot_section, option)
+                    engine_ctl.setoption(option[4:], value)
+                    log.info("Setting bot option %s = %s", option[4:], value)
+            engine_ctl.isready()
 
-        bot_username = config.get(bot_section, "username")
-        bot_password = config.get(bot_section, "password")
-        bot_greeting = config.get(bot_section, "greeting")
+            bot_username = config.get(bot_section, "username")
+            bot_password = config.get(bot_section, "password")
+            bot_greeting = config.get(bot_section, "greeting")
 
-        gameroom = GameRoom(config.get("global", "gameroom_url"))
-        gameroom.login(bot_username, bot_password)
-        side = options['side']
-        table = None
-        if gameid_or_opponent == "":
-            log.info("Starting a new game")
-            if side == "":
-                side = 'b'
-            tc = config.get(bot_section, "timecontrol")
-            rated = config.getboolean(bot_section, "rated")
-            log.info("Will play on side %s, using timecontrol %s" % (side, tc))
-            table = gameroom.newgame(side, tc, rated)
-        else:
-            # look through my games for correct opponent and side
-            games = gameroom.mygames()
-            for game in games:
-                if (gameid_or_opponent == game['player'].lower()
-                        or gameid_or_opponent == game['gid']):
-                    if (side == "" or side == game['side']
-                        and not already_playing(run_dir, game['gid'], game['side'])):
-                        table = Table(gameroom, game)
-                        log.info("Found in progress game")
-                        break
-            if table == None:
-                games = gameroom.opengames()
+            gameroom = GameRoom(config.get("global", "gameroom_url"))
+            gameroom.login(bot_username, bot_password)
+            side = options['side']
+            table = None
+            if gameid_or_opponent == "":
+                log.info("Starting a new game")
+                if side == "":
+                    side = 'b'
+                tc = config.get(bot_section, "timecontrol")
+                rated = config.getboolean(bot_section, "rated")
+                log.info("Will play on side %s, using timecontrol %s" % (side, tc))
+                table = gameroom.newgame(side, tc, rated)
+            else:
+                # look through my games for correct opponent and side
+                games = gameroom.mygames()
                 for game in games:
                     if (gameid_or_opponent == game['player'].lower()
                             or gameid_or_opponent == game['gid']):
                         if (side == "" or side == game['side']
                             and not already_playing(run_dir, game['gid'], game['side'])):
                             table = Table(gameroom, game)
-                            log.info("Found game to join")
+                            log.info("Found in progress game")
                             break
-            if table == None:
-                log.error("Could not find game against %s with side '%s'", gameid_or_opponent, side)
-                break
-        # Set the game to play in to current game id in case of a restart
-        gameid_or_opponent = table.gid
+                if table == None:
+                    games = gameroom.opengames()
+                    for game in games:
+                        if (gameid_or_opponent == game['player'].lower()
+                                or gameid_or_opponent == game['gid']):
+                            if (side == "" or side == game['side']
+                                and not already_playing(run_dir, game['gid'], game['side'])):
+                                table = Table(gameroom, game)
+                                log.info("Found game to join")
+                                break
+                if table == None:
+                    log.error("Could not find game against %s with side '%s'", gameid_or_opponent, side)
+                    engine_ctl.quit()
+                    engine_ctl.cleanup()
+                    break
+            # Set the game to play in to current game id in case of a restart
+            gameid_or_opponent = table.gid
 
-        if options['against'] != "":
-            joinmsg = "Joined game gid=%s side=%s; against %s" % (table.gid, table.side, options['against'])
-        else:
-            joinmsg = "Created game gid=%s side=%s; waiting for opponent" % (table.gid, table.side)
-        log.info(joinmsg)
-        if console is None:
-            print joinmsg
-
-        if config.has_option(bot_section, "ponder"):
-            table.ponder = config.getboolean(bot_section, "ponder")
-            if table.ponder:
-                log.info("Set pondering on.")
+            if options['against'] != "":
+                joinmsg = "Joined game gid=%s side=%s; against %s" % (table.gid, table.side, options['against'])
             else:
-                log.info("Set pondering off.")
-        else:
-            table.ponder = False
-        if config.has_option("global", "min_move_time"):
-            table.min_move_time = config.getint("global", "min_move_time")
-            log.info("Set minimum move time to %d seconds.", table.min_move_time)
-        else:
-            table.min_move_time = 5
-        if config.has_option("global", "min_time_left"):
-            table.min_timeleft = config.getint("global", "min_time_left")
-            log.info("Setting emergency stop time to %d seconds" % table.min_timeleft)
-        else:
-            table.min_timeleft = 5
+                joinmsg = "Created game gid=%s side=%s; waiting for opponent" % (table.gid, table.side)
+            log.info(joinmsg)
+            if console is None:
+                print joinmsg
+
+            if config.has_option(bot_section, "ponder"):
+                table.ponder = config.getboolean(bot_section, "ponder")
+                if table.ponder:
+                    log.info("Set pondering on.")
+                else:
+                    log.info("Set pondering off.")
+            else:
+                table.ponder = False
+            if config.has_option("global", "min_move_time"):
+                table.min_move_time = config.getint("global", "min_move_time")
+                log.info("Set minimum move time to %d seconds.", table.min_move_time)
+            else:
+                table.min_move_time = 5
+            if config.has_option("global", "min_time_left"):
+                table.min_timeleft = config.getint("global", "min_time_left")
+                log.info("Setting emergency stop time to %d seconds" % table.min_timeleft)
+            else:
+                table.min_timeleft = 5
+        except:
+            try:
+                engine_ctl.quit()
+            except (socket.error, IOError):
+                pass
+            for i in range(30):
+                if engine_ctl.engine.proc.poll() is not None:
+                    break
+                time.sleep(1)
+            else:
+                log.warn("Engine did not exit in 30 seconds, terminating process")
+                try:
+                    if sys.platform == 'win32':
+                        import ctypes
+                        handle = int(engine_ctl.engine.proc._handle)
+                        ctypes.windll.kernel32.TerminateProcess(handle, 0)
+                    else:
+                        os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
+                except os.error:
+                    # don't worry about errors when trying to kill the engine
+                    pass
+            engine_ctl.cleanup()
+            time.sleep(1)
+            raise
 
         try:
             try:
