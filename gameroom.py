@@ -33,7 +33,7 @@ import time
 import urllib
 import urllib2
 
-from aei import StdioEngine, SocketEngine, EngineController
+from pyrimaa.aei import StdioEngine, SocketEngine, EngineController
 
 _GR_CGI = "bot1gr.cgi"
 _MY_HOST = "127.0.0.1"

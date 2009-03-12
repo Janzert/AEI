@@ -22,9 +22,9 @@ import math
 import socket
 import time
 
-import board
+from pyrimaa import board
 
-from aei import StdioEngine, SocketEngine, EngineController, EngineException
+from pyrimaa.aei import StdioEngine, SocketEngine, EngineController, EngineException
 
 SRV_HOST = "127.0.0.1"
 SRV_PORT = 40007

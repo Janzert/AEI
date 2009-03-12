@@ -6,9 +6,9 @@ import time
 
 from subprocess import Popen
 
-import board
+from pyrimaa import board
 
-from aei import SocketEngine, StdioEngine, EngineController, EngineException
+from pyrimaa.aei import SocketEngine, StdioEngine, EngineController, EngineException
 
 if len(sys.argv) < 2:
     print "usage: analyse boardfile"

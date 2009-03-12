@@ -16,7 +16,7 @@ The scripts included to work with an AEI engine are:
 ``match.py``
   Plays two engines against each other.
 
-There are also a few helper modules:
+There are also a few helper modules located in the python package pyrimaa:
 
 ``aei.py``
   Implementation of the controller side of the AEI protocol
