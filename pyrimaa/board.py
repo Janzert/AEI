@@ -379,9 +379,13 @@ class Position(object):
         layout = "".join(layout)
         return layout
 
-    def to_placing_move(self):
+    def to_placing_move(self, old_colors = False):
         """ Generate a placing move string representation of the position """
-        whitestr = ["w"]
+        if old_colors:
+            color_str = "wb"
+        else:
+            color_str = "gs"
+        whitestr = [color_str[COL_GOLD]]
         for piece, pieceBoard in enumerate(self.bitBoards[COL_GOLD]):
             pname = "RCDHME"[piece]
             while pieceBoard:
@@ -391,7 +395,7 @@ class Position(object):
                 pieceBoard ^= bi[0]
         whitestr = " ".join(whitestr)
 
-        blackstr = ["b"]
+        blackstr = [color_str[COL_SILVER]]
         for piece, pieceBoard in enumerate(self.bitBoards[COL_SILVER]):
             pname = "rcdhme"[piece]
             while pieceBoard:
@@ -402,6 +406,37 @@ class Position(object):
         blackstr = " ".join(blackstr)
 
         return (whitestr, blackstr)
+
+    def place_piece(self, side, piece, column, rank):
+        index = (rank * 8) + (7-column)
+        bit = BB(1) << index
+        if self.placement[side] & bit:
+            raise ValueError("Tried to place a piece on another piece")
+        newBoards = [[x for x in self.bitBoards[0]], [y for y in self.bitBoards[1]]]
+        newPlacement = [self.placement[0], self.placement[1]]
+        newBoards[side][piece] |= bit
+        newPlacement[side] |= bit
+        zobrist = self._zhash ^ ZOBRIST_KEYS[side][piece][index]
+        return Position(self.color, self.stepsLeft, newBoards, newPlacement, zobrist)
+
+    def remove_piece(self, column, rank):
+        index = (rank * 8) + (7-column)
+        bit = BB(1) << index
+        if self.placement[COL_GOLD] & bit:
+            side = COL_GOLD
+        elif self.placement[COL_SILVER] & bit:
+            side = COL_SILVER
+        else:
+            raise ValueError("Tried to remove non-existant piece")
+        piece = 0
+        while not (self.bitBoards[side][piece] & bit):
+            piece += 1
+        newBoards = [[x for x in self.bitBoards[0]], [y for y in self.bitBoards[1]]]
+        newPlacement = [self.placement[0], self.placement[1]]
+        newBoards[side][piece] &= ~bit
+        newPlacement[side] &= ~bit
+        zobrist = self._zhash ^ ZOBRIST_KEYS[side][piece][index]
+        return Position(self.color, self.stepsLeft, newBoards, newPlacement, zobrist)
 
     def do_step(self, steps):
         """ Generate a new position from this position with the given steps """
@@ -800,9 +835,9 @@ def parse_long_pos(text):
     while text[0][:movecolorix+1].isdigit():
         movecolorix += 1
     movenumber = int(text[0][:movecolorix])
-    if text[0][movecolorix].lower() == 'b':
+    if text[0][movecolorix].lower() in "bs":
         color = COL_SILVER
-    elif text[0][movecolorix].lower() == 'w':
+    elif text[0][movecolorix].lower() in "wg":
         color = COL_GOLD
     else:
         raise ValueError("Could not find side to move")
@@ -986,10 +1021,10 @@ def main(filename):
     if positiontext[1][0] == '[':
         positiontext = [x.strip() for x in positiontext]
         movenum = int(positiontext[0][:-1])
-        pos = parse_short_pos("wb".index(positiontext[0][-1]), 4, positiontext[1])
+        pos = parse_short_pos("wbgs".index(positiontext[0][-1]) % 2, 4, positiontext[1])
     else:
         movenum, pos = parse_long_pos(positiontext)
-    print "%d%s" % (movenum, "wb"[pos.color])
+    print "%d%s" % (movenum, "gs"[pos.color])
     print
     print pos.to_long_str()
     print
