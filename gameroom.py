@@ -346,8 +346,8 @@ class Table:
                 starttime = time.time() - moveused
                 engine.setoption("tcmoveused", moveused);
                 self._update_timecontrol(state)
-                engine.setoption("wreserve", state['tcwreserve'])
-                engine.setoption("breserve", state['tcbreserve'])
+                engine.setoption("wreserve", state['tcwreserve2'])
+                engine.setoption("breserve", state['tcbreserve2'])
                 if state.has_key('wused'):
                     engine.setoption("wused", state['wused'])
                 if state.has_key('bused'):
@@ -356,7 +356,7 @@ class Table:
                     engine.setoption("tclastmoveused", state['lastmoveused'])
                 engine.go()
                 stopsent = False
-                myreserve = "tc%sreserve" % (self.side,)
+                myreserve = "tc%sreserve2" % (self.side,)
                 stoptime = starttime + int(state['tcmove']) + int(state[myreserve])
                 if (state.has_key('turntime')
                     and (starttime + state['turntime']) < stoptime):
