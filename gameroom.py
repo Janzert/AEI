@@ -126,8 +126,12 @@ class Table:
             if response.type == "info":
                 enginelog.info("%s", response.message)
             elif response.type == "log":
-                if response.message.startswith("Warning:"):
+                if response.message.startswith("Error:"):
+                    enginelog.error("%s", response.message)
+                elif response.message.startswith("Warning:"):
                     enginelog.warn("%s", response.message)
+                elif response.message.startswith("Debug:"):
+                    enginelog.debug("%s", response.message)
                 else:
                     enginelog.info("%s", response.message)
             return response

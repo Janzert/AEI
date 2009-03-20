@@ -58,7 +58,7 @@ class _ProcCom(Thread):
 
 class StdioEngine:
     def __init__(self, cmdline, log=None):
-        proc = Popen(cmdline,
+        proc = Popen(cmdline.split(),
                 stdin = PIPE,
                 stdout = PIPE,
                 universal_newlines = True)
@@ -124,10 +124,11 @@ class SocketEngine:
                     else:
                         raise
             if legacy_mode:
-                botargs = [con]
-                botargs += [str(a) for a in address]
+                botargs = con.split()
+                botargs = botargs + ["127.0.0.1", str(address[1])]
             else:
-                botargs = [con, "--server", "127.0.0.1", "--port"]
+                botargs = con.split()
+                botargs = botargs + ["--server", "127.0.0.1", "--port"]
                 botargs.append(str(address[1]))
             proc = Popen(botargs)
             con = listensock.accept()
