@@ -22,84 +22,94 @@ import sys
 import random
 import time
 
-BB = long
-BITS_ON_OFF_1 = 0xAAAAAAAAAAAAAAAAL
-BITS_ON_OFF_2 = 0xCCCCCCCCCCCCCCCCL
-BITS_ON_OFF_4 = 0xF0F0F0F0F0F0F0F0L
-BITS_ON_OFF_8 = 0xFF00FF00FF00FF00L
-BITS_ON_OFF_16 = 0xFFFF0000FFFF0000L
-BITS_ON_OFF_32 = 0xFFFFFFFF00000000L
+class Color:
+    GOLD = 0
+    SILVER = 1
 
-def bitandix(bitboard):
-    """ get one set bit and the index of it from a 64bit int """
-    bit = bitboard & (-bitboard)
-    cnt = (bit & BITS_ON_OFF_1) != 0L
-    cnt |= ((bit & BITS_ON_OFF_2) != 0L) << 1
-    cnt |= ((bit & BITS_ON_OFF_4) != 0L) << 2
-    cnt |= ((bit & BITS_ON_OFF_8) != 0L) << 3
-    cnt |= ((bit & BITS_ON_OFF_16) != 0L) << 4
-    cnt |= ((bit & BITS_ON_OFF_32) != 0L) << 5
-    return (bit, cnt)
+class Piece:
+    EMPTY = 0
+    GRABBIT = 1
+    GCAT = 2
+    GDOG = 3
+    GHORSE = 4
+    GCAMEL = 5
+    GELEPHANT = 6
+    COLOR = 8
+    SRABBIT = 9
+    SCAT = 10
+    SDOG = 11
+    SHORSE = 12
+    SCAMEL = 13
+    SELEPHANT = 14
+    COUNT = 15
+    PCHARS = " RCDHMExxrcdhme"
+    DECOLOR = ~COLOR
 
-COL_GOLD = 0
-COL_SILVER = 1
+ALL_BITS = 0xFFFFFFFFFFFFFFFFL
+NOT_A_FILE = 0xFEFEFEFEFEFEFEFEL
+NOT_H_FILE = 0x7F7F7F7F7F7F7F7FL
+NOT_1_RANK = 0xFFFFFFFFFFFFFF00L
+NOT_8_RANK = 0x00FFFFFFFFFFFFFFL
 
-PC_RABBIT = 0
-PC_CAT = 1
-PC_DOG = 2
-PC_HORSE = 3
-PC_CAMEL = 4
-PC_ELEPHANT = 5
+TRAP_C3_IX = 18
+TRAP_F3_IX = 21
+TRAP_C6_IX = 42
+TRAP_F6_IX = 45
+TRAP_C3_BIT = 1L << 18
+TRAP_F3_BIT = 1L << 21
+TRAP_C6_BIT = 1L << 42
+TRAP_F6_BIT = 1L << 45
+TRAPS = 0x0000240000240000L
 
-NOT_A_FILE = BB(0x7F7F7F7F7F7F7F7F)
-NOT_H_FILE = BB(0xFEFEFEFEFEFEFEFE)
-NOT_1_RANK = BB(0xFFFFFFFFFFFFFF00)
-NOT_8_RANK = BB(0x00FFFFFFFFFFFFFF)
+BASIC_SETUP = (0x0000FFFFFFFF0000L, 0x00000000000000FFL, 0x0000000000004200L, 0x0000000000001800L,
+               0x0000000000002400L, 0x0000000000008000L, 0x0000000000000100L, None, None,
+               0xFF00000000000000L, 0x0042000000000000L, 0x0018000000000000L,
+               0x0024000000000000L, 0x0080000000000000L, 0x0001000000000000L)
 
-TRAP_F3_IDX = 18
-TRAP_C3_IDX = 21
-TRAP_F6_IDX = 42
-TRAP_C6_IDX = 45
-TRAP_F3_BIT = BB(1) << 18
-TRAP_C3_BIT = BB(1) << 21
-TRAP_F6_BIT = BB(1) << 42
-TRAP_C6_BIT = BB(1) << 45
-TRAPS = BB(0x0000240000240000)
-
-BASIC_SETUP = ((BB(0x00000000000000FF), BB(0x0000000000004200), BB(0x0000000000001800),
-                BB(0x0000000000002400), BB(0x0000000000008000), BB(0x0000000000000100)),
-               (BB(0xFF00000000000000), BB(0x0042000000000000), BB(0x0018000000000000),
-                BB(0x0024000000000000), BB(0x0080000000000000), BB(0x0001000000000000)))
-
-BLANK_BOARD = ((BB(0x0000000000000000), BB(0x0000000000000000), BB(0x0000000000000000),
-                BB(0x0000000000000000), BB(0x0000000000000000), BB(0x0000000000000000)),
-               (BB(0x0000000000000000), BB(0x0000000000000000), BB(0x0000000000000000),
-                BB(0x0000000000000000), BB(0x0000000000000000), BB(0x0000000000000000)))
+BLANK_BOARD = (ALL_BITS, 0L, 0L, 0L, 0L, 0L, 0L, None, None, 0L, 0L, 0L, 0L, 0L, 0L)
 
 def neighbors_of(bits):
     """ get the neighboring bits to a set of bits """
-    bitboard = (bits & NOT_H_FILE) >> 1
-    bitboard |= (bits & NOT_A_FILE) << 1
+    bitboard = (bits & NOT_A_FILE) >> 1
+    bitboard |= (bits & NOT_H_FILE) << 1
     bitboard |= (bits & NOT_1_RANK) >> 8
     bitboard |= (bits & NOT_8_RANK) << 8
     return bitboard
 
+def bit_to_index(bit):
+    """ get the index of a bit """
+    cnt = (bit & 0xAAAAAAAAAAAAAAAAL) != 0L
+    cnt |= ((bit & 0xCCCCCCCCCCCCCCCCL) != 0L) << 1
+    cnt |= ((bit & 0xF0F0F0F0F0F0F0F0L) != 0L) << 2
+    cnt |= ((bit & 0xFF00FF00FF00FF00L) != 0L) << 3
+    cnt |= ((bit & 0xFFFF0000FFFF0000L) != 0L) << 4
+    cnt |= ((bit & 0xFFFFFFFF00000000L) != 0L) << 5
+    return cnt
+
 def index_to_alg(cnt):
     """ Convert a bit index to algebraic notation """
-    rank = "hgfedcba"[int(cnt % 8)]
-    column = "12345678"[int(cnt // 8)]
-    return rank + column
+    column = "abcdefgh"[int(cnt % 8)]
+    rank = "12345678"[int(cnt // 8)]
+    return column + rank
 
 def alg_to_index(sqr):
     """ Convert algebraic notation to a bit index """
-    index = 7-(ord(sqr[0])-97)
+    index = ord(sqr[0])-97
     index += (int(sqr[1])-1) * 8
     return index
+
+def index_to_sq(ix):
+    """Convert an index to a column and rank"""
+    return (ix % 8, ix // 8)
+
+def sq_to_index(column, rank):
+    """Convert a column and rank to an index"""
+    return (rank * 8) + column
 
 MOVE_OFFSETS = [[[], []], [[], []]]
 def _generate_move_offsets():
     for i in xrange(64):
-        bit = BB(1) << i
+        bit = 1L << i
         moves = neighbors_of(bit)
         grmoves = moves
         if bit & NOT_1_RANK:
@@ -118,7 +128,7 @@ RMOVE_OFFSETS = MOVE_OFFSETS[0][1]
 ZOBRIST_KEYS = [[], [], []]
 
 # generate zobrist keys, assuring no duplicate keys or 0
-def _genzobrist_newkey(used_keys, rnd):
+def _zobrist_newkey(used_keys, rnd):
     candidate = 0
     while candidate in used_keys:
         candidate = rnd.randint(-sys.maxint, sys.maxint)
@@ -129,17 +139,16 @@ def _generate_zobrist_keys():
     rnd = random.Random()
     rnd.seed(0xF00F)
     used_keys = [0]
-    for color in xrange(2):
-        ZOBRIST_KEYS[0].append(_genzobrist_newkey(used_keys, rnd))
+    ZOBRIST_KEYS[0] = _zobrist_newkey(used_keys, rnd)
+    for piece in xrange(Piece.COUNT):
         ZOBRIST_KEYS[2].append([])
-        for piece in xrange(6):
-            ZOBRIST_KEYS[2][color].append([])
-            for index in xrange(64):
-                ZOBRIST_KEYS[2][color][piece].append(_genzobrist_newkey(used_keys, rnd))
-            # Add zero key that won't change hash, used when adding and removing a piece from the board.
-            ZOBRIST_KEYS[2][color][piece].append(0)
+        for index in xrange(64):
+            if piece == Piece.EMPTY:
+                ZOBRIST_KEYS[2][piece].append(0)
+            else:
+                ZOBRIST_KEYS[2][piece].append(_zobrist_newkey(used_keys, rnd))
     for step in xrange(5):
-        ZOBRIST_KEYS[1].append(_genzobrist_newkey(used_keys, rnd))
+        ZOBRIST_KEYS[1].append(_zobrist_newkey(used_keys, rnd))
 _generate_zobrist_keys()
 
 ZOBRIST_KEYS = ZOBRIST_KEYS[2]
@@ -147,31 +156,31 @@ ZOBRIST_KEYS = ZOBRIST_KEYS[2]
 TRAP_NEIGHBORS = neighbors_of(TRAPS)
 
 class Position(object):
-    def __init__(self, sidemoving, steps_left, bitboards, placement_boards=None, zobrist=None):
-        self.color = sidemoving
+    def __init__(self, side, steps_left, bitboards, inpush=False,
+            last_piece=Piece.EMPTY, last_from=None, placement=None, zobrist=None):
+        self.color = side
         self.stepsLeft = steps_left
         self.bitBoards = bitboards
-        if placement_boards is None:
-            placement_boards = []
-            for side in bitboards:
-                sideplaces = BB(0)
-                for piece in side:
-                    sideplaces |= piece
-                placement_boards.append(sideplaces)
-
-        self.placement = placement_boards
+        self.inpush = inpush
+        self.last_piece = last_piece
+        self.last_from = last_from
+        if placement is None:
+            placement = [0L, 0L]
+            for piece in range(Piece.GRABBIT, Piece.GELEPHANT+1):
+                placement[Color.GOLD] |= bitboards[piece]
+                placement[Color.SILVER] |= bitboards[piece | Piece.COLOR]
+        self.placement = placement
 
         if zobrist is None:
             #zobrist = ZOBRIST_KEYS[0][sideMoving] ^ ZOBRIST_KEYS[1][stepsLeft]
             zobrist = 0
-            for color in xrange(2):
-                for piece in xrange(6):
-                    pieces = bitboards[color][piece]
-                    while pieces:
-                        p_bi = bitandix(pieces)
-                        pieces ^= p_bi[0]
-                        zobrist ^= ZOBRIST_KEYS[color][piece][p_bi[1]]
-
+            for piece in xrange(Piece.COUNT):
+                pieces = bitboards[piece]
+                while pieces:
+                    pbit = pieces & -pieces
+                    pieces ^= pbit
+                    pix = bit_to_index(pbit)
+                    zobrist ^= ZOBRIST_KEYS[piece][pix]
         self._zhash = zobrist
 
     def __eq__(self, other):
@@ -180,6 +189,10 @@ class Position(object):
             #    return False
             if (self.color != other.color or
                 self.stepsLeft != other.stepsLeft):
+                return False
+            if (self.inpush != other.inpush
+                    or self.last_from != other.last_from
+                    or self.last_piece != other.last_piece):
                 return False
             #if self.placement != other.placement:
             #    return False
@@ -190,82 +203,63 @@ class Position(object):
         return True
 
     def __ne__(self, other):
-        try:
-            if self._zhash != other._zhash:
-                return True
-            if (self.color != other.color or
-                self.stepsLeft != other.stepsLeft):
-                return True
-            if self.placement != other.placement:
-                return True
-            if self.bitBoards != other.bitBoards:
-                return True
-        except:
-            return True
-        return False
-
-    def __cmp__(self, other):
-        try:
-            if self._zhash != other._zhash:
-                return 1
-            if (self.color != other.color or
-                self.stepsLeft != other.stepsLeft):
-                return 1
-            if self.placement != other.placement:
-                return 1
-            if self.bitBoards != other.bitBoards:
-                return 1
-        except:
-            return 1
-        return 0
+        return not self.__eq__(other)
 
     def __hash__(self):
         return self._zhash
 
     def check_hash(self):
         """ Check to make sure the hash is correct """
-        #sideMoving = self.color
-        #stepsLeft = self.stepsLeft
         bitboards = self.bitBoards
         # zobrist = ZOBRIST_KEYS[0][sideMoving] ^ ZOBRIST_KEYS[1][stepsLeft]
         zobrist = 0
-        for color in xrange(2):
-            for piece in xrange(6):
-                pieces = bitboards[color][piece]
-                while pieces:
-                    p_bi = bitandix(pieces)
-                    pieces ^= p_bi[0]
-                    zobrist ^= ZOBRIST_KEYS[color][piece][p_bi[1]]
+        for piece in xrange(Piece.COUNT):
+            pieces = bitboards[piece]
+            while pieces:
+                pbit = pieces & -pieces
+                pieces ^= pbit
+                pix = bit_to_index(pbit)
+                zobrist ^= ZOBRIST_KEYS[piece][pix]
         if zobrist != self._zhash:
             raise RuntimeError("hash value is incorrect.")
 
     def check_boards(self):
         """ Check the internal consistency of the bitboards """
         bitboards = self.bitBoards
-        for side_ix, side in enumerate(bitboards):
-            for i, board in enumerate(side[:-1]):
-                for check_side_ix, check_side in enumerate(bitboards):
-                    for check_board_ix, check_board in enumerate(check_side[i+1:]):
-                        double = board
-                        double &= check_board
-                        if double != BB(0):
-                            raise RuntimeError("Two pieces occupy one square, %s:%s %s:%s %s %s %s %s" % ("wb"[side_ix],
-                                    "rcdhme"[i], "wb"[check_side_ix], "rcdhme"[check_board_ix], str(board),
-                                    str(check_board), str(double), index_to_alg(bitandix(double)[1])))
-
-        for i, side in enumerate(bitboards):
-            placement = BB(0)
-            for board in side:
-                placement |= board
-            if placement != self.placement[i]:
-                raise RuntimeError("Placement boards are incorrect")
+        cplacement = [0L, 0L]
+        empty = ALL_BITS
+        for pnum, pboard in enumerate(bitboards):
+            if pnum == 0 or pboard is None:
+                continue
+            for cnum, cboard in enumerate(bitboards[pnum+1:]):
+                if cboard is None:
+                    continue
+                double = pboard & cboard
+                if pboard & cboard:
+                    print "%X %X %X %d %d" % (pboard, cboard, double, pnum, cnum)
+                    raise RuntimeError("Two pieces occupy one square: %s %s" %
+                            (Piece.PCHARS[pnum], Piece.PCHARS[cnum]))
+            if pnum != 0:
+                if (pnum ^ Piece.COLOR) & Piece.COLOR:
+                    cplacement[0] |= pboard
+                else:
+                    cplacement[1] |= pboard
+            empty &= ~pboard
+        if cplacement != self.placement:
+            if cplacement[0] != self.placement[0]:
+                print "gplacement %X %X" % (cplacement[0], self.placement[0])
+            if cplacement[1] != self.placement[1]:
+                print "splacement %X %X" % (cplacement[1], self.placement[1])
+            raise RuntimeError("Placement boards are incorrect")
+        if empty != bitboards[0]:
+            raise RuntimeError("Empty board is incorrect %X %X" % (bitboards[0], empty))
 
     def is_goal(self):
         """ Check to see if this position is goal for either side """
-        ggoal = self.bitBoards[COL_GOLD][PC_RABBIT] & (~NOT_8_RANK)
-        sgoal = self.bitBoards[COL_SILVER][PC_RABBIT] & (~NOT_1_RANK)
+        ggoal = self.bitBoards[Piece.GRABBIT] & ~NOT_8_RANK
+        sgoal = self.bitBoards[Piece.SRABBIT] & ~NOT_1_RANK
         if ggoal or sgoal:
-            if self.color == COL_GOLD:
+            if self.color == Color.GOLD:
                 if sgoal:
                     return -1
                 else:
@@ -280,10 +274,10 @@ class Position(object):
 
     def is_rabbit_loss(self):
         """ Check that both sides still have rabbits """
-        grabbits = self.bitBoards[COL_GOLD][PC_RABBIT]
-        srabbits = self.bitBoards[COL_SILVER][PC_RABBIT]
+        grabbits = self.bitBoards[Piece.GRABBIT]
+        srabbits = self.bitBoards[Piece.SRABBIT]
         if not grabbits or not srabbits:
-            if self.color == COL_GOLD:
+            if self.color == Color.GOLD:
                 if not grabbits:
                     return -1
                 else:
@@ -300,41 +294,30 @@ class Position(object):
         goal = self.is_goal()
         if goal:
             return goal
-
         norabbits = self.is_rabbit_loss()
         if norabbits:
             return norabbits
-
         if len(self.get_steps()) == 0:
-            if self.color == COL_GOLD:
+            if self.color == Color.GOLD:
                 return -1
             else:
                 return 1
-
         return False
 
-    def to_long_str(self, dots=True):
-        """ Generate long string representation of the position """
+    def _to_long_str(self, dots=True):
         bitBoards = self.bitBoards
         layout = [" +-----------------+"]
         for row in xrange(8, 0, -1):
             rows = ["%d| " % row]
             rix = 8*(row-1)
             for col in xrange(8):
-                ix = rix+(7-col)
+                ix = rix + col
                 bit = 1 << ix
-                if bit & self.placement[0]:
+                if bit & (self.placement[0] | self.placement[1]):
                     piece = "* "
-                    for pi in xrange(7):
-                        if bit & bitBoards[0][pi]:
-                            piece = "RCDHME"[pi] + " "
-                            break
-                    rows.append(piece)
-                elif bit & self.placement[1]:
-                    piece = "* "
-                    for pi in xrange(7):
-                        if bit & bitBoards[1][pi]:
-                            piece = "rcdhme"[pi] + " "
+                    for pi in xrange(Piece.GRABBIT, Piece.COUNT):
+                        if bitBoards[pi] is not None and bit & bitBoards[pi]:
+                            piece = Piece.PCHARS[pi] + " "
                             break
                     rows.append(piece)
                 else:
@@ -352,32 +335,36 @@ class Position(object):
         layout.append("   a b c d e f g h  ")
         return "\n".join(layout)
 
-    def to_short_str(self):
-        """ Generate short string representation of the position """
+    def _to_short_str(self):
         bitBoards = self.bitBoards
-        placement = self.placement
+        placement = self.placement[0] | self.placement[1]
         layout = ["["]
-        for ix in xrange(63, -1, -1):
-            bit = 1 << ix
-            if bit & placement[0]:
-                piece = "*"
-                for pi in xrange(7):
-                    if bit & bitBoards[0][pi]:
-                        piece = "RCDHME"[pi]
-                        break
-                layout.append(piece)
-            elif bit & placement[1]:
-                piece = "*"
-                for pi in xrange(7):
-                    if bit & bitBoards[1][pi]:
-                        piece = "rcdhme"[pi]
-                        break
-                layout.append(piece)
-            else:
-                layout.append(" ")
+        for rank in xrange(7, -1, -1):
+            rix = rank * 8
+            for col in xrange(8):
+                ix = rix + col
+                bit = 1 << ix
+                if bit & placement:
+                    piece = "*"
+                    for pi in xrange(Piece.GRABBIT, Piece.COUNT):
+                        if bitBoards[pi] is not None and bit & bitBoards[pi]:
+                            piece = Piece.PCHARS[pi]
+                            break
+                    layout.append(piece)
+                else:
+                    layout.append(" ")
         layout.append("]")
         layout = "".join(layout)
         return layout
+
+    def board_to_str(self, format="long", dots=True):
+        """Generate string representation of the board"""
+        if format == "long":
+            return self._to_long_str(dots)
+        elif format == "short":
+            return self._to_short_str()
+        else:
+            raise ValueError("Invalid board format")
 
     def to_placing_move(self, old_colors = False):
         """ Generate a placing move string representation of the position """
@@ -385,132 +372,239 @@ class Position(object):
             color_str = "wb"
         else:
             color_str = "gs"
-        whitestr = [color_str[COL_GOLD]]
-        for piece, pieceBoard in enumerate(self.bitBoards[COL_GOLD]):
-            pname = "RCDHME"[piece]
+        whitestr = [color_str[Color.GOLD]]
+        for piece, pieceBoard in enumerate(self.bitBoards[Piece.GRABBIT:Piece.GELEPHANT+1]):
+            pname = Piece.PCHARS[piece + 1]
             while pieceBoard:
-                bi = bitandix(pieceBoard)
-                sqr = index_to_alg(bi[1])
+                bit = pieceBoard & -pieceBoard
+                pieceBoard ^= bit
+                pix = bit_to_index(bit)
+                sqr = index_to_alg(pix)
                 whitestr.append(pname+sqr)
-                pieceBoard ^= bi[0]
         whitestr = " ".join(whitestr)
 
-        blackstr = [color_str[COL_SILVER]]
-        for piece, pieceBoard in enumerate(self.bitBoards[COL_SILVER]):
-            pname = "rcdhme"[piece]
+        blackstr = [color_str[Color.SILVER]]
+        for piece, pieceBoard in enumerate(self.bitBoards[Piece.SRABBIT:Piece.SELEPHANT+1]):
+            pname = Piece.PCHARS[(piece+1) | Piece.COLOR]
             while pieceBoard:
-                bi = bitandix(pieceBoard)
-                sqr = index_to_alg(bi[1])
+                bit = pieceBoard & -pieceBoard
+                pieceBoard ^= bit
+                pix = bit_to_index(bit)
+                sqr = index_to_alg(pix)
                 blackstr.append(pname+sqr)
-                pieceBoard ^= bi[0]
         blackstr = " ".join(blackstr)
-
         return (whitestr, blackstr)
 
-    def place_piece(self, side, piece, column, rank):
-        index = (rank * 8) + (7-column)
-        bit = BB(1) << index
+    def steps_to_str(self, steps):
+        """Convert steps to a move string"""
+        dir_chars = {1: "w", -1: "e", 8: "s", -8: "n"}
+        pos = self
+        move_rep = []
+        for step in steps:
+            step_rep = []
+            from_bit = 1L << step[0]
+            for piece in xrange(Piece.GRABBIT, Piece.COUNT):
+                if (pos.bitBoards[piece] is not None
+                        and pos.bitBoards[piece] & from_bit):
+                    break
+            if not pos.bitBoards[piece] & from_bit:
+                raise ValueError("Tried to move empty piece")
+            step_rep.append(Piece.PCHARS[piece])
+            step_rep.append(index_to_alg(step[0]))
+            direction = step[0] - step[1]
+            try:
+                step_rep.append(dir_chars[direction])
+            except KeyError:
+                step_rep.append("," + index_to_alg(step[1]))
+            move_rep.append("".join(step_rep))
+            npos = pos.do_step(step)
+            trap = neighbors_of(from_bit) & TRAPS
+            pcolor = (piece & Piece.COLOR) >> 3
+            if ((pos.placement[pcolor] & trap or trap & (1L << step[1]))
+                    and npos.bitBoards[Piece.EMPTY] & trap):
+                tix = bit_to_index(trap)
+                if tix == step[1]:
+                    tpiece = piece
+                else:
+                    pcbit = pcolor << 3
+                    for tpiece in xrange(Piece.GRABBIT | pcbit,
+                            (Piece.GELEPHANT | pcbit) + 1):
+                        if (pos.bitBoards[tpiece] is not None
+                                and pos.bitBoards[tpiece] & trap):
+                            break
+                step_rep = [Piece.PCHARS[tpiece]]
+                step_rep.append(index_to_alg(tix))
+                step_rep.append("x")
+                move_rep.append("".join(step_rep))
+            pos = npos
+        return " ".join(move_rep)
+
+    def place_piece(self, piece, index):
+        bit = 1L << index
         if self.placement[side] & bit:
             raise ValueError("Tried to place a piece on another piece")
-        newBoards = [[x for x in self.bitBoards[0]], [y for y in self.bitBoards[1]]]
+        newBoards = [b for b in self.bitBoards]
         newPlacement = [self.placement[0], self.placement[1]]
-        newBoards[side][piece] |= bit
+        newBoards[piece] |= bit
         newPlacement[side] |= bit
-        zobrist = self._zhash ^ ZOBRIST_KEYS[side][piece][index]
-        return Position(self.color, self.stepsLeft, newBoards, newPlacement, zobrist)
+        zobrist = self._zhash ^ ZOBRIST_KEYS[piece][index]
+        return Position(self.color, self.stepsLeft, newBoards,
+                placement=newPlacement, zobrist=zobrist)
 
-    def remove_piece(self, column, rank):
-        index = (rank * 8) + (7-column)
-        bit = BB(1) << index
-        if self.placement[COL_GOLD] & bit:
-            side = COL_GOLD
-        elif self.placement[COL_SILVER] & bit:
-            side = COL_SILVER
+    def remove_piece(self, index):
+        bit = 1L << index
+        if self.placement[Color.GOLD] & bit:
+            side = Color.GOLD
+        elif self.placement[Color.SILVER] & bit:
+            side = Color.SILVER
         else:
             raise ValueError("Tried to remove non-existant piece")
-        piece = 0
-        while not (self.bitBoards[side][piece] & bit):
+        piece = Piece.GRABBIT
+        while not (self.bitBoards[piece] & bit):
             piece += 1
-        newBoards = [[x for x in self.bitBoards[0]], [y for y in self.bitBoards[1]]]
+        newBoards = [b for b in self.bitBoards]
         newPlacement = [self.placement[0], self.placement[1]]
-        newBoards[side][piece] &= ~bit
+        newBoards[piece] &= ~bit
         newPlacement[side] &= ~bit
-        zobrist = self._zhash ^ ZOBRIST_KEYS[side][piece][index]
-        return Position(self.color, self.stepsLeft, newBoards, newPlacement, zobrist)
+        zobrist = self._zhash ^ ZOBRIST_KEYS[piece][index]
+        return Position(self.color, self.stepsLeft, newBoards,
+                placement=newPlacement, zobrist=zobrist)
 
-    def do_step(self, steps):
+    def check_step(self, step):
+        class BadStep:
+            def __init__(self, msg):
+                self.message = msg
+            def __str__(self):
+                return self.message
+            def __nonzero__(self):
+                return False
+        bitboards = self.bitBoards
+        placement = self.placement
+        from_bit = 1L << step[0]
+        to_bit = 1L << step[1]
+        if from_bit & bitboards[Piece.EMPTY]:
+            return BadStep("Tried to move from an empty square")
+        if not (to_bit & bitboards[Piece.EMPTY]):
+            return BadStep("Tried to move to a non-empty square")
+        for piece in range(Piece.GRABBIT, Piece.COUNT):
+            if bitboards[piece] is not None and bitboards[piece] & from_bit:
+                break
+        direction = step[1] - step[0]
+        from_neighbors = neighbors_of(from_bit)
+        pcbit = piece & Piece.COLOR
+        pcolor = pcbit >> 3
+        pstrength = piece & Piece.DECOLOR
+        if not neighbors_of(from_bit) & to_bit:
+            return BadStep("Tried to move to non-adjacent square")
+        if pcolor == self.color:
+            isfrozen = (not from_neighbors & placement[pcolor]
+                    and from_neighbors & placement[pcolor^1])
+            if isfrozen:
+                isfrozen = False
+                for s in xrange((piece ^ Piece.COLOR) + 1,
+                        (Piece.GELEPHANT | (pcbit ^ Piece.COLOR)) + 1):
+                    if from_neighbors & bitboards[s]:
+                        isfrozen = True
+                        break
+                if isfrozen:
+                    return BadStep("Tried to move a frozen piece")
+            if pstrength == Piece.GRABBIT:
+                if ((pcolor == Color.GOLD and direction == -8)
+                        or (pcolor == Color.SILVER and direction == 8)):
+                    return BadStep("Tried to move a rabbit back")
+            if self.inpush and pstrength <= self.last_piece & Piece.DECOLOR:
+                return BadStep("Tried to push with too weak of a piece")
+        else:
+            if self.inpush:
+                return BadStep("Tried to move opponent piece while already in push")
+            if (self.last_piece == Piece.EMPTY
+                    or self.last_from != step[1]
+                    or pstrength >= self.last_piece & Piece.DECOLOR):
+                if self.stepsLeft == 1:
+                    return BadStep("Tried to start a push on the last step")
+                stronger = False
+                for s in xrange((piece ^ Piece.COLOR) + 1,
+                        (Piece.GELEPHANT | (self.color << 3)) + 1):
+                    if from_neighbors & bitboards[s]:
+                        stronger = True
+                        break
+                if not stronger:
+                    return BadStep("Tried to push a piece with no pusher around")
+        return True
+
+    def do_step(self, step):
         """ Generate a new position from this position with the given steps """
         bitBoards = self.bitBoards
         placement = self.placement
         stepsLeft = self.stepsLeft
         color = self.color
         zobrist = self._zhash
-        # make copies of the current boards
-        if len(steps) == 1:
-            if steps[0][3] == 0:
-                newBoards = [[x for x in bitBoards[0]], bitBoards[1]]
-            else:
-                newBoards = [bitBoards[0], [x for x in bitBoards[1]]]
-        else:
-            newBoards = [[x for x in bitBoards[0]], [y for y in bitBoards[1]]]
-
+        newBoards = [b for b in bitBoards]
         newPlacement = [placement[0], placement[1]]
-        for (from_bit, from_in), (to_bit, to_in), step_piece, step_color in steps:
-            # update the new bitboards
-            newBoards[step_color][step_piece] ^= from_bit ^ to_bit
-            newPlacement[step_color] ^= from_bit ^ to_bit
-            # update the zobrist hash
-            zobrist ^= ZOBRIST_KEYS[step_color][step_piece][from_in]
-            zobrist ^= ZOBRIST_KEYS[step_color][step_piece][to_in]
-            # remove trapped pieces, can only be one if any
-            if (from_bit & TRAP_NEIGHBORS) and (newPlacement[step_color] & TRAPS):
-                my_placement = newPlacement[step_color]
-                trapped = 0
-                if (my_placement & TRAP_C3_BIT) and (not (RMOVE_OFFSETS[21] & my_placement)):
-                    trapped = TRAP_C3_BIT
-                    trapped_idx = TRAP_C3_IDX
-                elif (my_placement & TRAP_F3_BIT) and (not (RMOVE_OFFSETS[18] & my_placement)):
-                    trapped = TRAP_F3_BIT
-                    trapped_idx = TRAP_F3_IDX
-                elif (my_placement & TRAP_C6_BIT) and (not (RMOVE_OFFSETS[45] & my_placement)):
-                    trapped = TRAP_C6_BIT
-                    trapped_idx = TRAP_C6_IDX
-                elif (my_placement & TRAP_F6_BIT) and (not (RMOVE_OFFSETS[42] & my_placement)):
-                    trapped = TRAP_F6_BIT
-                    trapped_idx = TRAP_F6_IDX
-
-                if trapped:
-                    nottrapped = ~trapped
-                    newPlacement[step_color] &= nottrapped
-                    for piece in xrange(6):
-                        if newBoards[step_color][piece] & trapped:
-                            zobrist ^= ZOBRIST_KEYS[step_color][piece][trapped_idx]
-                            newBoards[step_color][piece] &= nottrapped
-                            break   # can only ever be one trapped piece
-            stepsLeft -= 1
+        from_ix = step[0]
+        from_bit = 1L << from_ix
+        to_ix = step[1]
+        to_bit = 1L << to_ix
+        pcolor = bool(placement[1] & from_bit)
+        pcbit = pcolor << 3
+        for piece in range(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) +1):
+            if bitBoards[piece] & from_bit:
+                break
+        ispush = False
+        ispull = False
+        if pcolor != color:
+            pstrength = piece & Piece.DECOLOR
+            if (self.last_piece != Piece.EMPTY
+                    and self.last_from == to_ix
+                    and pstrength < (self.last_piece & Piece.DECOLOR)):
+                ispull = True
+            else:
+                ispush = True
+        # update the new bitboards
+        step_bits = from_bit | to_bit
+        newBoards[piece] ^= step_bits
+        newPlacement[pcolor] ^= step_bits
+        newBoards[Piece.EMPTY] ^= step_bits
+        # update the zobrist hash
+        zobrist ^= ZOBRIST_KEYS[piece][from_ix]
+        zobrist ^= ZOBRIST_KEYS[piece][to_ix]
+        # remove trapped pieces, can only be one if any
+        ntrap = neighbors_of(from_bit) & TRAPS & ~neighbors_of(newPlacement[pcolor])
+        if ntrap & newPlacement[pcolor]:
+            nottrapped = ~ntrap
+            tix = bit_to_index(ntrap)
+            newBoards[Piece.EMPTY] |= ntrap
+            newPlacement[pcolor] &= nottrapped
+            for tpiece in xrange(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) + 1):
+                if newBoards[tpiece] & ntrap:
+                    zobrist ^= ZOBRIST_KEYS[tpiece][tix]
+                    newBoards[tpiece] &= nottrapped
+                    break   # can only ever be one trapped piece
+        stepsLeft -= 1
         if stepsLeft < 1:
             color ^= 1
             stepsLeft = 4
-
-        return Position(color, stepsLeft, newBoards, newPlacement, zobrist)
+            piece = Piece.EMPTY
+            from_ix = None
+        if self.inpush or ispull:
+            piece = Piece.EMPTY
+            from_ix = None
+        return Position(color, stepsLeft, newBoards, ispush, piece, from_ix,
+                placement=newPlacement, zobrist=zobrist)
 
     def do_move(self, steps):
         """ Generate a new position from the given move steps """
-        steps = [step for step in steps if step[1][0] != 0] # remove trap steps, else they can add the piece back to the board.
-        npos = self.do_step(steps)
+        for step in steps:
+            npos = self.do_step(step)
         if npos.color == self.color:
-            npos = Position((self.color+1)%2, 4, npos.bitBoards, npos.placement)
+            npos = Position((self.color+1)%2, 4, npos.bitBoards, placement=npos.placement)
         return npos
 
     def get_single_steps(self):
         """ Generate all regular steps from this position """
-        lbitandix = bitandix
-
         color = self.color
-        bitBoards_my = self.bitBoards[color]
-        bitBoards_opp = self.bitBoards[color ^1]
+        bitboards = self.bitBoards
         placementBoards = self.placement
-        zobrist = self._zhash
 
         newstepsleft = self.stepsLeft - 1
         if newstepsleft < 1:
@@ -521,149 +615,146 @@ class Position(object):
 
         move_list = []  # list to return generated steps in
         move_list_append = move_list.append
-        empty_squares = ~(placementBoards[0] | placementBoards[1])
         stronger = placementBoards[color ^1] # stronger enemy pieces
-
         neighbors_of_my = neighbors_of(placementBoards[color])
-        for piece in xrange(6):
-            piecestomove = bitBoards_my[piece]
-            stronger ^= bitBoards_opp[piece] # remove enemy of the same rank
-            good_squares = neighbors_of_my | (~neighbors_of(stronger))
-            piecestomove &= good_squares # get rid of frozen pieces
+        pcbit = color << 3
+        for piece in xrange(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) + 1):
+            stronger ^= bitboards[piece ^ Piece.COLOR] # remove enemy of the same rank
+            piecestomove = bitboards[piece] & (neighbors_of_my | ~neighbors_of(stronger))
 
             while piecestomove:
-                from_bi = lbitandix(piecestomove)
-                piecestomove ^= from_bi[0]
-                potential_squares = empty_squares & MOVE_OFFSETS[color][piece > 0][from_bi[1]]
+                from_bit = piecestomove & -piecestomove
+                piecestomove ^= from_bit
+                from_ix = bit_to_index(from_bit)
+                potential_squares = bitboards[Piece.EMPTY] & MOVE_OFFSETS[color][(piece & Piece.DECOLOR) != Piece.GRABBIT][from_ix]
 
                 while potential_squares:
-                    to_bi = lbitandix(potential_squares)
-                    potential_squares ^= to_bi[0]
-
+                    to_bit = potential_squares & -potential_squares
+                    potential_squares ^= to_bit
+                    to_ix = bit_to_index(to_bit)
                     # create new position
                     # make copies of the current boards
-                    if color == 0:
-                        newBoards = [[x for x in bitBoards_my], bitBoards_opp]
-                    else:
-                        newBoards = [bitBoards_opp, [x for x in bitBoards_my]]
+                    newBoards = [b for b in bitboards]
                     newPlacement = [placementBoards[0], placementBoards[1]]
-
                     # update the new bitboards
-                    newBoards[color][piece] ^= from_bi[0] ^ to_bi[0]
-                    newPlacement[color] ^= from_bi[0] ^ to_bi[0]
+                    step_bits = from_bit | to_bit
+                    newBoards[Piece.EMPTY] ^= step_bits
+                    newBoards[piece] ^= step_bits
+                    newPlacement[color] ^= step_bits
                     # update the zobrist hash
-                    newzobrist = zobrist
-                    newzobrist ^= ZOBRIST_KEYS[color][piece][from_bi[1]]
-                    newzobrist ^= ZOBRIST_KEYS[color][piece][to_bi[1]]
+                    zobrist = self._zhash
+                    zobrist ^= ZOBRIST_KEYS[piece][from_ix]
+                    zobrist ^= ZOBRIST_KEYS[piece][to_ix]
                     # remove trapped pieces, can only be one if any
-                    if (from_bi[0] & TRAP_NEIGHBORS) and (newPlacement[color] & TRAPS):
+                    if (from_bit & TRAP_NEIGHBORS) and (newPlacement[color] & TRAPS):
                         my_placement = newPlacement[color]
                         trapped = 0
-                        if (my_placement & TRAP_C3_BIT) and (not (RMOVE_OFFSETS[21] & my_placement)):
+                        if (my_placement & TRAP_C3_BIT) and (not (RMOVE_OFFSETS[TRAP_C3_IX] & my_placement)):
                             trapped = TRAP_C3_BIT
-                            trapped_idx = TRAP_C3_IDX
-                        elif (my_placement & TRAP_F3_BIT) and (not (RMOVE_OFFSETS[18] & my_placement)):
+                            trapped_idx = TRAP_C3_IX
+                        elif (my_placement & TRAP_F3_BIT) and (not (RMOVE_OFFSETS[TRAP_F3_IX] & my_placement)):
                             trapped = TRAP_F3_BIT
-                            trapped_idx = TRAP_F3_IDX
-                        elif (my_placement & TRAP_C6_BIT) and (not (RMOVE_OFFSETS[45] & my_placement)):
+                            trapped_idx = TRAP_F3_IX
+                        elif (my_placement & TRAP_C6_BIT) and (not (RMOVE_OFFSETS[TRAP_C6_IX] & my_placement)):
                             trapped = TRAP_C6_BIT
-                            trapped_idx = TRAP_C6_IDX
-                        elif (my_placement & TRAP_F6_BIT) and (not (RMOVE_OFFSETS[42] & my_placement)):
+                            trapped_idx = TRAP_C6_IX
+                        elif (my_placement & TRAP_F6_BIT) and (not (RMOVE_OFFSETS[TRAP_F6_IX] & my_placement)):
                             trapped = TRAP_F6_BIT
-                            trapped_idx = TRAP_F6_IDX
+                            trapped_idx = TRAP_F6_IX
 
                         if trapped:
+                            newBoards[Piece.EMPTY] ^= trapped
                             newPlacement[color] ^= trapped
-                            for trappiece in xrange(6):
-                                if newBoards[color][trappiece] & trapped:
-                                    newzobrist ^= ZOBRIST_KEYS[color][trappiece][trapped_idx]
-                                    newBoards[color][trappiece] ^= trapped
-                                    break   # can only ever be one trapped piece
+                            for trappiece in xrange(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) + 1):
+                                if newBoards[trappiece] & trapped:
+                                    zobrist ^= ZOBRIST_KEYS[trappiece][trapped_idx]
+                                    newBoards[trappiece] ^= trapped
+                                    break
 
-                    pos = Position(newcolor, newstepsleft, newBoards, newPlacement, newzobrist)
-
-                    move_list_append((((from_bi, to_bi, piece, color), ), pos))
-
-        return move_list
-
-    def get_double_steps(self):
-        """ Generate all push-pull steps from this position """
-        lbitandix = bitandix
-        do_step = self.do_step
-        lneighbors_of = neighbors_of
-
-        color = self.color
-        opponent = color ^ 1
-        bitboards_my = self.bitBoards[color]
-        bitboards_opp = self.bitBoards[opponent]
-        placement_boards = self.placement
-
-        move_list = []
-        move_list_append = move_list.append
-        empty_squares = ~(placement_boards[0] | placement_boards[1])
-        stronger = placement_boards[opponent] ^ bitboards_opp[0]
-
-        neighbors_of_my = lneighbors_of(placement_boards[color])
-        for piece in xrange(1, 6):
-            piecestomove = bitboards_my[piece]
-            stronger ^= bitboards_opp[piece]
-            good_squares = neighbors_of_my | (~lneighbors_of(stronger))
-            piecestomove &= good_squares    # eliminate frozen pieces
-
-            for weaker in xrange(0, piece):
-                victims = bitboards_opp[weaker] & lneighbors_of(piecestomove)
-
-                while victims:
-                    vic_bi = lbitandix(victims)
-                    victims ^= vic_bi[0]
-                    attackers = piecestomove & RMOVE_OFFSETS[vic_bi[1]]
-
-                    victosqr = empty_squares & RMOVE_OFFSETS[vic_bi[1]]
-                    # Get all push moves for this victim
-                    while victosqr:
-                        vto_bi = lbitandix(victosqr)
-                        victosqr ^= vto_bi[0]
-                        vicstep = (vic_bi, vto_bi, weaker, opponent)
-
-                        # create list of possible push steps
-                        pushattackers = attackers
-                        while pushattackers:
-                            attacker_bi = bitandix(pushattackers)
-                            pushattackers ^= attacker_bi[0]
-
-                            step = (vicstep, (attacker_bi, vic_bi, piece, color))
-                            pos = do_step(step)
-
-                            move_list_append((step, pos))
-
-                    # Get all pull moves for this victim
-                    while attackers:
-                        attacker_bi = lbitandix(attackers)
-                        attackers ^= attacker_bi[0]
-                        atttosqr = empty_squares & RMOVE_OFFSETS[attacker_bi[1]]
-                        vicstep = (vic_bi, attacker_bi, weaker, opponent)
-
-                        while atttosqr:
-                            ato_bi = bitandix(atttosqr)
-                            atttosqr ^= ato_bi[0]
-
-                            step = ((attacker_bi, ato_bi, piece, color), vicstep)
-                            pos = do_step(step)
-
-                            move_list_append((step, pos))
-
+                    if newcolor == color:
+                        pos = Position(newcolor, newstepsleft, newBoards,
+                                False, piece, from_ix,
+                                placement=newPlacement, zobrist=zobrist)
+                    else:
+                        pos = Position(newcolor, newstepsleft, newBoards,
+                                False, Piece.EMPTY, None,
+                                placement=newPlacement, zobrist=zobrist)
+                    move_list_append(((from_ix, to_ix), pos))
         return move_list
 
     def get_steps(self):
         """ Get all the steps from this position """
-        steps = self.get_single_steps()
-        if self.stepsLeft > 1:
-            steps += self.get_double_steps()
-        return steps
+        color = self.color
+        bitboards = self.bitBoards
+        placement = self.placement
+        last_from = self.last_from
+        neighbors_of_my = neighbors_of(self.placement[color])
+
+        step_list = []
+        if self.inpush:
+            lastbit = 1L << last_from
+            lf_neighbors = neighbors_of(lastbit)
+            stronger = 0L
+            attackers = 0L
+            pcbit = color << 3
+            lstrength = self.last_piece & Piece.DECOLOR
+            for piece in xrange(Piece.GELEPHANT | pcbit, lstrength | pcbit, -1):
+                attackers |= (bitboards[piece] & lf_neighbors
+                        & (neighbors_of_my | ~neighbors_of(stronger)))
+                stronger |= bitboards[piece ^ Piece.COLOR]
+            while attackers:
+                abit = attackers & -attackers
+                attackers ^= abit
+                step = (bit_to_index(abit), last_from)
+                step_list.append((step, self.do_step(step)))
+        else:
+            opponent = color ^ 1
+            stronger = placement[opponent] ^ bitboards[Piece.GRABBIT | (opponent << 3)]
+            pcbit = color << 3
+            attackers = 0L
+            if self.stepsLeft > 1:
+                for piece in xrange(Piece.GCAT | pcbit, (Piece.GELEPHANT | pcbit) +1):
+                    stronger ^= bitboards[piece ^ Piece.COLOR]
+                    attackers |= bitboards[piece] & (neighbors_of_my | ~neighbors_of(stronger))
+            ocbit = opponent << 3
+            empty_neighbors = neighbors_of(bitboards[Piece.EMPTY])
+            for vpiece in xrange(Piece.GRABBIT | ocbit, Piece.GELEPHANT | ocbit):
+                pullsdone = 0
+                if self.last_piece & Piece.DECOLOR > vpiece & Piece.DECOLOR:
+                    last_from = self.last_from
+                    lastbit = 1L << last_from
+                    pulls = bitboards[vpiece] & neighbors_of(lastbit)
+                    pullsdone |= lastbit | pulls
+                    while pulls:
+                        pbit = pulls & -pulls
+                        pulls ^= pbit
+                        step = (bit_to_index(pbit), last_from)
+                        step_list.append((step, self.do_step(step)))
+                if self.stepsLeft < 2:
+                    continue
+                attackers &= ~bitboards[vpiece ^ Piece.COLOR]
+                victims = (bitboards[vpiece] & neighbors_of(attackers)
+                        & empty_neighbors)
+                while victims:
+                    vbit = victims & -victims
+                    victims ^= vbit
+                    vix = bit_to_index(vbit)
+                    to_bits = neighbors_of(vbit) & bitboards[Piece.EMPTY]
+                    while to_bits:
+                        tbit = to_bits & -to_bits
+                        to_bits ^= tbit
+                        if (vbit & pullsdone) and (tbit & pullsdone):
+                            continue
+                        step = (vix, bit_to_index(tbit))
+                        step_list.append((step, self.do_step(step)))
+
+            step_list += self.get_single_steps()
+        return step_list
 
     def get_null_move(self):
         """ Generate a null move """
-        return Position(self.color^1, 4, self.bitBoards, self.placement, self._zhash)
+        return Position(self.color^1, 4, self.bitBoards,
+                placement=self.placement, zobrist=self._zhash)
 
     def get_moves(self):
         """ Generate all possible moves from this position """
@@ -677,15 +768,15 @@ class Position(object):
                 for step, move in npos.get_steps():
                     if move.color == color:
                         if move not in nextpart:
-                            nextpart[move] = nsteps+step
+                            nextpart[move] = nsteps + (step,)
                     elif move not in finished:
-                        finished[move] = nsteps+step
-
-                move = npos.get_null_move()
-                if move not in finished:
-                    finished[move] = nsteps
+                        finished[move] = nsteps + (step,)
+                if not npos.inpush:
+                    move = npos.get_null_move()
+                    if move not in finished:
+                        finished[move] = nsteps
             partial = nextpart
-
+        del finished[self.get_null_move()]
         return finished
 
     def get_moves_nodes(self):
@@ -704,15 +795,15 @@ class Position(object):
                 for step, move in steps:
                     if move.color == color:
                         if move not in nextpart:
-                            nextpart[move] = nsteps+step
+                            nextpart[move] = nsteps + (step,)
                     elif move not in finished:
-                        finished[move] = nsteps+step
-
-                move = npos.get_null_move()
-                if move not in finished:
-                    finished[move] = nsteps
+                        finished[move] = nsteps + (step,)
+                if not npos.inpush:
+                    move = npos.get_null_move()
+                    if move not in finished:
+                        finished[move] = nsteps
             partial = nextpart
-
+        del finished[self.get_null_move()]
         return (finished, nodes)
 
     def get_rnd_step_move(self):
@@ -722,68 +813,18 @@ class Position(object):
         prevsteps = []
         while pos.color == self.color:
             steps = pos.get_steps()
-            if pos.bitBoards != self.bitBoards:
+            if pos != self:
                 nullmove = pos.get_null_move()
                 steps.append(((), nullmove))
 
             if len(steps) == 0: # If no steps were generated then we are immobilized.
-                if pos == self:
-                    return None
-                else:
-                    pos == self
-                    continue
+                return None
 
             randstep = random.choice(steps)
             taken += randstep[0]
             pos = randstep[1]
 
         return (taken, pos)
-
-def add_traps(pos, steps):
-    """ Add trap steps to a series of steps """
-    tsteps = []
-    for step in steps:
-        tsteps.append(step)
-        npos = pos.do_step((step, ))
-        ntrap = neighbors_of(step[0][0]) & TRAPS
-        if ntrap and (pos.placement[step[3]] & ntrap) and (not (npos.placement[step[3]] & ntrap)):
-            for piece in xrange(0, 6):
-                if pos.bitBoards[step[3]][piece] & ntrap:
-                    tsteps.append((bitandix(ntrap), (0, 64), piece, step[3]))
-                    break
-        if (step[1][0] & TRAPS) and not (npos.placement[step[3]] & step[1][0]):
-            tsteps.append((step[1], (0, 64), step[2], step[3]))
-        pos = npos
-    return tsteps
-
-def steps_to_str(steps):
-    """ Convert steps to a move string """
-    pieces = "RCDHMErcdhme"
-    move = []
-    for step in steps:
-        step_str = []
-        step_str.append(pieces[step[2] + (step[3]*6)])
-        if step[0][0] != 0:
-            step_str.append(index_to_alg(step[0][1]))
-            if step[1][0] == 0:
-                step_str.append("x")
-            else:
-                direction = step[0][1] - step[1][1]
-                if direction == 1:
-                    step_str.append("e")
-                elif direction == -1:
-                    step_str.append("w")
-                elif direction == 8:
-                    step_str.append("s")
-                elif direction == -8:
-                    step_str.append("n")
-                else:
-                    step_str.append(',' + index_to_alg(step[1][1]))
-        else:
-            step_str.append(index_to_alg(step[1][1]))
-        step_str = "".join(step_str)
-        move.append(step_str)
-    return " ".join(move)
 
 def parse_move(line):
     """ Parse steps from a move string """
@@ -793,32 +834,23 @@ def parse_move(line):
 
     steps = []
     for step in text:
-        piece = "RCDHMErcdhme".index(step[0])
-        if piece > 5:
-            piece -= 6
-            color = COL_SILVER
-        else:
-            color = COL_GOLD
-        index = alg_to_index(step[1:3])
-        bit = BB(1) << index
+        from_ix = alg_to_index(step[1:3])
         if len(step) > 3:
             if step[3] == 'x':
-                steps.append(((bit, index), (0, 64), piece, color))
                 continue
             elif step[3] == 'n':
-                toindex = index + 8
+                to_ix = from_ix + 8
             elif step[3] == 's':
-                toindex = index - 8
+                to_ix = from_ix - 8
             elif step[3] == 'e':
-                toindex = index - 1
+                to_ix = from_ix - 1
             elif step[3] == 'w':
-                toindex = index + 1
+                to_ix = from_ix + 1
             else:
                 raise ValueError("Invalid step direction.")
-            tobit = BB(1) << toindex
-            steps.append(((bit, index), (tobit, toindex), piece, color))
+            steps.append((from_ix, to_ix))
         else:
-            steps.append(((0, 64), (bit, index), piece, color))
+            raise ValueError("Can't represent placing step")
 
     return steps
 
@@ -836,9 +868,9 @@ def parse_long_pos(text):
         movecolorix += 1
     movenumber = int(text[0][:movecolorix])
     if text[0][movecolorix].lower() in "bs":
-        color = COL_SILVER
+        color = Color.SILVER
     elif text[0][movecolorix].lower() in "wg":
-        color = COL_GOLD
+        color = Color.GOLD
     else:
         raise ValueError("Could not find side to move")
 
@@ -850,25 +882,23 @@ def parse_long_pos(text):
     if text[1][0] != '+':
         raise ValueError("Board does not start after move line")
     ranknum = 7
-    bitboards = list([list(x) for x in BLANK_BOARD])
+    bitboards = [b for b in BLANK_BOARD]
     for line in text[2:10]:
         if not line[0].isdigit() or int(line[0])-1 != ranknum:
             raise ValueError("Unexpected rank number at rank %d" % ranknum+1)
         for piece_index in xrange(3, 18, 2):
             colnum = (piece_index-3)//2
-            bit = 1 << ((ranknum*8) + (7-colnum))
+            bit = 1 << ((ranknum*8) + colnum)
             piecetext = line[piece_index]
             if piecetext in [' ', 'X', 'x', '.']:
                 continue
-            piece = "RCDHMErcdhme".find(piecetext)
-            if piece != -1 and piece < 6:
-                bitboards[0][piece] |= bit
-            elif piece != -1:
-                bitboards[1][piece-6] |= bit
+            piece = Piece.PCHARS.find(piecetext)
+            if piece != -1:
+                bitboards[piece] |= bit
+                bitboards[Piece.EMPTY] &= ~bit
             else:
                 raise ValueError("Invalid piece at %s%d" % ("abcdefgh"[colnum], ranknum+1))
         ranknum -= 1
-
     pos = Position(color, steps, bitboards)
 
     if len(text) > 12:
@@ -880,14 +910,14 @@ def parse_long_pos(text):
             line = " ".join(line.split()[1:])
             move = parse_move(line)
             pos = pos.do_step(move)
-            if pos.color == COL_GOLD:
+            if pos.color == Color.GOLD:
                 movenumber += 1
 
     return (movenumber, pos)
 
 def parse_short_pos(side, stepsleft, text):
     """ Parse a position from a short format string """
-    if side not in [COL_GOLD, COL_SILVER]:
+    if side not in [Color.GOLD, Color.SILVER]:
         raise ValueError("Invalid side passed into parse_short_str, %d" % (side))
     if stepsleft > 4 or stepsleft < 0:
         raise ValueError("Invalid steps left passed into parse_short_str, %d" % (stepsleft))
@@ -901,10 +931,11 @@ def parse_short_pos(side, stepsleft, text):
                 raise ValueError("Invalid piece at position %d, %s" % (place, piecetext))
             if piece > 5:
                 piece -= 6
-                piececolor = COL_SILVER
+                piececolor = Color.SILVER
             else:
-                piececolor = COL_GOLD
-            bit = BB(1) << (63-place)
+                piececolor = Color.GOLD
+            index = (7 - (place // 8)) + (place % 8)
+            bit = 1L << index
             bitboards[piececolor][piece] |= bit
     pos = Position(side, stepsleft, bitboards)
     return pos
@@ -915,13 +946,13 @@ def test_random_play():
     goal_wins = immo_wins = 0
     start_time = time.time()
     for i in xrange(100):
-        pos = Position(COL_GOLD, 4, BASIC_SETUP)
+        pos = Position(Color.GOLD, 4, BASIC_SETUP)
         turn = 2
         while not pos.is_goal():
             moves = pos.get_moves()
             del moves[pos.get_null_move()]
             print turn
-            print pos.to_long_str()
+            print pos.board_to_str()
             print len(moves)
             print (time.time()-start_time)
             print
@@ -945,7 +976,7 @@ def rnd_step_game(pos):
         move = pos.get_rnd_step_move()
         if move is None: # immobilization
             assert len(pos.get_moves()) == 1
-            if pos.color == COL_GOLD:
+            if pos.color == Color.GOLD:
                 return -1
             else:
                 return 1
@@ -962,7 +993,7 @@ def rnd_game(pos):
         moves = pos.get_moves()
         del moves[pos.get_null_move()]
         if len(moves) == 0:
-            if pos.color == COL_GOLD:
+            if pos.color == Color.GOLD:
                 return -1
             else:
                 return 1
@@ -980,8 +1011,8 @@ def test_rnd_steps():
     goal_wins = 0
     immo_wins = 0
     for i in xrange(100):
-        pos = Position(COL_GOLD, 4, BASIC_SETUP)
-        print pos.to_long_str()
+        pos = Position(Color.GOLD, 4, BASIC_SETUP)
+        print pos.board_to_str()
         print
 
         turn = 3
@@ -999,7 +1030,7 @@ def test_rnd_steps():
 
             pos = move[1]
             print steps_to_str(move[0])
-            print pos.to_long_str()
+            print pos.board_to_str()
             print turn
             print
             turn += 1
@@ -1026,18 +1057,91 @@ def main(filename):
         movenum, pos = parse_long_pos(positiontext)
     print "%d%s" % (movenum, "gs"[pos.color])
     print
-    print pos.to_long_str()
+    print pos.board_to_str()
     print
-    moves = pos.to_placing_move()
-    print moves[0]
-    print moves[1]
+    print pos.board_to_str("short")
+    print
+    placing = pos.to_placing_move()
+    print placing[0]
+    print placing[1]
     print
     starttime = time.time()
-    finished, nodes = pos.get_moves_nodes()
-    del finished[pos.get_null_move()]
-    print len(finished), "unique moves"
+    moves, nodes = pos.get_moves_nodes()
+    print len(moves), "unique moves"
     gentime = time.time()
 
+    real_steps = [s for s, m in pos.get_steps()]
+    for i in xrange(64):
+        for j in xrange(64):
+            tstep = (i, j)
+            check_resp = pos.check_step(tstep)
+            if check_resp and not tstep in real_steps:
+                print "check_step thought %s to %s was valid step %d,%d" % (
+                        index_to_alg(tstep[0]), index_to_alg(tstep[1]), tstep[0], tstep[1])
+                return
+            if not check_resp and tstep in real_steps:
+                print "check_step thought %s to %s was invalid step" % (
+                        index_to_alg(tstep[0]), index_to_alg(tstep[1]))
+                return
+
+    import x88board
+    mn, opos = x88board.parse_long_pos(positiontext)
+    omoves = opos.get_moves()
+    new_res = set([p.board_to_str("short") for p in moves.keys()])
+    if len(new_res) != len(moves):
+        print "duplicate boards in results %d!=%d" % (len(new_res), len(moves))
+        checked = {}
+        for upos, move in moves.iteritems():
+            bstr = upos.board_to_str("short")
+            if checked.has_key(bstr):
+                cpos = checked[bstr][0]
+                print "found duplicate board"
+                print pos.steps_to_str(move)
+                print upos.board_to_str()
+                print
+                print pos.steps_to_str(checked[bstr][1])
+                print cpos.board_to_str()
+                print "upos inpush %s lf %s lp %s" % (
+                        upos.inpush, upos.last_from, Piece.PCHARS[upos.last_piece])
+                print "cpos inpush %s lf %s lp %s" % (
+                        cpos.inpush, cpos.last_from, Piece.PCHARS[cpos.last_piece])
+                if upos._zhash != cpos._zhash:
+                    print "zobrist %X, %X" % (upos._zhash, cpos._zhash)
+                if upos.placement != cpos.placement:
+                    print "placement %s, %s" % (upos.placement, cpos.placement)
+            else:
+                checked[bstr] = (upos, move)
+    old_res = set([p.board_to_str("short") for p in omoves.keys()])
+    if new_res != old_res or len(omoves) != len(moves):
+        discount = 0
+        print "Only in new results:"
+        for upos, move in moves.iteritems():
+            if upos.board_to_str("short") not in old_res:
+                discount += 1
+                print pos.steps_to_str(move)
+                print upos.board_to_str("short")
+            if upos.color == pos.color:
+                print "result position with same color"
+            if upos.stepsLeft != 4:
+                print "result position with steps taken"
+            if upos.inpush:
+                print "result position in push"
+            if upos.last_from is not None or upos.last_piece != Piece.EMPTY:
+                print "result position with last piece information"
+            if discount > 40:
+                print "Stopping results"
+                break
+        print
+        print "Only in old results:"
+        for upos, move in omoves.iteritems():
+            if upos.board_to_str("short") not in new_res:
+                print upos.steps_to_str(move)
+                print upos.board_to_str("short")
+                discount += 1
+            if discount > 40:
+                print "Stopping results"
+                break
+    """
     score = 0
     tests = 1000
     for i in xrange(tests):
@@ -1047,6 +1151,7 @@ def main(filename):
 
     print "Random step win percentage for gold is %.1f%%" % ((score/float(tests))*100)
     print "%.2f seconds to generate moves, %.2f seconds to play %d random games" % (gentime-starttime, endgames-gentime, tests)
+    """
 
     """
     score = 0
@@ -1072,7 +1177,7 @@ def main(filename):
 
     #print
     #for move in finished.items():
-    #    print move[0].to_short_str()
+    #    print move[0].board_to_str("short")
     #    print steps_to_str(add_traps(pos, move[1]))
 
 if __name__ == "__main__":

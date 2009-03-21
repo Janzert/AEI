@@ -259,7 +259,7 @@ class EngineController:
     def setposition(self, pos):
         self.engine.send("setposition %s %s\n" % (
                 "wb"[pos.color],
-                pos.to_short_str()))
+                pos.board_to_str("short")))
 
     def go(self, searchtype=None, searchvalue=None):
         gocmd = ["go"]

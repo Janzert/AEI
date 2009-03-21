@@ -33,7 +33,7 @@ eng = EngineController(StdioEngine("../D/bot_opfor"))
 #eng.setoption("log_console", 1)
 #eng.setoption("depth", "12")
 eng.setoption("hash", 500)
-print pos.to_long_str()
+print pos.board_to_str()
 eng.setposition(pos)
 eng.go()
 
