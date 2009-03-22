@@ -104,7 +104,8 @@ setoption name <id> [value <x>]
     Other standard options:
     * hash - Size in megabytes of the hash table.
     * depth - If set to a positive number the depth in steps to search a
-        position. An engine may honor a minimum depth of 4. A value of zero (0)         or less indicates no fixed depth.
+        position. An engine may honor a minimum depth of 4. A value of zero (0)
+        or less indicates no fixed depth.
     If an engine receives an unrecognized option it should log a warning.
 makemove <move>    
     Make a move. Stop any current search in progress.

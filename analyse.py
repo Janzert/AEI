@@ -20,7 +20,7 @@ movenum, pos = board.parse_long_pos(plines)
 pfile.close()
 
 #eng = EngineController(SocketEngine("./bot_opfor2008cc", legacy_mode=True))
-eng = EngineController(StdioEngine("../D/bot_opfor"))
+eng = EngineController(StdioEngine("python simple_engine.py"))
 
 #eng.setoption("tcmove", 120)
 #eng.setoption("tcmax", 600)
@@ -51,7 +51,7 @@ while True:
         pass
 
 eng.quit()
-stop_waiting = time.time() + 60
+stop_waiting = time.time() + 20
 while time.time() < stop_waiting:
     try:
         resp = eng.get_response(1)

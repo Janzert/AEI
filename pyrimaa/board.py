@@ -61,10 +61,10 @@ TRAP_C6_BIT = 1L << 42
 TRAP_F6_BIT = 1L << 45
 TRAPS = 0x0000240000240000L
 
-BASIC_SETUP = (0x0000FFFFFFFF0000L, 0x00000000000000FFL, 0x0000000000004200L, 0x0000000000001800L,
-               0x0000000000002400L, 0x0000000000008000L, 0x0000000000000100L, None, None,
-               0xFF00000000000000L, 0x0042000000000000L, 0x0018000000000000L,
-               0x0024000000000000L, 0x0080000000000000L, 0x0001000000000000L)
+BASIC_SETUP = (0x0000FFFFFFFF0000L, 0x00000000000000FFL, 0x0000000000002400L, 0x0000000000008100L,
+               0x0000000000004200L, 0x0000000000000800L, 0x0000000000001000L, None, None,
+               0xFF00000000000000L, 0x0024000000000000L, 0x0081000000000000L,
+               0x0042000000000000L, 0x0010000000000000L, 0x0008000000000000L)
 
 BLANK_BOARD = (ALL_BITS, 0L, 0L, 0L, 0L, 0L, 0L, None, None, 0L, 0L, 0L, 0L, 0L, 0L)
 
@@ -547,7 +547,7 @@ class Position(object):
         to_bit = 1L << to_ix
         pcolor = bool(placement[1] & from_bit)
         pcbit = pcolor << 3
-        for piece in range(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) +1):
+        for piece in xrange(Piece.GRABBIT | pcbit, (Piece.GELEPHANT | pcbit) +1):
             if bitBoards[piece] & from_bit:
                 break
         ispush = False
@@ -594,11 +594,34 @@ class Position(object):
 
     def do_move(self, steps):
         """ Generate a new position from the given move steps """
+        pos = self
         for step in steps:
-            npos = self.do_step(step)
-        if npos.color == self.color:
-            npos = Position((self.color+1)%2, 4, npos.bitBoards, placement=npos.placement)
-        return npos
+            pos = pos.do_step(step)
+        if pos.color == self.color:
+            pos = Position(self.color^1, 4, pos.bitBoards, placement=pos.placement)
+        return pos
+
+    def do_move_str(self, move_str):
+        try:
+            steps = parse_move(move_str)
+            result = self.do_move(steps)
+        except ValueError, exc:
+            if exc.message == "Can't represent placing step":
+                bitboards = [b for b in self.bitBoards]
+                for step_str in move_str.split():
+                    if len(step_str) != 3:
+                        raise ValueError("Found mixture of placing steps and regular steps")
+                    piece = Piece.PCHARS.index(step_str[0])
+                    ix = alg_to_index(step_str[1:])
+                    bit = 1L << ix
+                    if not bitboards[Piece.EMPTY] & bit:
+                        raise ValueError("Tried to place a piece onto another")
+                    bitboards[piece] |= bit
+                    bitboards[Piece.EMPTY] &= ~bit
+                result = Position(self.color^1, 4, bitboards)
+            else:
+                raise
+        return result
 
     def get_single_steps(self):
         """ Generate all regular steps from this position """
@@ -809,21 +832,24 @@ class Position(object):
     def get_rnd_step_move(self):
         """ Generate a move from this position by taking random steps. """
         pos = self
-        taken = ()
-        prevsteps = []
+        taken = []
         while pos.color == self.color:
             steps = pos.get_steps()
-            if pos != self:
+            if pos != self and not pos.inpush:
                 nullmove = pos.get_null_move()
                 steps.append(((), nullmove))
 
             if len(steps) == 0: # If no steps were generated then we are immobilized.
-                return None
+                if taken:
+                    pos = self
+                else:
+                    return None
 
             randstep = random.choice(steps)
-            taken += randstep[0]
+            taken.append(randstep[0])
             pos = randstep[1]
-
+        if not taken[-1]:
+            taken = taken[:-1]
         return (taken, pos)
 
 def parse_move(line):
@@ -843,9 +869,9 @@ def parse_move(line):
             elif step[3] == 's':
                 to_ix = from_ix - 8
             elif step[3] == 'e':
-                to_ix = from_ix - 1
-            elif step[3] == 'w':
                 to_ix = from_ix + 1
+            elif step[3] == 'w':
+                to_ix = from_ix - 1
             else:
                 raise ValueError("Invalid step direction.")
             steps.append((from_ix, to_ix))
@@ -918,25 +944,21 @@ def parse_long_pos(text):
 def parse_short_pos(side, stepsleft, text):
     """ Parse a position from a short format string """
     if side not in [Color.GOLD, Color.SILVER]:
-        raise ValueError("Invalid side passed into parse_short_str, %d" % (side))
+        raise ValueError("Invalid side passed into parse_short_pos, %d" % (side))
     if stepsleft > 4 or stepsleft < 0:
-        raise ValueError("Invalid steps left passed into parse_short_str, %d" % (stepsleft))
+        raise ValueError("Invalid steps left passed into parse_short_pos, %d" % (stepsleft))
 
-    bitboards = list([list(x) for x in BLANK_BOARD])
+    bitboards = [b for b in BLANK_BOARD]
     for place, piecetext in enumerate(text[1:-1]):
         if piecetext != ' ':
             try:
-                piece = "RCDHMErcdhme".index(piecetext)
+                piece = Piece.PCHARS.index(piecetext)
             except ValueError:
                 raise ValueError("Invalid piece at position %d, %s" % (place, piecetext))
-            if piece > 5:
-                piece -= 6
-                piececolor = Color.SILVER
-            else:
-                piececolor = Color.GOLD
-            index = (7 - (place // 8)) + (place % 8)
+            index = sq_to_index(place % 8, 7 - (place // 8))
             bit = 1L << index
-            bitboards[piececolor][piece] |= bit
+            bitboards[piece] |= bit
+            bitboards[Piece.EMPTY] &= ~bit
     pos = Position(side, stepsleft, bitboards)
     return pos
 
@@ -1059,16 +1081,29 @@ def main(filename):
     print
     print pos.board_to_str()
     print
-    print pos.board_to_str("short")
+
+    short_str = pos.board_to_str("short")
+    print short_str
     print
+    if parse_short_pos(pos.color, 4, short_str) != pos:
+        print "Short string board round trip failed"
+        rpos = parse_short_pos(pos.color, 4, short_str)
+        print rpos.board_to_str()
+        return
+
     placing = pos.to_placing_move()
     print placing[0]
     print placing[1]
     print
+
+    steps, result = pos.get_rnd_step_move()
+    print "Random step move:", pos.steps_to_str(steps)
+    print
+
     starttime = time.time()
     moves, nodes = pos.get_moves_nodes()
-    print len(moves), "unique moves"
     gentime = time.time()
+    print len(moves), "unique moves"
 
     real_steps = [s for s, m in pos.get_steps()]
     for i in xrange(64):
