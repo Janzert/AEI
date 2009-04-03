@@ -441,12 +441,13 @@ class Position(object):
 
     def place_piece(self, piece, index):
         bit = 1L << index
-        if self.placement[side] & bit:
+        if not self.bitBoards[Piece.EMPTY] & bit:
             raise ValueError("Tried to place a piece on another piece")
         newBoards = [b for b in self.bitBoards]
         newPlacement = [self.placement[0], self.placement[1]]
         newBoards[piece] |= bit
-        newPlacement[side] |= bit
+        newBoards[Piece.EMPTY] &= ~bit
+        newPlacement[(piece & Piece.COLOR) >> 3] |= bit
         zobrist = self._zhash ^ ZOBRIST_KEYS[piece][index]
         return Position(self.color, self.stepsLeft, newBoards,
                 placement=newPlacement, zobrist=zobrist)
@@ -465,6 +466,7 @@ class Position(object):
         newBoards = [b for b in self.bitBoards]
         newPlacement = [self.placement[0], self.placement[1]]
         newBoards[piece] &= ~bit
+        newBoards[Piece.EMPTY] |= bit
         newPlacement[side] &= ~bit
         zobrist = self._zhash ^ ZOBRIST_KEYS[piece][index]
         return Position(self.color, self.stepsLeft, newBoards,

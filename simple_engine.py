@@ -69,8 +69,6 @@ class AEIEngine(object):
             setup = Position(Color.GOLD, 4, board.BASIC_SETUP)
             setup_moves = setup.to_placing_move()
             move_str = setup_moves[pos.color][2:]
-            if pos.color:
-                self.insetup = False
         else:
             steps, result = pos.get_rnd_step_move()
             move_str = pos.steps_to_str(steps)
@@ -89,7 +87,7 @@ class AEIEngine(object):
             if msg == "isready":
                 ctl.send("readyok")
             elif msg == "newgame":
-                self.newgame
+                self.newgame()
             elif msg.startswith("setposition"):
                 side, pos_str = msg.split(None, 2)[1:]
                 self.setposition(side, pos_str)
