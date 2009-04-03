@@ -79,10 +79,11 @@ isready
     Ping engine. Waits for engine to respond with "readyok"
 newgame    
     Signals the start of a new game.
-setposition <position>  
-    Set the current position. Positions are given by the side to move (w/b)
-    and a string consisting of the piece letter or a space for each of the 64
-    squares.
+setposition <side> <position>  
+    Set the current position. Positions are given by the side to move (w/b or
+    g/s) and a board consisting of the an opening and closing square brack ([])
+    and a piece letter or a space for each of the 64 squares from left to right
+    and top to bottom (a8-h8, a7-h7...a1-h1).
 setoption name <id> [value <x>]
     Set any engine configuration as well as various game state settings.
     The standard game state options are (all times are given in seconds):
@@ -98,7 +99,7 @@ setoption name <id> [value <x>]
     * wused - Amount of time used on gold's last turn.
     * bused - Amount of time used on silver's last turn.
     * lastmoveused - Amount of time used on the last turn.
-    * tcmoveused - Amount of time used so far on the current turn.
+    * moveused - Amount of time used so far on the current turn.
     The following options are not required but if an engine does allow setting
     the option described it should use the standard option name.
     Other standard options:
@@ -109,15 +110,13 @@ setoption name <id> [value <x>]
     If an engine receives an unrecognized option it should log a warning.
 makemove <move>    
     Make a move. Stop any current search in progress.
-go [ponder, infinite]
+go [ponder]
     Start searching using the current position and game state. A plain go
     command means the engine should send a bestmove according to its own time
     management or other options already set (e.g. fixed depth). There are two
     optional subcommands that change this:
     * ponder - The engine should start pondering on the current position with
     the expectation that it will later receive the opponents actual move.
-    * infinite - Search until either a forced win or loss is found or the
-    'stop' command is received.
 stop
     Stop the current search. The engine should respond with the bestmove found.
 quit
