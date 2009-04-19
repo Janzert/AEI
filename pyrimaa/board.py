@@ -1104,8 +1104,8 @@ def main(filename):
 
     starttime = time.time()
     moves, nodes = pos.get_moves_nodes()
-    gentime = time.time()
-    print len(moves), "unique moves"
+    gentime = time.time() - starttime
+    print "%d unique moves generated in %.2f seconds" % (len(moves), gentime)
 
     real_steps = [s for s, m in pos.get_steps()]
     for i in xrange(64):
@@ -1178,44 +1178,7 @@ def main(filename):
             if discount > 40:
                 print "Stopping results"
                 break
-    """
-    score = 0
-    tests = 1000
-    for i in xrange(tests):
-        if rnd_step_game(pos) == 1:
-            score += 1
-    endgames = time.time()
 
-    print "Random step win percentage for gold is %.1f%%" % ((score/float(tests))*100)
-    print "%.2f seconds to generate moves, %.2f seconds to play %d random games" % (gentime-starttime, endgames-gentime, tests)
-    """
-
-    """
-    score = 0
-    tests = 1000
-    for i in xrange(tests):
-        if rnd_game(pos) == 1:
-            score += 1
-
-        print "\rRandom move win percentage after %d tests is %.4f" % (i+1, score/float(i+1)),
-
-    print
-    print "Random move win percentage for gold is %.4f" % (score/float(tests))
-    """
-
-    #allmoves = dict(finished)
-    #for ix, move in enumerate(finished):
-    #    omoves = move.get_moves()
-    #    del omoves[move.get_null_move()]
-    #    allmoves.update(omoves)
-    #    if (ix+1) % 50 == 0:
-    #        print (ix+1), len(allmoves)
-    #print len(allmoves), "moves at 2 ply"
-
-    #print
-    #for move in finished.items():
-    #    print move[0].board_to_str("short")
-    #    print steps_to_str(add_traps(pos, move[1]))
 
 if __name__ == "__main__":
     try:
