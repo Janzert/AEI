@@ -75,10 +75,13 @@ def post(url, values, logname="network"):
                 except socket.timeout:
                     body = ""
             except urllib2.URLError, err:
-                netlog.info("Received URLError, reason type %s", type(err.reason))
-                if hasattr(err, "reason") and len(err.reason) > 0 and err.reason[0] == 10060:
-                    body = ""
-                else:
+                try:
+                    netlog.info("Received URLError, reason type %s", type(err.reason))
+                    if err.reason[0] == 10060:
+                        body = ""
+                    else:
+                        raise
+                except (TypeError, AttributeError):
                     raise
             tries += 1
     finally:
