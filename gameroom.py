@@ -353,7 +353,8 @@ class Table:
                 else:
                     moveused = 0
                 starttime = time.time() - moveused
-                engine.setoption("tcmoveused", moveused);
+                engine.setoption("tcmoveused", moveused)
+                engine.setoption("moveused", moveused)
                 self._update_timecontrol(state)
                 engine.setoption("wreserve", state['tcwreserve2'])
                 engine.setoption("breserve", state['tcbreserve2'])
