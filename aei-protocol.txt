@@ -100,6 +100,10 @@ setoption name <id> [value <x>]
     * bused - Amount of time used on silver's last turn.
     * lastmoveused - Amount of time used on the last turn.
     * moveused - Amount of time used so far on the current turn.
+    * opponent - Opponent's name
+    * opponent_rating - Opponent's rating
+    * rated - Current game is rated
+    * event - Event the current game is a part of
     The following options are not required but if an engine does allow setting
     the option described it should use the standard option name.
     Other standard options:

@@ -54,7 +54,8 @@ class AEIEngine(object):
     def setoption(self, name, value):
         std_opts = set(["tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
                 "tcturns", "tcturntime", "wreserve", "breserve", "wused",
-                "bused", "lastmoveused", "tcmoveused"])
+                "bused", "lastmoveused", "tcmoveused", "opponent",
+                "opponent_rating"])
         if name not in std_opts:
             self.log("Warning: Received unrecognized option, %s" % (name))
 

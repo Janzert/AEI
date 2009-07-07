@@ -305,6 +305,8 @@ class Table:
                     if opname.startswith('*'):
                         opname = opname[2:]
                     log.info("Playing against %s", opname)
+                    engine.setoption("opponent", opname)
+                    engine.setoption("opponent_rating", state[opside+"rating"])
                     oplogged = True
                 oppresent = opside + "present"
                 if (state.get('starttime', "") == ""
@@ -361,6 +363,7 @@ class Table:
                     engine.setoption("bused", state['bused'])
                 if state.has_key('lastmoveused'):
                     engine.setoption("tclastmoveused", state['lastmoveused'])
+                    engine.setoption("lastmoveused", state['lastmoveused'])
                 engine.go()
                 stopsent = False
                 myreserve = "tc%sreserve2" % (self.side,)
@@ -802,6 +805,7 @@ def main(args):
                 table.reserveseat()
                 table.sitdown()
                 table.updatestate()
+                engine_ctl.setoption("rated", table.state.get('rated', 1))
                 try:
                     touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
                     time.sleep(1) # Give the server a small break.
