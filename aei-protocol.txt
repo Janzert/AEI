@@ -222,3 +222,10 @@ Arimaa is a registered trademark of Omar Syed. The game of Arimaa is also
 patented by Omar Syed. Further information on the game is available at
 <http://arimaa.com/>.
 
+Changes
+=======
+Version 1
+    Added "protocol-version" message so controllers can remain compatible with
+    old engines.
+    Change all colors in the protocol to g (gold) and s (silver).
+
