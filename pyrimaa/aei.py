@@ -216,12 +216,19 @@ class EngineResponse:
 
 class EngineController:
     def __init__(self, engine):
-        self.gold_score = 0
-        self.silver_score = 0
-
         self.engine = engine
         engine.send("aei\n")
         response = engine.waitfor("aeiok", START_TIME)
+
+        self.protocol_version = 0
+        if response[0].lstrip().startswith("protocol-version"):
+            version = response[0].lstrip().split()[1].strip()
+            response = response[1:]
+            self.protocol_version = 1
+            if engine.log and version != "1":
+                engine.log.warn(
+                    "Unrecognized protocol version from engine, %s."
+                    % (version,))
 
         self.ident = dict()
         for line in response:
@@ -257,16 +264,17 @@ class EngineController:
         self.engine.send("makemove %s\n" % (move))
 
     def setposition(self, pos):
+        side_colors = "wb"
+        if self.protocol_version != 0:
+            side_colors = "gs"
         self.engine.send("setposition %s %s\n" % (
-                "wb"[pos.color],
+                side_colors[pos.color],
                 pos.board_to_str("short")))
 
     def go(self, searchtype=None, searchvalue=None):
         gocmd = ["go"]
         if searchtype == "ponder":
             gocmd.append(" ponder")
-        elif searchtype == "infinite":
-            gocmd.append(" infinite")
         gocmd.append("\n")
         gocmd = "".join(gocmd)
         self.engine.send(gocmd)
