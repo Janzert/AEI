@@ -353,17 +353,28 @@ class Table:
                 else:
                     moveused = 0
                 starttime = time.time() - moveused
-                engine.setoption("tcmoveused", moveused)
-                engine.setoption("moveused", moveused)
+                timeusedname = "moveused"
+                gusedname = "gused"
+                susedname = "sused"
+                if engine.protocol_version == 0:
+                    timeusedname = "tcmoveused"
+                    gusedname = "wused"
+                    susedname = "bused"
+                engine.setoption(timeusedname, moveused)
                 self._update_timecontrol(state)
-                engine.setoption("wreserve", state['tcwreserve2'])
-                engine.setoption("breserve", state['tcbreserve2'])
+                if engine.protocol_version == 0:
+                    engine.setoption("wreserve", state['tcwreserve2'])
+                    engine.setoption("breserve", state['tcbreserve2'])
+                else:
+                    engine.setoption("greserve", state['tcwreserve2'])
+                    engine.setoption("sreserve", state['tcbreserve2'])
                 if state.has_key('wused'):
-                    engine.setoption("wused", state['wused'])
+                    engine.setoption(gusedname, state['wused'])
                 if state.has_key('bused'):
-                    engine.setoption("bused", state['bused'])
+                    engine.setoption(susedname, state['bused'])
                 if state.has_key('lastmoveused'):
-                    engine.setoption("tclastmoveused", state['lastmoveused'])
+                    if engine.protocol_version == 0:
+                        engine.setoption("tclastmoveused", state['lastmoveused'])
                     engine.setoption("lastmoveused", state['lastmoveused'])
                 engine.go()
                 stopsent = False
@@ -394,7 +405,7 @@ class Table:
                         if (response.type == "info"
                                 and response.message.startswith("time")
                                 and not secondtimeupdate):
-                            engine.setoption("tcmoveused", int(time.time() - starttime))
+                            engine.setoption(timeusedname, int(time.time() - starttime))
                             secondtimeupdate = True
                     except socket.timeout:
                         pass
@@ -823,9 +834,13 @@ def main(args):
                 except (socket.error, IOError):
                     pass
                 for i in range(30):
+                    time.sleep(1)
                     if engine_ctl.engine.proc.poll() is not None:
                         break
-                    time.sleep(1)
+                    try:
+                        engine_ctl.quit()
+                    except (socket.error, IOError):
+                        pass
                 else:
                     log.warn("Engine did not exit in 30 seconds, terminating process")
                     try:

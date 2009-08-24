@@ -37,6 +37,7 @@ class AEIEngine(object):
         if header != "aei":
             raise AEIException("Did not receive aei header, instead (%s)" % (
                 header))
+        controller.send("protocol-version 1")
         controller.send("id name Sample Engine")
         controller.send("id author Janzert")
         controller.send("aeiok")
@@ -53,8 +54,8 @@ class AEIEngine(object):
 
     def setoption(self, name, value):
         std_opts = set(["tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
-                "tcturns", "tcturntime", "wreserve", "breserve", "wused",
-                "bused", "lastmoveused", "tcmoveused", "opponent",
+                "tcturns", "tcturntime", "greserve", "sreserve", "gused",
+                "sused", "lastmoveused", "moveused", "opponent",
                 "opponent_rating"])
         if name not in std_opts:
             self.log("Warning: Received unrecognized option, %s" % (name))

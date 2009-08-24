@@ -4,14 +4,15 @@ import socket
 import sys
 import time
 
+from ConfigParser import SafeConfigParser
 from subprocess import Popen
 
 from pyrimaa import board
 
-from pyrimaa.aei import SocketEngine, StdioEngine, EngineController, EngineException
+from pyrimaa.aei import SocketEngine, StdioEngine, EngineController
 
 if len(sys.argv) < 2:
-    print "usage: analyse boardfile"
+    print "usage: analyze boardfile"
     sys.exit()
 
 pfile = open(sys.argv[1], 'r')
@@ -19,8 +20,32 @@ plines = pfile.readlines()
 movenum, pos = board.parse_long_pos(plines)
 pfile.close()
 
+config = SafeConfigParser()
+if config.read("analyze.cfg") != ["analyze.cfg"]:
+    print "Could not open 'analyze.cfg'"
+    sys.exit(1)
+
+bot_section = config.get("global", "default_engine")
+com_method = config.get(bot_section, "communication_method").lower()
+enginecmd = config.get(bot_section, "cmdline")
+
+if com_method == "2008cc":
+    eng_com = SocketEngine(enginecmd, legacy_mode=True)
+elif com_method == "socket":
+    eng_com = SocketEngine(enginecmd)
+elif com_method == "stdio":
+    eng_com = StdioEngine(enginecmd)
+else:
+    raise ValueError("Unrecognized communication method: %s" % (com_method,))
+eng = EngineController(eng_com)
+
+for option in config.options(bot_section):
+    if option.startswith("bot_"):
+        value = config.get(bot_section, option)
+        eng.setoption(option[4:], value)
+
 #eng = EngineController(SocketEngine("./bot_opfor2008cc", legacy_mode=True))
-eng = EngineController(StdioEngine("python simple_engine.py"))
+#eng = EngineController(StdioEngine("python simple_engine.py"))
 
 #eng.setoption("tcmove", 120)
 #eng.setoption("tcmax", 600)
@@ -32,7 +57,8 @@ eng = EngineController(StdioEngine("python simple_engine.py"))
 
 #eng.setoption("log_console", 1)
 #eng.setoption("depth", "12")
-eng.setoption("hash", 500)
+#eng.setoption("hash", 500)
+
 print pos.board_to_str()
 eng.setposition(pos)
 eng.go()
@@ -60,7 +86,10 @@ while time.time() < stop_waiting:
         elif resp.type == "log":
             print "log: %s" % (resp.message)
     except socket.timeout:
-        pass
+        try:
+            eng.quit()
+        except IOError:
+            pass
     if eng.engine.proc.poll() is not None:
         break
 eng.cleanup()

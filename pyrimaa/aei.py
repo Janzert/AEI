@@ -244,6 +244,8 @@ class EngineController:
 
     def get_response(self, timeout=None):
         rstr = self.engine.readline(timeout=timeout)
+        if rstr == "":
+            raise socket.timeout()
         resp = EngineResponse(rstr.split()[0].lower())
         if resp.type == "info":
             resp.message = rstr[rstr.find("info")+len("info"):].strip()

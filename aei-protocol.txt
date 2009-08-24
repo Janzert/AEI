@@ -107,10 +107,10 @@ setoption name <id> [value <x>]
     * tctotal - Time limit for the total length of the game.
     * tcturns - Maximum number of moves the game can last.
     * tcturntime - Maximum time a single move can last.
-    * wreserve - Amount of reserve time for gold.
-    * breserve - Amount of reserve time for silver.
-    * wused - Amount of time used on gold's last turn.
-    * bused - Amount of time used on silver's last turn.
+    * greserve - Amount of reserve time for gold.
+    * sreserve - Amount of reserve time for silver.
+    * gused - Amount of time used on gold's last turn.
+    * sused - Amount of time used on silver's last turn.
     * lastmoveused - Amount of time used on the last turn.
     * moveused - Amount of time used so far on the current turn.
     * opponent - Opponent's name.
