@@ -114,7 +114,8 @@ setoption name <id> [value <x>]
     * lastmoveused - Amount of time used on the last turn.
     * moveused - Amount of time used so far on the current turn.
     * opponent - Opponent's name.
-    * opponent_rating - Opponent's rating.
+    * opponent_rating - Opponent's current rating.
+    * rating - Engine's current rating.
     * rated - Current game is rated. 1 is rated, 0 is unrated. The default is
       rated.
     * event - Event the current game is a part of.

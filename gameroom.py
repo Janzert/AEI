@@ -305,6 +305,7 @@ class Table:
                     if opname.startswith('*'):
                         opname = opname[2:]
                     log.info("Playing against %s", opname)
+                    engine.setoption("rating", state[self.side+"rating"])
                     engine.setoption("opponent", opname)
                     engine.setoption("opponent_rating", state[opside+"rating"])
                     oplogged = True
