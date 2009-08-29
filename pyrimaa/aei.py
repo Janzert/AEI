@@ -225,10 +225,12 @@ class EngineController:
             version = response[0].lstrip().split()[1].strip()
             response = response[1:]
             self.protocol_version = 1
-            if engine.log and version != "1":
-                engine.log.warn(
-                    "Unrecognized protocol version from engine, %s."
-                    % (version,))
+            if engine.log:
+                if version != "1":
+                    engine.log.warn(
+                        "Unrecognized protocol version from engine, %s."
+                        % (version,))
+                engine.log.info("Setting aei protocol to version 1")
 
         self.ident = dict()
         for line in response:

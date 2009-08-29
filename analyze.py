@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+import logging
 import socket
 import sys
 import time
@@ -10,6 +11,9 @@ from subprocess import Popen
 from pyrimaa import board
 
 from pyrimaa.aei import SocketEngine, StdioEngine, EngineController
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("analyze")
 
 if len(sys.argv) < 2:
     print "usage: analyze boardfile"
@@ -30,11 +34,11 @@ com_method = config.get(bot_section, "communication_method").lower()
 enginecmd = config.get(bot_section, "cmdline")
 
 if com_method == "2008cc":
-    eng_com = SocketEngine(enginecmd, legacy_mode=True)
+    eng_com = SocketEngine(enginecmd, legacy_mode=True, log=log)
 elif com_method == "socket":
-    eng_com = SocketEngine(enginecmd)
+    eng_com = SocketEngine(enginecmd, log=log)
 elif com_method == "stdio":
-    eng_com = StdioEngine(enginecmd)
+    eng_com = StdioEngine(enginecmd, log=log)
 else:
     raise ValueError("Unrecognized communication method: %s" % (com_method,))
 eng = EngineController(eng_com)
