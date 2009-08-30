@@ -292,14 +292,6 @@ class EngineController:
             setoptcmd += " value %s" % (value,)
         self.engine.send(setoptcmd+"\n")
 
-    def checkeval(self, pos=None):
-        if pos is not None:
-            self.engine.send("checkeval %s %s\n" % (
-                "wb"[pos.color],
-                pos.to_short_str()))
-        else:
-            self.engine.send("checkeval current\n")
-
     def quit(self):
         self.engine.send("quit\n")
 
