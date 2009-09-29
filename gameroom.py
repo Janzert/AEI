@@ -326,6 +326,9 @@ class Table:
                 if opname.startswith('*'):
                     opname = opname[2:]
                 log.info("Playing against %s", opname)
+                engine.setoption("rating", state[self.side+"rating"])
+                engine.setoption("opponent", opname)
+                engine.setoption("opponent_rating", state[opside+"rating"])
                 oplogged = True
             if not oplogged and int(state.get('postal', "0")) < 1:
                 # if the game hasn't started and not postal wait some more
@@ -427,6 +430,11 @@ class Table:
         if state['result'].lower()[0] != self.side.lower():
             win = "I lost"
         log.info("Game over, %s result: '%s'", win, state['result'])
+        permanent_id = post("http://arimaa.com/arimaa/gameroom/client1gr.cgi",
+                {"action": "findgameid", "tid": self.gid},
+                "Table.findgameid").get("gid", None)
+        if permanent_id:
+            log.info("Permanent game id is #%s", permanent_id)
 
 class GameRoom:
     def __init__(self, url):
