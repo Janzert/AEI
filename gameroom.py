@@ -308,6 +308,7 @@ class Table:
                     engine.setoption("rating", state[self.side+"rating"])
                     engine.setoption("opponent", opname)
                     engine.setoption("opponent_rating", state[opside+"rating"])
+                    engine.setoption("rated", state.get('rated', 1))
                     oplogged = True
                 oppresent = opside + "present"
                 if (state.get('starttime', "") == ""
@@ -329,6 +330,7 @@ class Table:
                 engine.setoption("rating", state[self.side+"rating"])
                 engine.setoption("opponent", opname)
                 engine.setoption("opponent_rating", state[opside+"rating"])
+                engine.setoption("rated", state.get('rated', 1))
                 oplogged = True
             if not oplogged and int(state.get('postal', "0")) < 1:
                 # if the game hasn't started and not postal wait some more
