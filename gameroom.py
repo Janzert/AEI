@@ -432,7 +432,7 @@ class Table:
         if state['result'].lower()[0] != self.side.lower():
             win = "I lost"
         log.info("Game over, %s result: '%s'", win, state['result'])
-        permanent_id = post("http://arimaa.com/arimaa/gameroom/client1gr.cgi",
+        permanent_id = post(self.gameroom.url,
                 {"action": "findgameid", "tid": self.gid},
                 "Table.findgameid").get("gid", None)
         if permanent_id:
