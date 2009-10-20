@@ -16,12 +16,33 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("analyze")
 
 if len(sys.argv) < 2:
-    print "usage: analyze boardfile"
+    print "usage: analyze <board or movelist file> [move to analyze]"
     sys.exit()
 
+have_board = False
 pfile = open(sys.argv[1], 'r')
 plines = pfile.readlines()
-movenum, pos = board.parse_long_pos(plines)
+plines = [l.strip() for l in plines]
+plines = [l for l in plines if l]
+while plines and not plines[0][0].isdigit():
+    del plines[0]
+if not plines:
+    print "File %s does not appear to be a board or move list."
+    sys.exit()
+if len(plines) < 2 or plines[1][0] != '+':
+    have_board = False
+    if len(sys.argv) > 2:
+        stop_move = sys.argv[2]
+    move_list = []
+    while plines and plines[0][0].isdigit():
+        move = plines.pop(0)
+        if move.startswith(stop_move):
+            break
+        move_list.append(move)
+else:
+    movenum, pos = board.parse_long_pos(plines)
+    have_board = True
+
 pfile.close()
 
 config = SafeConfigParser()
@@ -48,23 +69,16 @@ for option in config.options(bot_section):
         value = config.get(bot_section, option)
         eng.setoption(option[4:], value)
 
-#eng = EngineController(SocketEngine("./bot_opfor2008cc", legacy_mode=True))
-#eng = EngineController(StdioEngine("python simple_engine.py"))
-
-#eng.setoption("tcmove", 120)
-#eng.setoption("tcmax", 600)
-#eng.setoption("tcmoveused", 0)
-#eng.setoption("wreserve", 300)
-#eng.setoption("breserve", 300)
-#eng.setoption("root_lmr", 0)
-#eng.setoption("use_lmr", 0)
-
-#eng.setoption("log_console", 1)
-#eng.setoption("depth", "12")
-#eng.setoption("hash", 500)
-
+if have_board:
+    eng.setposition(pos)
+else:
+    pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
+    eng.newgame()
+    for move in move_list:
+        move = move[3:]
+        pos = pos.do_move_str(move)
+        eng.makemove(move)
 print pos.board_to_str()
-eng.setposition(pos)
 eng.go()
 
 while True:
