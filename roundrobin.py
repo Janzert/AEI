@@ -31,6 +31,9 @@ from pyrimaa.aei import EngineController, StdioEngine
 from pyrimaa import board
 from pyrimaa.board import Color, Position
 
+# used to print bot log messages for debuging
+PRINT_LOG = False
+
 def parse_timefield(full_field, start_unit="m"):
     unit_order = " smhd"
     units = {"s": 1, "m": 60, "h": 60*60, "d": 60*60*24}
@@ -127,10 +130,10 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         side = position.color
         engine = engines[side]
         if timecontrol:
-            engine.setoption("wreserve", int(reserves[0]))
-            engine.setoption("breserve", int(reserves[1]))
+            engine.setoption("greserve", int(reserves[0]))
+            engine.setoption("sreserve", int(reserves[1]))
             movestart = time.time()
-            engine.setoption("tcmoveused", 0)
+            engine.setoption("moveused", 0)
         engine.go()
         if timecontrol:
             timeout = movestart + time_incr + reserves[side]
@@ -147,6 +150,8 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 resp = engine.get_response(wait)
                 if resp.type == "bestmove":
                     break
+                elif resp.type == "log" and PRINT_LOG:
+                    print "log:", resp.message
         except socket.timeout:
             engine.stop()
 
