@@ -629,7 +629,8 @@ def main(args):
     try:
         options = parseargs(args)
     except ValueError:
-        print "Command not understood %s" % (" ".join(args))
+        print "Command not understood %s" % (" ".join(args[1:]))
+        print "Usage: %s [play|move <opponent>] [side]" % (os.path.basename(args[0]),)
         sys.exit(2)
 
     config = SafeConfigParser()
