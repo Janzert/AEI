@@ -1,4 +1,9 @@
-Copyright (c) 2008 Brian Haskin Jr.
+This software is provided under the MIT license below. The notice of
+authorization for use of the game Arimaa is given after the license.
+
+
+Software License:
+Copyright 2008, 2009 Brian Haskin Jr.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -17,4 +22,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+
+Arimaa authorization:
+This software is being provided with a written authorization from Arimaa.com
+and in compliance with "Section 3 of the Arimaa Public License". Authorization
+#90819. Any rights granted by the end user license of this software apply only
+to this software and do not extend to the Arimaa game. The end user is
+responsible to ensure that any derivate work based on this software complies
+with the Arimaa Public License and obtain any authorization or license by
+contacting Arimaa.com.
+The Arimaa name is a trademark of Arimaa.com. The Arimaa game is patented. The
+Arimaa game rules, the Arimaa board design and the Arimaa piece design are
+copyright protected. The Arimaa Public License allows cost free use of the
+Arimaa game for non-commercial use.
 
