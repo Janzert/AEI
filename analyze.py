@@ -69,11 +69,11 @@ for option in config.options(bot_section):
         value = config.get(bot_section, option)
         eng.setoption(option[4:], value)
 
+eng.newgame()
 if have_board:
     eng.setposition(pos)
 else:
     pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
-    eng.newgame()
     for move in move_list:
         move = move[3:]
         pos = pos.do_move_str(move)
