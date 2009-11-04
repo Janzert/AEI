@@ -608,7 +608,7 @@ class Position(object):
             steps = parse_move(move_str)
             result = self.do_move(steps)
         except ValueError, exc:
-            if exc.message == "Can't represent placing step":
+            if str(exc) == "Can't represent placing step":
                 bitboards = [b for b in self.bitBoards]
                 for step_str in move_str.split():
                     if len(step_str) != 3:
