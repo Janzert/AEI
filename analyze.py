@@ -33,10 +33,12 @@ if len(plines) < 2 or plines[1][0] != '+':
     have_board = False
     if len(sys.argv) > 2:
         stop_move = sys.argv[2]
+    else:
+        stop_move = None
     move_list = []
     while plines and plines[0][0].isdigit():
         move = plines.pop(0)
-        if move.startswith(stop_move):
+        if stop_move and move.startswith(stop_move):
             break
         move_list.append(move)
 else:
