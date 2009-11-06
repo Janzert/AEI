@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import logging
 import re
 import socket
 import sys
@@ -27,12 +28,13 @@ import time
 
 from ConfigParser import SafeConfigParser, NoOptionError
 
-from pyrimaa.aei import EngineController, StdioEngine
+from pyrimaa.aei import EngineController, StdioEngine, SocketEngine
 from pyrimaa import board
 from pyrimaa.board import Color, Position
 
-# used to print bot log messages for debuging
-PRINT_LOG = False
+# change to INFO level to get bot log messages
+logging.basicConfig(level=logging.WARN)
+log = logging.getLogger("roundrobin")
 
 def parse_timefield(full_field, start_unit="m"):
     unit_order = " smhd"
@@ -150,8 +152,8 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 resp = engine.get_response(wait)
                 if resp.type == "bestmove":
                     break
-                elif resp.type == "log" and PRINT_LOG:
-                    print "log:", resp.message
+                elif resp.type == "log":
+                    log.info("log: %s" % (resp.message,))
         except socket.timeout:
             engine.stop()
 
@@ -240,7 +242,16 @@ def main(args):
                 gbot['gold'] += 1
                 def run_bot(bot):
                     cmdline = config.get(bot['name'], "cmdline")
-                    engine = EngineController(StdioEngine(cmdline))
+                    if config.has_option(bot['name'], "communication_method"):
+                        com_method = config.get(bot['name'],
+                                "communication_method").lower()
+                    else:
+                        com_method = "stdio"
+                    if com_method == "stdio":
+                        engine = StdioEngine(cmdline, log=log)
+                    elif com_method == "socket":
+                        engine = SocketEngine(cmdline, log=log)
+                    engine = EngineController(engine)
                     for option, value in global_options:
                         engine.setoption(option, value)
                     for name, value in config.items(bot['name']):
