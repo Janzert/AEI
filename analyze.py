@@ -6,7 +6,6 @@ import sys
 import time
 
 from ConfigParser import SafeConfigParser
-from subprocess import Popen
 
 from pyrimaa import board
 

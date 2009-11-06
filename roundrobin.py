@@ -125,7 +125,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
     if not position:
         insetup = True
         position = Position(Color.GOLD, 4, board.BLANK_BOARD)
-    gamestart = time.time()
+    starttime = time.time()
     while insetup or not position.is_end_state():
         #print "gs"[position.color]
         #print position.board_to_str()
@@ -163,14 +163,14 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 if moveend > timeout:
                     return (side^1, "t", position)
                 if not insetup:
-                    reserve_incr = time_incr - (moveend - movestart)
+                    reserve_incr = ((time_incr - (moveend - movestart))
+                            * reserve_per)
                     reserves[side] += reserve_incr
                     reserves[side] = min(reserves[side], reserve_max)
             move = resp.move
             position = position.do_move_str(move)
-            #print move
-            for e in engines:
-                e.makemove(move)
+            for eng in engines:
+                eng.makemove(move)
             if insetup and side == Color.SILVER:
                 insetup = False
         else:
@@ -185,7 +185,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         result = (position.color^1, "m", position)
     return result
 
-def main(args):
+def main():
     config = SafeConfigParser()
     if not config.read("roundrobin.cfg"):
         print "Could not read 'roundrobin.cfg'."
@@ -230,9 +230,9 @@ def main(args):
             print "Did not find a bot section for %s" % (bname)
             return 1
 
-    for n in xrange(rounds):
+    for round_num in xrange(rounds):
         for bot_ix, bot in enumerate(bots[:-1]):
-            for opp_ix, opp in enumerate(bots[bot_ix+1:]):
+            for opp in bots[bot_ix+1:]:
                 if bot['gold'] <= opp['gold']:
                     gbot = bot
                     sbot = opp
@@ -276,6 +276,7 @@ def main(args):
                 time.sleep(5)
                 gengine.cleanup()
                 sengine.cleanup()
+        print "After round %d:" % (round_num+1,)
         for bot in bots:
             print "%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
                     bot['timeouts'])
@@ -285,5 +286,5 @@ def main(args):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
 
