@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import threading
 import time
 import signal
 import socket
@@ -211,8 +210,8 @@ class SocketEngine:
         self.sock.close()
 
 class EngineResponse:
-    def __init__(self, type):
-        self.type = type
+    def __init__(self, msg_type):
+        self.type = msg_type
 
 class EngineController:
     def __init__(self, engine):
@@ -275,7 +274,7 @@ class EngineController:
                 side_colors[pos.color],
                 pos.board_to_str("short")))
 
-    def go(self, searchtype=None, searchvalue=None):
+    def go(self, searchtype=None):
         gocmd = ["go"]
         if searchtype == "ponder":
             gocmd.append(" ponder")
