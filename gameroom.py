@@ -19,6 +19,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+"""Interface to the arimaa gameserver.
+
+Usage: gameroom.py [play|move opponent_name or game_number] [side to play]
+
+Starts and controls an engine then plays a game or move on the server as
+specified by the command line arguments. Configuration is provided in the file
+'gameroom.cfg'.
+
+The first argument specifies what existing game to join and whether to
+play the full game or just one move. Using 'play' indicates the full game
+should be played. 'move' will play only one move at most then exit, if it is
+the opponent's move the interface will exit immediately. This is handy for
+postal games.
+
+The second argument specifies which side to join. The side is given by a
+single letter (i.e. g or s). (w or b will also currently work but may be
+removed in the future)
+
+"""
+
 from ConfigParser import SafeConfigParser
 import logging
 import os
@@ -46,6 +66,7 @@ class EngineCrashException(Exception):
     pass
 
 def post(url, values, logname="network"):
+    """Send a post request to the specified url."""
     data = urllib.urlencode(values)
     req = urllib2.Request(url, data)
     oldtimeout = socket.getdefaulttimeout()
@@ -84,11 +105,13 @@ def post(url, values, logname="network"):
     return parsebody(body)
 
 def unquote(qstr):
+    """Unquote a string from the server."""
     qstr = qstr.replace("%13", "\n")
     qstr = qstr.replace("%25", "%")
     return qstr
 
 def parsebody(body):
+    """Parse a message from the server returning a dict."""
     data = dict()
     lines = body.splitlines()
     for line in lines:
@@ -99,6 +122,7 @@ def parsebody(body):
     return data
 
 class Table:
+
     def __init__(self, gameroom, tableinfo):
         self.min_move_time = 5
         self.min_timeleft = 5
@@ -504,7 +528,7 @@ def parseargs(args):
     if len(args) < 2:
         return dict(against='', side='b', onemove=False)
     first = args[1].lower()
-    if len(first) == 1 and first in "wb":
+    if len(first) == 1 and first in "wbgs":
         return dict(against='', side=first, onemove=False)
     if first == "play" or first == "move":
         if len(args) < 3:
@@ -617,12 +641,20 @@ def shutdown_engine(engine_ctl):
     time.sleep(1)
 
 def main(args):
+    """Main entry for script.
+
+    Parses the command line. Reads 'gameroom.cfg' for the configuration.
+    Starts the engine and gives it any initial configuration. Joins or creates
+    the specified game. Then finally controls the engine passing it the game
+    information and sending engine responses back to the server.
+
+    """
     try:
         options = parseargs(args)
     except ValueError:
-        print "Command not understood %s" % (" ".join(args[1:]))
-        print "Usage: %s [play|move <opponent>] [side]" % (
-                os.path.basename(args[0]),)
+        print "Command not understood '%s'" % (" ".join(args[1:]))
+        print
+        print __doc__
         sys.exit(2)
 
     config = SafeConfigParser()
@@ -734,6 +766,10 @@ def main(args):
             gameroom = GameRoom(config.get("global", "gameroom_url"))
             gameroom.login(bot_username, bot_password)
             side = options['side']
+            if side == "g":
+                side = "w"
+            elif side == "s":
+                side = "b"
             table = None
             if gameid_or_opponent == "":
                 log.info("Starting a new game")
