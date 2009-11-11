@@ -26,7 +26,6 @@ import os.path
 import signal
 import socket
 import traceback
-from subprocess import Popen, STDOUT
 import sys
 import re
 import time
@@ -36,9 +35,6 @@ import urllib2
 from pyrimaa.aei import StdioEngine, SocketEngine, EngineController
 
 _GR_CGI = "bot1gr.cgi"
-_MY_HOST = "127.0.0.1"
-_MY_PORT = 40007
-_BOT_CON_TIMEOUT = 15
 
 log = logging.getLogger("gameroom")
 netlog = logging.getLogger("gameroom.net")
@@ -52,22 +48,14 @@ class EngineCrashException(Exception):
 def post(url, values, logname="network"):
     data = urllib.urlencode(values)
     req = urllib2.Request(url, data)
-    tries = 0
     oldtimeout = socket.getdefaulttimeout()
     if values.get('wait', 0) != 0:
         socket.setdefaulttimeout(values['maxwait'] + 20)
     else:
         socket.setdefaulttimeout(300)
     try:
-        try:
-            response = urllib2.urlopen(req)
-            body = response.read()
-        except socket.timeout:
-            body = ""
-        while body == "" and tries < 6:
-            if body == "":
-                netlog.info("empty response from server will try again, sleeping for %d seconds", tries * 10)
-                time.sleep(tries * 10)
+        body = ""
+        for try_num in range(1, 6):
             try:
                 try:
                     response = urllib2.urlopen(req)
@@ -75,15 +63,18 @@ def post(url, values, logname="network"):
                 except socket.timeout:
                     body = ""
             except urllib2.URLError, err:
-                try:
-                    netlog.info("Received URLError, reason type %s", type(err.reason))
-                    if err.reason[0] == 10060:
-                        body = ""
-                    else:
-                        raise
-                except (TypeError, AttributeError):
+                if (not hasattr(err, "reason")
+                        or type(err.reason) != socket.gaierror):
                     raise
-            tries += 1
+                if err.reason[0] == 10060:
+                    body = ""
+                else:
+                    raise
+            if body != "":
+                break
+            netlog.info("bad response from server trying again in %d seconds",
+                    try_num * 10)
+            time.sleep(try_num * 10)
     finally:
         socket.setdefaulttimeout(oldtimeout)
     netlog.debug("%s response body:\n%s", logname, body)
@@ -92,20 +83,20 @@ def post(url, values, logname="network"):
         log.error("Error in response to %s: %s", logname, info['error'])
     return parsebody(body)
 
-def unquote(s):
-    s = s.replace("%13", "\n")
-    s = s.replace("%25", "%")
-    return s
+def unquote(qstr):
+    qstr = qstr.replace("%13", "\n")
+    qstr = qstr.replace("%25", "%")
+    return qstr
 
 def parsebody(body):
-    d = dict()
+    data = dict()
     lines = body.splitlines()
     for line in lines:
-        eq = line.find('=')
-        if eq > 0:
-            k = line[:eq]
-            d[k] = unquote(line[eq+1:])
-    return d
+        equal_ix = line.find('=')
+        if equal_ix > 0:
+            key = line[:equal_ix]
+            data[key] = unquote(line[equal_ix+1:])
+    return data
 
 class Table:
     def __init__(self, gameroom, tableinfo):
@@ -119,7 +110,8 @@ class Table:
         self.auth = ""
         self.state = {}
         self.sent_tc = {'tcmove': None, 'tcreserve': None, 'tcpercent': None,
-                'tcmax': None, 'tctotal': None, 'tcturns': None, 'tcturntime': None}
+                'tcmax': None, 'tctotal': None, 'tcturns': None,
+                'tcturntime': None}
 
     def _check_engine(self, timeout=None):
         if self.engine.engine.proc.poll() is not None:
@@ -268,7 +260,8 @@ class Table:
             log.info("Catching engine up to current move.")
             moves = state['moves'].splitlines()
             if len(moves) > 2:
-                # the last move in the list is blank, i.e. the server is waiting for it
+                # the last move in the list is blank,
+                # i.e. the server is waiting for it
                 if (state.get('turn', "") == self.side):
                     # the second to last move is also sent to the engine below
                     # when it's our turn so don't send it either now.
@@ -298,7 +291,8 @@ class Table:
                         self._check_engine(0)
                 except socket.timeout:
                     pass
-                # XXX: This wait should probably really be based off the opponents time left
+                # XXX: This wait should probably really be based off
+                # the opponents time left
                 state = self.updatestate(30)
                 if not oplogged and state.get(opplayer, "") != "":
                     opname = state[opplayer]
@@ -380,12 +374,14 @@ class Table:
                     engine.setoption(susedname, state['bused'])
                 if state.has_key('lastmoveused'):
                     if engine.protocol_version == 0:
-                        engine.setoption("tclastmoveused", state['lastmoveused'])
+                        engine.setoption("tclastmoveused",
+                                state['lastmoveused'])
                     engine.setoption("lastmoveused", state['lastmoveused'])
                 engine.go()
                 stopsent = False
                 myreserve = "tc%sreserve2" % (self.side,)
-                stoptime = starttime + int(state['tcmove']) + int(state[myreserve])
+                stoptime = starttime + int(state['tcmove']) + int(
+                        state[myreserve])
                 if (state.has_key('turntime')
                     and (starttime + state['turntime']) < stoptime):
                     stoptime = int(starttime + state['turntime'])
@@ -411,7 +407,8 @@ class Table:
                         if (response.type == "info"
                                 and response.message.startswith("time")
                                 and not secondtimeupdate):
-                            engine.setoption(timeusedname, int(time.time() - starttime))
+                            engine.setoption(timeusedname,
+                                    int(time.time() - starttime))
                             secondtimeupdate = True
                     except socket.timeout:
                         pass
@@ -524,45 +521,14 @@ def parseargs(args):
         return ret
     raise ValueError("Bad commandline arguments")
 
-def run_engine(botcmd, working_dir=None, address=(_MY_HOST, _MY_PORT)):
-    listensock = socket.socket()
-    while True:
-        try:
-            listensock.bind(address)
-            listensock.listen(1)
-            listensock.settimeout(_BOT_CON_TIMEOUT)
-            log.debug("Listening for engine on %s:%d" % address)
-            break
-        except socket.error, exc:
-            if (hasattr(exc, 'args')
-                    and (exc.args[0] == 10048
-                        or exc.args[0] == 98)):
-                address = (address[0], address[1]+1)
-            else:
-                raise
-
-    botargs = [botcmd]
-    botargs += [str(x) for x in address]
-    log.info("Starting engine with command '%s'", " ".join(botargs))
-    bot_proc = Popen(botargs, cwd=working_dir)
-    con = listensock.accept()
-    log.debug("Engine connected.")
-    engine = EngineController(SocketEngine(con))
-    listensock.close()
-    del listensock
-    log.info("Engine initialized")
-    engine.process = bot_proc
-
-    return (engine, bot_proc)
-
 def touch_run_file(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
-    rf = open(filename, 'w')
-    rf.write("%d\n" % os.getpid())
-    rf.close()
+    run_file = open(filename, 'w')
+    run_file.write("%d\n" % os.getpid())
+    run_file.close()
     log.info("Created run file at %s" % filename)
 
-def remove_run_files(run_dir, rfile):
+def remove_run_file(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
     try:
         os.remove(filename)
@@ -573,11 +539,11 @@ def remove_run_files(run_dir, rfile):
 def how_many_bots(run_dir):
     files = os.listdir(run_dir)
     count = 0
-    for fn in files:
-        if fn.endswith('.bot'):
-            rf = open(os.path.join(run_dir, fn), 'r')
+    for filename in files:
+        if filename.endswith('.bot'):
+            run_file = open(os.path.join(run_dir, filename), 'r')
             try:
-                pid = int(rf.read())
+                pid = int(run_file.read())
                 if sys.platform == 'win32':
                     count += 1
                 else:
@@ -594,9 +560,9 @@ def already_playing(run_dir, gameid, side):
     isplaying = False
     runfn = os.path.join(run_dir, "%s%s.bot" % (gameid, side))
     try:
-        rf = open(runfn, 'r')
+        run_file = open(runfn, 'r')
         try:
-            pid = int(rf.read())
+            pid = int(run_file.read())
             if sys.platform == 'win32':
                 isplaying = True
             else:
@@ -609,7 +575,8 @@ def already_playing(run_dir, gameid, side):
             pass
     except IOError:
         pass
-    log.info("The file %s indicates we are already playing at %s on side %s" % (runfn, gameid, side))
+    log.info("The file %s indicates we are already playing at %s on side %s"
+            % (runfn, gameid, side))
     return isplaying
 
 def str_loglevel(strlevel):
@@ -625,26 +592,54 @@ def str_loglevel(strlevel):
     else:
         raise ValueError("Unrecognised logging level")
 
+def shutdown_engine(engine_ctl):
+    try:
+        engine_ctl.quit()
+    except (socket.error, IOError):
+        pass
+    for i in range(30):
+        if engine_ctl.engine.proc.poll() is not None:
+            break
+        time.sleep(1)
+    else:
+        log.warn("Engine did not exit in 30 seconds, killing process")
+        try:
+            if sys.platform == 'win32':
+                import ctypes
+                handle = int(engine_ctl.engine.proc._handle)
+                ctypes.windll.kernel32.TerminateProcess(handle, 0)
+            else:
+                os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
+        except os.error:
+            # don't worry about errors when trying to kill the engine
+            pass
+    engine_ctl.cleanup()
+    time.sleep(1)
+
 def main(args):
     try:
         options = parseargs(args)
     except ValueError:
         print "Command not understood %s" % (" ".join(args[1:]))
-        print "Usage: %s [play|move <opponent>] [side]" % (os.path.basename(args[0]),)
+        print "Usage: %s [play|move <opponent>] [side]" % (
+                os.path.basename(args[0]),)
         sys.exit(2)
 
     config = SafeConfigParser()
     try:
         config.readfp(open('gameroom.cfg', 'rU'))
     except IOError:
-        print "Could not open 'gameroom.cfg' this file must be readable and contain the configuration for connecting to the gameroom."
+        print "Could not open 'gameroom.cfg'"
+        print "this file must be readable and contain the configuration"
+        print "for connecting to the gameroom."
         sys.exit(1)
 
     aeilog = logging.getLogger("gameroom.aei")
     if config.has_section("Logging"):
         logdir = config.get("Logging", "directory")
         if not os.path.exists(logdir):
-            print "Log directory '%s' not found, attempting to create it." % (logdir)
+            print "Log directory '%s' not found, attempting to create it." % (
+                    logdir)
             os.makedirs(logdir)
         logfilename = "%s-%s.log" % (time.strftime("%Y%m%d-%H%M"),
                     str(os.getpid()),
@@ -691,7 +686,8 @@ def main(args):
 
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
-        log.warn("Run file directory '%s' not found, attempting to create it." % (run_dir))
+        log.warn("Run file directory '%s' not found, attempting to create it."
+                % (run_dir))
         os.makedirs(run_dir)
     bot_count = how_many_bots(run_dir)
     if bot_count >= config.getint("global", "max_bots"):
@@ -708,13 +704,17 @@ def main(args):
     while True:
         try:
             if com_method == "2008cc":
-                engine_ctl = EngineController(SocketEngine(enginecmd, legacy_mode=True))
+                engine_ctl = EngineController(SocketEngine(enginecmd,
+                    log=aeilog, legacy_mode=True))
             elif com_method == "socket":
-                engine_ctl = EngineController(SocketEngine(enginecmd, log=aeilog))
+                engine_ctl = EngineController(SocketEngine(enginecmd,
+                    log=aeilog))
             elif com_method == "stdio":
-                engine_ctl = EngineController(StdioEngine(enginecmd, log=aeilog))
+                engine_ctl = EngineController(StdioEngine(enginecmd,
+                    log=aeilog))
             else:
-                raise ValueError("Unrecognized communication method, %s" % (com_method))
+                raise ValueError("Unrecognized communication method, %s"
+                        % (com_method))
         except OSError, exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
             sys.exit(1)
@@ -739,10 +739,11 @@ def main(args):
                 log.info("Starting a new game")
                 if side == "":
                     side = 'b'
-                tc = config.get(bot_section, "timecontrol")
+                timecontrol = config.get(bot_section, "timecontrol")
                 rated = config.getboolean(bot_section, "rated")
-                log.info("Will play on side %s, using timecontrol %s" % (side, tc))
-                table = gameroom.newgame(side, tc, rated)
+                log.info("Will play on side %s, using timecontrol %s"
+                        % (side, timecontrol))
+                table = gameroom.newgame(side, timecontrol, rated)
             else:
                 # look through my games for correct opponent and side
                 games = gameroom.mygames()
@@ -750,7 +751,8 @@ def main(args):
                     if (gameid_or_opponent == game['player'].lower()
                             or gameid_or_opponent == game['gid']):
                         if (side == "" or side == game['side']
-                            and not already_playing(run_dir, game['gid'], game['side'])):
+                            and not already_playing(run_dir, game['gid'],
+                                game['side'])):
                             table = Table(gameroom, game)
                             log.info("Found in progress game")
                             break
@@ -760,12 +762,14 @@ def main(args):
                         if (gameid_or_opponent == game['player'].lower()
                                 or gameid_or_opponent == game['gid']):
                             if (side == "" or side == game['side']
-                                and not already_playing(run_dir, game['gid'], game['side'])):
+                                and not already_playing(run_dir, game['gid'],
+                                    game['side'])):
                                 table = Table(gameroom, game)
                                 log.info("Found game to join")
                                 break
                 if table == None:
-                    log.error("Could not find game against %s with side '%s'", gameid_or_opponent, side)
+                    log.error("Could not find game against %s with side '%s'",
+                            gameid_or_opponent, side)
                     engine_ctl.quit()
                     engine_ctl.cleanup()
                     break
@@ -773,9 +777,11 @@ def main(args):
             gameid_or_opponent = table.gid
 
             if options['against'] != "":
-                joinmsg = "Joined game gid=%s side=%s; against %s" % (table.gid, table.side, options['against'])
+                joinmsg = "Joined game gid=%s side=%s; against %s" % (table.gid,
+                        table.side, options['against'])
             else:
-                joinmsg = "Created game gid=%s side=%s; waiting for opponent" % (table.gid, table.side)
+                joinmsg = "Created game gid=%s side=%s; waiting for opponent"\
+                        % (table.gid, table.side)
             log.info(joinmsg)
             if console is None:
                 print joinmsg
@@ -790,37 +796,18 @@ def main(args):
                 table.ponder = False
             if config.has_option("global", "min_move_time"):
                 table.min_move_time = config.getint("global", "min_move_time")
-                log.info("Set minimum move time to %d seconds.", table.min_move_time)
+                log.info("Set minimum move time to %d seconds.",
+                        table.min_move_time)
             else:
                 table.min_move_time = 5
             if config.has_option("global", "min_time_left"):
                 table.min_timeleft = config.getint("global", "min_time_left")
-                log.info("Setting emergency stop time to %d seconds" % table.min_timeleft)
+                log.info("Setting emergency stop time to %d seconds"
+                        % table.min_timeleft)
             else:
                 table.min_timeleft = 5
         except:
-            try:
-                engine_ctl.quit()
-            except (socket.error, IOError):
-                pass
-            for i in range(30):
-                if engine_ctl.engine.proc.poll() is not None:
-                    break
-                time.sleep(1)
-            else:
-                log.warn("Engine did not exit in 30 seconds, terminating process")
-                try:
-                    if sys.platform == 'win32':
-                        import ctypes
-                        handle = int(engine_ctl.engine.proc._handle)
-                        ctypes.windll.kernel32.TerminateProcess(handle, 0)
-                    else:
-                        os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
-                except os.error:
-                    # don't worry about errors when trying to kill the engine
-                    pass
-            engine_ctl.cleanup()
-            time.sleep(1)
+            shutdown_engine(engine_ctl)
             raise
 
         try:
@@ -831,42 +818,19 @@ def main(args):
                 table.updatestate()
                 engine_ctl.setoption("rated", table.state.get('rated', 1))
                 try:
-                    touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
+                    touch_run_file(run_dir, "%s%s.bot"
+                            % (table.gid, table.side))
                     time.sleep(1) # Give the server a small break.
                     log.info("Starting play")
                     table.playgame(engine_ctl, bot_greeting, options['onemove'])
                 finally:
                     log.info("Leaving game")
-                    remove_run_files(run_dir, "%s%s.bot" % (table.gid, table.side))
+                    remove_run_file(run_dir, "%s%s.bot"
+                            % (table.gid, table.side))
                     table.leave()
                 break
             finally:
-                try:
-                    engine_ctl.quit()
-                except (socket.error, IOError):
-                    pass
-                for i in range(30):
-                    time.sleep(1)
-                    if engine_ctl.engine.proc.poll() is not None:
-                        break
-                    try:
-                        engine_ctl.quit()
-                    except (socket.error, IOError):
-                        pass
-                else:
-                    log.warn("Engine did not exit in 30 seconds, terminating process")
-                    try:
-                        if sys.platform == 'win32':
-                            import ctypes
-                            handle = int(engine_ctl.engine.proc._handle)
-                            ctypes.windll.kernel32.TerminateProcess(handle, 0)
-                        else:
-                            os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
-                    except os.error:
-                        # don't worry about errors when trying to kill the engine
-                        pass
-                engine_ctl.cleanup()
-                time.sleep(1)
+                shutdown_engine(engine_ctl)
         except (KeyboardInterrupt, SystemExit):
             raise
         except EngineCrashException, exc:
@@ -876,7 +840,7 @@ def main(args):
             unknowns_caught += 1
             log.error("Caught unkown exception #%d, restarting.\n%s" % (
                 unknowns_caught, traceback.format_exc()))
-            time.sleep(2);
+            time.sleep(2)
             if unknowns_caught > 5:
                 break
 
