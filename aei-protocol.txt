@@ -200,9 +200,192 @@ log <string>
     "Error:", "Warning:" or "Debug:" to indicate special handling by the
     controller.
 
-Example Session
-===============
+Example Sessions
+================
 
+Below are a couple examples of AEI being used. Lines prefixed with 'CTL:' are
+from the controller to the engine and 'ENG:' from the engine to the controller.
+
+Here is a complete session with OpFor doing a short analyses of an opening 
+position::
+
+    CTL: aei
+    ENG: protocol-version 1
+    ENG: id name OpFor
+    ENG: id author Janzert
+    ENG: aeiok
+    CTL: isready
+    ENG: log Set transposition table size to 10MB (187245 entries)
+    ENG: readyok
+    CTL: setoption name depth value 6
+    CTL: newgame
+    ENG: log Search depth set to 6
+    ENG: log Starting new game.
+    CTL: setposition g [rrrrrrrrhdcemcdh                                HDCMECDHRRRRRRRR]
+    CTL: go
+    ENG: log Starting search
+    ENG: info depth 4
+    ENG: info time 0
+    ENG: info nodes 10066
+    ENG: info qnodes 3353
+    ENG: info score 65
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n
+    ENG: info depth 5
+    ENG: info time 0
+    ENG: info nodes 20159
+    ENG: info qnodes 6726
+    ENG: info score 29
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s
+    ENG: info depth 6
+    ENG: info time 1
+    ENG: info nodes 30466
+    ENG: info qnodes 10236
+    ENG: info score 18
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s me7w
+    ENG: log Searched 30466 nodes, 60932.00 nps, 6646 tthits.
+    ENG: log Finished search in 0.50 seconds, average 0.50, max 0.50.
+    ENG: bestmove Ee2n Ee3n Ee4n Ee5n
+    ENG: log Positions allocated 4313, in reserve 4309(1.43MB).
+    CTL: quit
+    ENG: log Exiting by server command.
+    CTL: quit
+
+Here is the startup and first few moves in a blitz game::
+
+    CTL: aei
+    ENG: protocol-version 1
+    ENG: id name OpFor
+    ENG: id author Janzert
+    ENG: aeiok
+    ENG: log Set transposition table size to 10MB (187245 entries)
+    CTL: isready
+    ENG: readyok
+    CTL: setoption name hash value 500
+    CTL: isready
+    ENG: log Set transposition table size to 500MB (9362285 entries)
+    ENG: readyok
+    CTL: setoption name rated value 1
+    CTL: newgame
+    CTL: isready
+    ENG: log Starting new game.
+    ENG: readyok
+    CTL: setoption name tcmove value 15
+    CTL: setoption name tcreserve value 90
+    CTL: setoption name tcpercent value 100
+    CTL: setoption name tcmax value 120
+    CTL: setoption name tctotal value 7200
+    CTL: setoption name tcturns value 0
+    CTL: setoption name tcturntime value 0
+    CTL: isready
+    ENG: readyok
+    CTL: setoption name rating value 1857
+    CTL: setoption name opponent value bot_Clueless2009Blitz
+    CTL: setoption name opponent_rating value 1918
+    CTL: setoption name rated value 1
+    CTL: setoption name moveused value 0
+    CTL: setoption name greserve value 90
+    CTL: setoption name sreserve value 90
+    CTL: go
+    ENG: log Starting search
+    ENG: log Min search: 13.50 Max: 94.00
+    ENG: log Searched 0 nodes, -nan nps, 0 tthits.
+    ENG: log Finished search in 0.00 seconds, average 0.00, max 0.00.
+    ENG: bestmove Rh1 Rg1 Rf1 Rc1 Rb1 Ra1 Rh2 Ra2 Ce1 Cf2 Dd1 Dc2 Hg2 Hb2 Md2 Ee2 
+    CTL: makemove Rh1 Rg1 Rf1 Rc1 Rb1 Ra1 Rh2 Ra2 Ce1 Cf2 Dd1 Dc2 Hg2 Hb2 Md2 Ee2
+    CTL: go ponder
+    ENG: log Positions allocated 3, in reserve 1(0.00MB).
+    ENG: log made move Rh1 Rg1 Rf1 Rc1 Rb1 Ra1 Rh2 Ra2 Ce1 Cf2 Dd1 Dc2 Hg2 Hb2 Md2 Ee2
+    ENG: log Starting search
+    ENG: log Min search: 13.50 Max: 94.00
+    ENG: log Searched 0 nodes, -nan nps, 0 tthits.
+    ENG: log Finished search in 0.00 seconds, average 0.00, max 0.00.
+    ENG: log Positions allocated 4, in reserve 1(0.00MB).
+    CTL: makemove ed7 hg7 hb7 me7 de8 dd8 cf7 cc7 ra7 rh7 ra8 rb8 rc8 rf8 rg8 rh8
+    ENG: log made move ed7 hg7 hb7 me7 de8 dd8 cf7 cc7 ra7 rh7 ra8 rb8 rc8 rf8 rg8 rh8
+    CTL: setoption name moveused value 0
+    CTL: setoption name greserve value 90
+    CTL: setoption name sreserve value 90
+    CTL: setoption name gused value 0
+    CTL: setoption name sused value 3
+    CTL: setoption name lastmoveused value 3
+    CTL: go
+    ENG: log Starting search
+    ENG: log Min search: 13.50 Max: 94.00
+    ENG: info depth 4
+    ENG: info time 1
+    ENG: info nodes 10008
+    ENG: info qnodes 3333
+    ENG: info score 66
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n
+    CTL: setoption name moveused value 1
+    ENG: info depth 5
+    ENG: info time 1
+    ENG: info nodes 20039
+    ENG: info qnodes 6685
+    ENG: info score 37
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s
+    ENG: info depth 6
+    ENG: info time 1
+    ENG: info nodes 30191
+    ENG: info qnodes 10108
+    ENG: info score 26
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s me7w
+    ENG: info depth 7
+    ENG: info time 1
+    ENG: info nodes 37106
+    ENG: info qnodes 12160
+    ENG: info score 7
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s ed6s hg7s
+    ENG: info depth 8
+    ENG: info time 2
+    ENG: info nodes 51087
+    ENG: info qnodes 15672
+    ENG: info score 6
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s ed6s hg7s dd8s
+    ENG: info depth 9
+    ENG: info time 2
+    ENG: info nodes 79019
+    ENG: info qnodes 22266
+    ENG: info score 23
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s dd8s rh7s rh6w w Ee6s
+    ENG: info depth 10
+    ENG: info time 6
+    ENG: info nodes 182581
+    ENG: info qnodes 76480
+    ENG: info score 29
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s dd8s rh7s rh6w w Ee6s Ee5e
+    ENG: info depth 11
+    ENG: info time 12
+    ENG: info nodes 342008
+    ENG: info qnodes 158205
+    ENG: info score 40
+    ENG: info pv Ee2n Ee3n Ee4n Ee5n b ed7s rh7s rh6w ed6n
+    ENG: log Min search time reached
+    ENG: log move_length 15.06, decision_length 14.08, time_left 78.94
+    ENG: log Searched 470983 nodes, 30758.07 nps, 89239 tthits.
+    ENG: log Finished search in 15.31 seconds, average 15.31, max 15.31.
+    ENG: bestmove Ee2n Ee3n Ee4n Ee5n
+    CTL: makemove Ee2n Ee3n Ee4n Ee5n
+    CTL: go ponder
+    ENG: log Positions allocated 4277, in reserve 4271(1.41MB).
+    ENG: log made move Ee2n Ee3n Ee4n Ee5n
+    ENG: log Starting search
+    ENG: log Min search: 13.50 Max: 94.00
+    CTL: makemove hb7s hg7s ed7s dd8s
+    CTL: setoption name moveused value 0
+    CTL: setoption name greserve value 89
+    CTL: setoption name sreserve value 92
+    CTL: setoption name gused value 0
+    CTL: setoption name sused value 13
+    CTL: setoption name lastmoveused value 13
+    CTL: go
+    ENG: log Stopping engine for incoming move.
+    ENG: log made move hb7s hg7s ed7s dd8s
+    ENG: log Starting search
+    ENG: log Min search: 13.45 Max: 93.00
+    ENG: info depth 4
+    ENG: info time 1
+    ENG: info nodes 16711
 
 
 Acknowledgements

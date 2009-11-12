@@ -52,7 +52,10 @@ if config.read("analyze.cfg") != ["analyze.cfg"]:
     sys.exit(1)
 
 bot_section = config.get("global", "default_engine")
-com_method = config.get(bot_section, "communication_method").lower()
+if config.has_option(bot_section, "communication_method"):
+    com_method = config.get(bot_section, "communication_method").lower()
+else:
+    com_method = "stdio"
 enginecmd = config.get(bot_section, "cmdline")
 
 if com_method == "2008cc":
