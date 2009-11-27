@@ -83,6 +83,12 @@ else:
         pos = pos.do_move_str(move)
         eng.makemove(move)
 print pos.board_to_str()
+
+for option in config.options(bot_section):
+    if option.startswith("post_pos_"):
+        value = config.get(bot_section, option)
+        eng.setoption(option[9:], value)
+
 eng.go()
 
 while True:
