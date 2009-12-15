@@ -79,6 +79,7 @@ def post(url, values, logname="network"):
         for try_num in range(1, 6):
             try:
                 try:
+                    netlog.debug("%s request:\n%s", logname, req.get_data())
                     response = urllib2.urlopen(req)
                     body = response.read()
                 except socket.timeout:
@@ -453,9 +454,18 @@ class Table:
         if state['result'].lower()[0] != self.side.lower():
             win = "I lost"
         log.info("Game over, %s result: '%s'", win, state['result'])
-        permanent_id = post(self.gameroom.url,
-                {"action": "findgameid", "tid": self.gid},
-                "Table.findgameid").get("gid", None)
+        log.info("Getting permanent id from %s", self.gid)
+        permanent_id = None
+        get_id_tries = 0
+        while True:
+            permanent_id = post(self.gameroom.url,
+                    {"action": "findgameid", "tid": self.gid},
+                    "Table.findgameid").get("gid", None)
+            get_id_tries += 1
+            if not permanent_id and get_id_tries <= 3:
+                time.sleep(2 * get_id_tries)
+            else:
+                break
         if permanent_id:
             log.info("Permanent game id is #%s", permanent_id)
 

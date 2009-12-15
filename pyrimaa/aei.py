@@ -129,7 +129,11 @@ class SocketEngine:
                 botargs = con.split()
                 botargs = botargs + ["--server", "127.0.0.1", "--port"]
                 botargs.append(str(address[1]))
-            proc = Popen(botargs)
+            if con == "listen":
+                print "Listening on %s:%s" % address
+                proc = None
+            else:
+                proc = Popen(botargs)
             con = listensock.accept()
             listensock.close()
 
