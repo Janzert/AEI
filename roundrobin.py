@@ -32,7 +32,6 @@ from pyrimaa.aei import EngineController, StdioEngine, SocketEngine
 from pyrimaa import board
 from pyrimaa.board import Color, Position
 
-# change to INFO level to get bot log messages
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger("roundrobin")
 
@@ -152,8 +151,10 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 resp = engine.get_response(wait)
                 if resp.type == "bestmove":
                     break
+                if resp.type == "info":
+                    log.info("%s info: %s" % ("gs"[side], resp.message))
                 elif resp.type == "log":
-                    log.info("log: %s" % (resp.message,))
+                    log.info("%s log: %s" % ("gs"[side], resp.message))
         except socket.timeout:
             engine.stop()
 
@@ -169,6 +170,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                     reserves[side] = min(reserves[side], reserve_max)
             move = resp.move
             position = position.do_move_str(move)
+            log.info("position:\n%s", position.board_to_str())
             for eng in engines:
                 eng.makemove(move)
             if insetup and side == Color.SILVER:
@@ -184,6 +186,25 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         assert len(position.get_steps()) == 0
         result = (position.color^1, "m", position)
     return result
+
+def run_bot(bot, config, global_options):
+    cmdline = config.get(bot['name'], "cmdline")
+    if config.has_option(bot['name'], "communication_method"):
+        com_method = config.get(bot['name'],
+                "communication_method").lower()
+    else:
+        com_method = "stdio"
+    if com_method == "stdio":
+        engine = StdioEngine(cmdline, log=log)
+    elif com_method == "socket":
+        engine = SocketEngine(cmdline, log=log)
+    engine = EngineController(engine)
+    for option, value in global_options:
+        engine.setoption(option, value)
+    for name, value in config.items(bot['name']):
+        if name.startswith("bot_"):
+            engine.setoption(name[4:], value)
+    return engine
 
 def main():
     config = SafeConfigParser()
@@ -204,6 +225,17 @@ def main():
         print "At timecontrol %s" % (tctl_str,)
     except NoOptionError:
         timecontrol = None
+
+    if config.has_option("global", "loglevel"):
+        levelstr = config.get("global", "loglevel").lower()
+        levels = {"info": logging.INFO, "debug": logging.DEBUG,
+                "warn": logging.WARN, "error": logging.ERROR}
+        level = levels.get(levelstr, None)
+        if level:
+            log.setLevel(level)
+        else:
+            print "Attempted to set unrecognized log level"
+            return 1
 
     global_options = []
     for name, value in config.items("global"):
@@ -240,26 +272,8 @@ def main():
                     gbot = opp
                     sbot = bot
                 gbot['gold'] += 1
-                def run_bot(bot):
-                    cmdline = config.get(bot['name'], "cmdline")
-                    if config.has_option(bot['name'], "communication_method"):
-                        com_method = config.get(bot['name'],
-                                "communication_method").lower()
-                    else:
-                        com_method = "stdio"
-                    if com_method == "stdio":
-                        engine = StdioEngine(cmdline, log=log)
-                    elif com_method == "socket":
-                        engine = SocketEngine(cmdline, log=log)
-                    engine = EngineController(engine)
-                    for option, value in global_options:
-                        engine.setoption(option, value)
-                    for name, value in config.items(bot['name']):
-                        if name.startswith("bot_"):
-                            engine.setoption(name[4:], value)
-                    return engine
-                gengine = run_bot(gbot)
-                sengine = run_bot(sbot)
+                gengine = run_bot(gbot, config, global_options)
+                sengine = run_bot(sbot, config, global_options)
                 wside, reason, position = playgame(gengine, sengine,
                         timecontrol)
                 winner = [gbot, sbot][wside]
