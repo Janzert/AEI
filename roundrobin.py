@@ -167,7 +167,8 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                     reserve_incr = ((time_incr - (moveend - movestart))
                             * reserve_per)
                     reserves[side] += reserve_incr
-                    reserves[side] = min(reserves[side], reserve_max)
+                    if reserve_max:
+                        reserves[side] = min(reserves[side], reserve_max)
             move = resp.move
             position = position.do_move_str(move)
             log.info("position:\n%s", position.board_to_str())
