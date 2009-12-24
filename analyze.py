@@ -26,7 +26,7 @@ plines = [l for l in plines if l]
 while plines and not plines[0][0].isdigit():
     del plines[0]
 if not plines:
-    print "File %s does not appear to be a board or move list."
+    print "File %s does not appear to be a board or move list." % (sys.argv[1],)
     sys.exit()
 if len(plines) < 2 or plines[1][0] != '+':
     have_board = False
