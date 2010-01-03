@@ -131,8 +131,13 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         side = position.color
         engine = engines[side]
         if timecontrol:
-            engine.setoption("greserve", int(reserves[0]))
-            engine.setoption("sreserve", int(reserves[1]))
+            if engine.protocol_version > 0:
+                engine.setoption("greserve", int(reserves[0]))
+                engine.setoption("sreserve", int(reserves[1]))
+            else:
+                engine.setoption("wreserve", int(reserves[0]))
+                engine.setoption("breserve", int(reserves[1]))
+                engine.setoption("tcmoveused", 0)
             movestart = time.time()
             engine.setoption("moveused", 0)
         engine.go()
