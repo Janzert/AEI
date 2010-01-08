@@ -212,6 +212,19 @@ def run_bot(bot, config, global_options):
             engine.setoption(name[4:], value)
     return engine
 
+def format_time(seconds):
+    hours = int(seconds / 3600)
+    seconds -= hours * 3600
+    minutes = int(seconds / 60)
+    seconds -= minutes * 60
+    fmt_tm = []
+    if hours:
+        fmt_tm.append("%dh" % hours)
+    if minutes or fmt_tm:
+        fmt_tm.append("%dm" % minutes)
+    fmt_tm.append("%ds" % seconds)
+    return "".join(fmt_tm)
+
 def main():
     config = SafeConfigParser()
     if not config.read("roundrobin.cfg"):
@@ -268,6 +281,7 @@ def main():
             print "Did not find a bot section for %s" % (bname)
             return 1
 
+    start_time = time.time()
     for round_num in xrange(rounds):
         for bot_ix, bot in enumerate(bots[:-1]):
             for opp in bots[bot_ix+1:]:
@@ -296,7 +310,9 @@ def main():
                 time.sleep(5)
                 gengine.cleanup()
                 sengine.cleanup()
-        print "After round %d:" % (round_num+1,)
+        round_end = time.time()
+        total_time = round_end - start_time
+        print "After round %d and %s:" % (round_num+1, format_time(total_time))
         for bot in bots:
             print "%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
                     bot['timeouts'])
