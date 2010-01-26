@@ -89,7 +89,12 @@ for option in config.options(bot_section):
         value = config.get(bot_section, option)
         eng.setoption(option[9:], value)
 
-eng.go()
+search_position = True
+if config.has_option("global", "search_position"):
+    sp_str = config.get("global", "search_position")
+    search_position = not (sp_str.lower() in ["false", "0", "no"])
+if search_position:
+    eng.go()
 
 while True:
     try:
@@ -102,7 +107,8 @@ while True:
             print "bestmove: %s" % resp.move
             break
     except socket.timeout:
-        pass
+        if not search_position:
+            break
 
 eng.quit()
 stop_waiting = time.time() + 20

@@ -89,7 +89,7 @@ newgame
     times should be reset to the initial value.
 setposition <side> <position>  
     Set the current position. Positions are given by the side to move (g/s)
-    and a board consisting of the an opening and closing square brack ([]) and
+    and a board consisting of an opening and closing square bracket ([]) and
     a piece letter or a space for each of the 64 squares from left to right
     and top to bottom (a8-h8, a7-h7...a1-h1).
 setoption name <id> [value <x>]
