@@ -495,9 +495,7 @@ class Position(object):
             return BadStep("Tried to move from an empty square")
         if not (to_bit & bitboards[Piece.EMPTY]):
             return BadStep("Tried to move to a non-empty square")
-        for piece in range(Piece.GRABBIT, Piece.COUNT):
-            if bitboards[piece] is not None and bitboards[piece] & from_bit:
-                break
+        piece = self.piece_at(from_bit)
         direction = step[1] - step[0]
         from_neighbors = neighbors_of(from_bit)
         pcbit = piece & Piece.COLOR
@@ -506,23 +504,17 @@ class Position(object):
         if not neighbors_of(from_bit) & to_bit:
             return BadStep("Tried to move to non-adjacent square")
         if pcolor == self.color:
-            isfrozen = (not from_neighbors & placement[pcolor]
-                    and from_neighbors & placement[pcolor^1])
-            if isfrozen:
-                isfrozen = False
-                for s in xrange((piece ^ Piece.COLOR) + 1,
-                        (Piece.GELEPHANT | (pcbit ^ Piece.COLOR)) + 1):
-                    if from_neighbors & bitboards[s]:
-                        isfrozen = True
-                        break
-                if isfrozen:
-                    return BadStep("Tried to move a frozen piece")
+            if self.is_frozen_at(from_bit):
+                return BadStep("Tried to move a frozen piece")
             if pstrength == Piece.GRABBIT:
                 if ((pcolor == Color.GOLD and direction == -8)
                         or (pcolor == Color.SILVER and direction == 8)):
                     return BadStep("Tried to move a rabbit back")
-            if self.inpush and pstrength <= self.last_piece & Piece.DECOLOR:
-                return BadStep("Tried to push with too weak of a piece")
+            if self.inpush:
+                if pstrength <= self.last_piece & Piece.DECOLOR:
+                    return BadStep("Tried to push with too weak of a piece")
+                if self.last_from != step[1]:
+                    return BadStep("Tried to neglect finishing a push")
         else:
             if self.inpush:
                 return BadStep(
@@ -532,16 +524,52 @@ class Position(object):
                     or pstrength >= self.last_piece & Piece.DECOLOR):
                 if self.stepsLeft == 1:
                     return BadStep("Tried to start a push on the last step")
-                stronger = False
+                stronger_and_unfrozen = False
                 for s in xrange((piece ^ Piece.COLOR) + 1,
                         (Piece.GELEPHANT | (self.color << 3)) + 1):
-                    if from_neighbors & bitboards[s]:
-                        stronger = True
+                    if from_neighbors & bitboards[s] & \
+                            (~self._frozen_neighbors(from_bit)):
+                        stronger_and_unfrozen = True
                         break
-                if not stronger:
+                if not stronger_and_unfrozen:
                     return BadStep(
                             "Tried to push a piece with no pusher around")
         return True
+
+    def piece_at(self, bit):
+        bitboards = self.bitBoards
+        for piece in range(Piece.GRABBIT, Piece.COUNT):
+            if bitboards[piece] is not None and bitboards[piece] & bit:
+                break
+        return piece
+
+    def is_frozen_at(self, bit):
+        bitboards = self.bitBoards
+        placement = self.placement
+        neighbors = neighbors_of(bit)
+        piece = self.piece_at(bit)
+        pcbit = piece & Piece.COLOR
+        pcolor = pcbit >> 3
+        isfrozen = (not neighbors & placement[pcolor]
+                    and neighbors & placement[pcolor^1])
+        if isfrozen:
+            isfrozen = False
+            for s in xrange((piece ^ Piece.COLOR) + 1,
+                    (Piece.GELEPHANT | (pcbit ^ Piece.COLOR)) + 1):
+                if neighbors & bitboards[s]:
+                    return True
+        return False
+    
+    def _frozen_neighbors(self, bit):
+        frozen_neighbors = 0L
+        #neighbor_bits = ((bit & NOT_A_FILE) >> 1, (bit & NOT_H_FILE) << 1, \
+        #                 (bit & NOT_1_RANK) >> 8, (bit & NOT_8_RANK) << 8)
+        # Not completely accurate, but sufficient:
+        neighbor_bits = (bit >> 1, bit << 1, bit >> 8, bit << 8)
+        for nbit in neighbor_bits:
+            if self.is_frozen_at(nbit):
+                frozen_neighbors |= nbit
+        return frozen_neighbors
 
     def do_step(self, step):
         """ Generate a new position from this position with the given steps """
