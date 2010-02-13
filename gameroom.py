@@ -831,6 +831,10 @@ def main(args):
             log.info(joinmsg)
             if console is None:
                 print joinmsg
+            # force the std streams to flush so the bot starter script used
+            # on the arimaa.com server can pick up the join message
+            sys.stdout.flush()
+            sys.stderr.flush()
 
             if config.has_option(bot_section, "ponder"):
                 table.ponder = config.getboolean(bot_section, "ponder")
