@@ -535,7 +535,7 @@ class Position(object):
                 for s in xrange((piece ^ Piece.COLOR) + 1,
                         (Piece.GELEPHANT | (self.color << 3)) + 1):
                     if from_neighbors & bitboards[s] & \
-                            (~self._frozen_neighbors(from_bit)):
+                            (~self.frozen_neighbors(from_bit)):
                         stronger_and_unfrozen = True
                         break
                 if not stronger_and_unfrozen:
