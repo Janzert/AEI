@@ -480,6 +480,13 @@ class Position(object):
                 placement=newPlacement, zobrist=zobrist)
 
     def check_step(self, step):
+        """ check the legality of a step
+
+        In the case of an illegal step returns an object that evaluates to
+        False and will also give an informative str() description for why the
+        step is invalid.
+
+        """
         class BadStep:
             def __init__(self, msg):
                 self.message = msg
@@ -528,7 +535,7 @@ class Position(object):
                 for s in xrange((piece ^ Piece.COLOR) + 1,
                         (Piece.GELEPHANT | (self.color << 3)) + 1):
                     if from_neighbors & bitboards[s] & \
-                            (~self._frozen_neighbors(from_bit)):
+                            (~self.frozen_neighbors(from_bit)):
                         stronger_and_unfrozen = True
                         break
                 if not stronger_and_unfrozen:
@@ -537,6 +544,11 @@ class Position(object):
         return True
 
     def piece_at(self, bit):
+        """ return the piece type occupying the given square
+
+        The bitboard passed in should have exactly one bit set.
+
+        """
         bitboards = self.bitBoards
         for piece in range(Piece.GRABBIT, Piece.COUNT):
             if bitboards[piece] is not None and bitboards[piece] & bit:
@@ -544,6 +556,11 @@ class Position(object):
         return piece
 
     def is_frozen_at(self, bit):
+        """ test if a piece is frozen
+
+        The argument bitboard passed in should have exactly one bit set.
+
+        """
         bitboards = self.bitBoards
         placement = self.placement
         neighbors = neighbors_of(bit)
@@ -559,13 +576,13 @@ class Position(object):
                 if neighbors & bitboards[s]:
                     return True
         return False
-    
-    def _frozen_neighbors(self, bit):
+
+    def frozen_neighbors(self, bits):
+        """ returns a bitboard with the frozen neighbors of the given bitboard
+        """
         frozen_neighbors = 0L
-        #neighbor_bits = ((bit & NOT_A_FILE) >> 1, (bit & NOT_H_FILE) << 1, \
-        #                 (bit & NOT_1_RANK) >> 8, (bit & NOT_8_RANK) << 8)
-        # Not completely accurate, but sufficient:
-        neighbor_bits = (bit >> 1, bit << 1, bit >> 8, bit << 8)
+        neighbor_bits = ((bits & NOT_A_FILE) >> 1, (bits & NOT_H_FILE) << 1, \
+                         (bits & NOT_1_RANK) >> 8, (bits & NOT_8_RANK) << 8)
         for nbit in neighbor_bits:
             if self.is_frozen_at(nbit):
                 frozen_neighbors |= nbit
