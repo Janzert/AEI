@@ -552,8 +552,8 @@ class Position(object):
         bitboards = self.bitBoards
         for piece in range(Piece.GRABBIT, Piece.COUNT):
             if bitboards[piece] is not None and bitboards[piece] & bit:
-                break
-        return piece
+                return piece
+        return Piece.EMPTY
 
     def is_frozen_at(self, bit):
         """ test if a piece is frozen
