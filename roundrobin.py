@@ -74,6 +74,8 @@ def parse_timecontrol(tc_str):
             f_str = tstr[:end]
             rest = tstr[end + 1:]
         return (f_str, rest)
+    if tc_str.lower() == "none":
+        return None
     tc = {}
     f_str, tc_str = split_tc(tc_str)
     tc['move'] = parse_timefield(f_str)
@@ -147,8 +149,9 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 timeout = starttime + max_turn
         else:
             timeout = None
+        resp = None
         try:
-            while time.time() < timeout:
+            while not timeout or time.time() < timeout:
                 if timeout:
                     wait = timeout - time.time()
                 else:
