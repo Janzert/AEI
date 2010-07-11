@@ -127,8 +127,9 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         insetup = True
         position = Position(Color.GOLD, 4, board.BLANK_BOARD)
     starttime = time.time()
+    position.movenumber = 1
     while insetup or not position.is_end_state():
-        #print "gs"[position.color]
+        #print "%d%s" % (position.movenumber, "gs"[position.color])
         #print position.board_to_str()
         side = position.color
         engine = engines[side]
@@ -178,7 +179,11 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                     if reserve_max:
                         reserves[side] = min(reserves[side], reserve_max)
             move = resp.move
+            mn = position.movenumber
             position = position.do_move_str(move)
+            if position.color == Color.GOLD:
+                mn += 1
+            position.movenumber = mn
             log.info("position:\n%s", position.board_to_str())
             for eng in engines:
                 eng.makemove(move)
@@ -300,7 +305,7 @@ def main():
                 wside, reason, position = playgame(gengine, sengine,
                         timecontrol)
                 winner = [gbot, sbot][wside]
-                print "gs"[position.color]
+                print "%d%s" % (position.movenumber, "gs"[position.color])
                 print position.board_to_str()
                 print "%s wins because of %s playing side %s" % (
                         winner['name'], reason, "gs"[wside])

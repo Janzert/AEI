@@ -57,14 +57,18 @@ class _ProcCom(Thread):
 
 class StdioEngine:
     def __init__(self, cmdline, log=None):
-        proc = Popen(cmdline.split(),
-                stdin = PIPE,
-                stdout = PIPE,
+        proc = Popen(cmdline, shell = True,
+                stdin = PIPE, stdout = PIPE,
                 universal_newlines = True)
         self.proc = proc
         self.log = log
         self.proc_com = _ProcCom(proc, log)
         self.proc_com.start()
+        self.active = True
+
+    def __del__(self):
+        if self.active:
+            self.cleanup()
 
     def send(self, msg):
         if self.log:
@@ -94,6 +98,7 @@ class StdioEngine:
         return response
 
     def cleanup(self):
+        self.active = False
         self.proc_com.stop.set()
         if self.proc.poll() is None:
             if sys.platform == 'win32':
@@ -123,17 +128,14 @@ class SocketEngine:
                     else:
                         raise
             if legacy_mode:
-                botargs = con.split()
-                botargs = botargs + ["127.0.0.1", str(address[1])]
+                botargs = con + " 127.0.0.1 " + str(address[1])
             else:
-                botargs = con.split()
-                botargs = botargs + ["--server", "127.0.0.1", "--port"]
-                botargs.append(str(address[1]))
+                botargs = con + " --server 127.0.0.1 --port " + str(address[1])
             if con == "listen":
                 print "Listening on %s:%s" % address
                 proc = None
             else:
-                proc = Popen(botargs)
+                proc = Popen(botargs, shell = True)
             con = listensock.accept()
             listensock.close()
 
@@ -142,6 +144,11 @@ class SocketEngine:
         self.sock = con[0]
         self.address = con[1]
         self.buf = ""
+        self.active = True
+
+    def __del__(self):
+        if self.active:
+            self.cleanup()
 
     def send(self, msg):
         if self.log is not None:
@@ -211,7 +218,15 @@ class SocketEngine:
         return response
 
     def cleanup(self):
+        self.active = False
         self.sock.close()
+        if self.proc and self.proc.poll() is None:
+            if sys.platform == 'win32':
+                import ctypes
+                handle = int(self.proc._handle)
+                ctypes.windll.kernel32.TerminateProcess(handle, 0)
+            else:
+                os.kill(self.proc.pid, signal.SIGTERM)
 
 class EngineResponse:
     def __init__(self, msg_type):
