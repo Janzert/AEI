@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Brian Haskin Jr.
+# Copyright (c) 2008-2010 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,9 @@ import signal
 import socket
 import sys
 import os
+
+if sys.platform == 'win32':
+    import ctypes
 
 from threading import Thread, Event
 from Queue import Queue, Empty
@@ -102,9 +105,9 @@ class StdioEngine:
         self.proc_com.stop.set()
         if self.proc.poll() is None:
             if sys.platform == 'win32':
-                import ctypes
-                handle = int(self.proc._handle)
-                ctypes.windll.kernel32.TerminateProcess(handle, 0)
+                # send CTRL+BREAK signal to kill engine shell
+                pid = self.proc.pid
+                ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, pid)
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
@@ -222,9 +225,9 @@ class SocketEngine:
         self.sock.close()
         if self.proc and self.proc.poll() is None:
             if sys.platform == 'win32':
-                import ctypes
-                handle = int(self.proc._handle)
-                ctypes.windll.kernel32.TerminateProcess(handle, 0)
+                # send CTRL+BREAK signal to kill engine shell
+                pid = self.proc.pid
+                ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, pid)
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
@@ -261,6 +264,9 @@ class EngineController:
 
     def cleanup(self):
         self.engine.cleanup()
+
+    def is_running(self):
+        return self.engine.proc.poll() is None
 
     def get_response(self, timeout=None):
         rstr = self.engine.readline(timeout=timeout)

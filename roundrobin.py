@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-# Copyright (c) 2009 Brian Haskin Jr.
+# Copyright (c) 2009-2010 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -273,6 +273,18 @@ def main():
         for name, value in global_options:
             print "%s: %s" % (name, value)
 
+    # setup to write a bayeselo compatible pgn file
+    write_pgn = False
+    if config.has_option("global", "write_pgn"):
+        write_pgn = config.getboolean("global", "write_pgn")
+        if write_pgn:
+            try:
+                pgn_name = config.get("global", "pgn_filename")
+            except NoOptionError:
+                print "Must specify pgn_filename option with write_pgn option."
+                return 1
+            pgn_file = open(pgn_name, "a+")
+
     bots = []
     for bname in config.get("global", "bots").split():
         for bsection in bot_configs:
@@ -304,6 +316,8 @@ def main():
                 sengine = run_bot(sbot, config, global_options)
                 wside, reason, position = playgame(gengine, sengine,
                         timecontrol)
+                gengine.quit()
+                sengine.quit()
                 winner = [gbot, sbot][wside]
                 print "%d%s" % (position.movenumber, "gs"[position.color])
                 print position.board_to_str()
@@ -313,9 +327,22 @@ def main():
                 if reason == 't':
                     [gbot, sbot][wside ^ 1]['timeouts'] += 1
                 winner['reasons'][reason] = winner['reasons'].get(reason, 0) + 1
-                gengine.quit()
-                sengine.quit()
-                time.sleep(5)
+
+                # write game result to pgn file
+                if write_pgn:
+                    results = ['1-0', '0-1']
+                    pgn_file.write('[White "%s"]\n' % (gbot['name'],))
+                    pgn_file.write('[Black "%s"]\n' % (sbot['name'],))
+                    pgn_file.write('[Result "%s"]\n' % (results[wside]))
+                    pgn_file.write('%s\n\n' % (results[wside]))
+                    pgn_file.flush()
+
+                # give the engines up to 30 more seconds to exit normally
+                for i in range(30):
+                    if (not gengine.is_running()
+                            and not sengine.is_running()):
+                        break
+                    time.sleep(1)
                 gengine.cleanup()
                 sengine.cleanup()
         round_end = time.time()
