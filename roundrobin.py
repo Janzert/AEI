@@ -89,14 +89,27 @@ def parse_timecontrol(tc_str):
     f_str, tc_str = split_tc(tc_str)
     tc['max'] = parse_timefield(f_str)
     f_str, tc_str = split_tc(tc_str)
-    try:
-        tc['turns'] = int(f_str)
+    if f_str[-1] == 't':
+        tc['turns'] = int(f_str[:-1])
         tc['total'] = 0
-    except ValueError:
+    else:
         tc['turns'] = 0
         tc['total'] = parse_timefield(f_str, "h")
     tc['turntime'] = parse_timefield(tc_str)
     return tc
+
+def get_limit_winner(pos):
+    bstr = pos.board_to_str("short")
+    gp = 0
+    for p in "EMHDCR":
+        gp += bstr.count(p)
+    sp = 0
+    for p in "emhdcr":
+        sp += bstr.count(p)
+    if gp > sp:
+        return (0, 's', pos)
+    else:
+        return (1, 's', pos)
 
 def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
     engines = (gold_eng, silver_eng)
@@ -117,6 +130,9 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
             eng.setoption("tcturns", max_moves)
             eng.setoption("tctotal", max_gametime)
             eng.setoption("tcturntime", max_turn)
+    else:
+        max_gametime = 0
+        max_moves = 0
     for eng in engines:
         eng.newgame()
         if position:
@@ -127,6 +143,8 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
         insetup = True
         position = Position(Color.GOLD, 4, board.BLANK_BOARD)
     starttime = time.time()
+    if max_gametime:
+        endtime_limit = starttime + max_gametime
     position.movenumber = 1
     while insetup or not position.is_end_state():
         #print "%d%s" % (position.movenumber, "gs"[position.color])
@@ -148,6 +166,8 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
             timeout = movestart + time_incr + reserves[side]
             if max_turn and starttime + max_turn > timeout:
                 timeout = starttime + max_turn
+            if max_gametime and endtime_limit < timeout:
+                timeout = endtime_limit
         else:
             timeout = None
         resp = None
@@ -166,6 +186,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                     log.info("%s log: %s" % ("gs"[side], resp.message))
         except socket.timeout:
             engine.stop()
+        endtime = time.time()
 
         if resp and resp.type == "bestmove":
             if timecontrol:
@@ -189,8 +210,12 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 eng.makemove(move)
             if insetup and side == Color.SILVER:
                 insetup = False
-        else:
+            if max_moves and position.movenumber > max_moves:
+                return get_limit_winner(position)
+        elif not max_gametime or endtime < endtime_limit:
             return (side^1, "t", position)
+        else: # exceeded game time limit
+            return get_limit_winner(position)
 
     if position.is_goal():
         result = (min(position.is_goal(), 0), "g", position)
@@ -330,10 +355,19 @@ def main():
 
                 # write game result to pgn file
                 if write_pgn:
+                    ply_count = position.movenumber * 2
+                    if position.color:
+                        ply_count -= 1
+                    else:
+                        ply_count -= 2
                     results = ['1-0', '0-1']
                     pgn_file.write('[White "%s"]\n' % (gbot['name'],))
                     pgn_file.write('[Black "%s"]\n' % (sbot['name'],))
-                    pgn_file.write('[Result "%s"]\n' % (results[wside]))
+                    pgn_file.write('[Result "%s"]\n' % (results[wside],))
+                    pgn_file.write('[ResultCode "%s"]\n' % (reason,))
+                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count,))
+                    if timecontrol:
+                        pgn_file.write('[TimeControl "%s"]\n' % (tctl_str,))
                     pgn_file.write('%s\n\n' % (results[wside]))
                     pgn_file.flush()
 
