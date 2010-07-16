@@ -157,6 +157,9 @@ ZOBRIST_KEYS = ZOBRIST_KEYS[2]
 
 TRAP_NEIGHBORS = neighbors_of(TRAPS)
 
+class IllegalMove(ValueError):
+    pass
+
 class Position(object):
     def __init__(self, side, steps_left, bitboards, inpush=False,
             last_piece=Piece.EMPTY, last_from=None, placement=None,
@@ -651,33 +654,57 @@ class Position(object):
         return Position(color, stepsLeft, newBoards, ispush, piece, from_ix,
                 placement=newPlacement, zobrist=zobrist)
 
-    def do_move(self, steps):
+    def do_move(self, steps, strict_checks=True):
         """ Generate a new position from the given move steps """
         pos = self
         for step in steps:
+            if strict_checks:
+                is_legal = pos.check_step(step)
+                if not is_legal:
+                    raise IllegalMove(str(is_legal))
             pos = pos.do_step(step)
         if pos.color == self.color:
             pos = Position(self.color^1, 4, pos.bitBoards,
                     placement=pos.placement)
         return pos
 
-    def do_move_str(self, move_str):
+    def _check_setup_step(self, piece, ix, bitboards, available):
+        if piece & Piece.COLOR != self.color * Piece.COLOR:
+            raise IllegalMove("Tried to place opposing side's piece")
+        if ((self.color and ix < 48)
+                or (not self.color and ix > 15)):
+            raise IllegalMove("Tried to place a piece outside of setup area")
+        if available[piece & ~Piece.COLOR] < 1:
+            raise IllegalMove("Tried to place too many '%s'"
+                    % (Piece.PCHARS[piece],))
+
+    def do_move_str(self, move_str, strict_checks=True):
         try:
             steps = parse_move(move_str)
-            result = self.do_move(steps)
+            result = self.do_move(steps, strict_checks)
         except ValueError, exc:
             if str(exc) == "Can't represent placing step":
                 bitboards = [b for b in self.bitBoards]
+                available = {Piece.GRABBIT:8, Piece.GCAT:2, Piece.GDOG:2,
+                        Piece.GHORSE:2, Piece.GCAMEL:1, Piece.GELEPHANT:1}
                 for step_str in move_str.split():
                     if len(step_str) != 3:
-                        raise ValueError("Found mixture of step types")
+                        raise IllegalMove("Found mixture of step types")
                     piece = Piece.PCHARS.index(step_str[0])
                     ix = alg_to_index(step_str[1:])
                     bit = 1L << ix
+                    if strict_checks:
+                        self._check_setup_step(piece, ix, bitboards, available)
+                        available[piece & ~Piece.COLOR] -= 1
                     if not bitboards[Piece.EMPTY] & bit:
-                        raise ValueError("Tried to place a piece onto another")
+                        raise IllegalMove("Tried to place a piece onto another")
                     bitboards[piece] |= bit
                     bitboards[Piece.EMPTY] &= ~bit
+                if strict_checks:
+                    not_placed = [p[0] for p in available.items() if p[1] > 0]
+                    if not_placed:
+                        raise IllegalMove("Did not place all pieces in setup")
+
                 result = Position(self.color^1, 4, bitboards)
             else:
                 raise
