@@ -98,19 +98,6 @@ def parse_timecontrol(tc_str):
     tc['turntime'] = parse_timefield(tc_str)
     return tc
 
-def get_limit_winner(pos):
-    bstr = pos.board_to_str("short")
-    gp = 0
-    for p in "EMHDCR":
-        gp += bstr.count(p)
-    sp = 0
-    for p in "emhdcr":
-        sp += bstr.count(p)
-    if gp > sp:
-        return (0, 's', pos)
-    else:
-        return (1, 's', pos)
-
 def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
     engines = (gold_eng, silver_eng)
     if timecontrol:
@@ -146,6 +133,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
     if max_gametime:
         endtime_limit = starttime + max_gametime
     position.movenumber = 1
+    limit_winner = 1
     while insetup or not position.is_end_state():
         #print "%d%s" % (position.movenumber, "gs"[position.color])
         #print position.board_to_str()
@@ -168,6 +156,17 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                 timeout = starttime + max_turn
             if max_gametime and endtime_limit < timeout:
                 timeout = endtime_limit
+            bstr = position.board_to_str("short")
+            gp = 0
+            for p in "EMHDCR":
+                gp += bstr.count(p)
+            sp = 0
+            for p in "emhdcr":
+                sp += bstr.count(p)
+            if gp > sp:
+                limit_winner = 0
+            elif sp > gp:
+                limit_winner = 1
         else:
             timeout = None
         resp = None
@@ -211,11 +210,11 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
             if insetup and side == Color.SILVER:
                 insetup = False
             if max_moves and position.movenumber > max_moves:
-                return get_limit_winner(position)
+                return (limit_winner, "s", position)
         elif not max_gametime or endtime < endtime_limit:
             return (side^1, "t", position)
         else: # exceeded game time limit
-            return get_limit_winner(position)
+            return (limit_winner, "s", position)
 
     if position.is_goal():
         result = (min(position.is_goal(), 0), "g", position)
