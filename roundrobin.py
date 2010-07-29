@@ -31,88 +31,26 @@ from ConfigParser import SafeConfigParser, NoOptionError
 from pyrimaa.aei import EngineController, StdioEngine, SocketEngine
 from pyrimaa import board
 from pyrimaa.board import Color, Position
+from pyrimaa.util import TimeControl
 
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger("roundrobin")
 
-def parse_timefield(full_field, start_unit="m"):
-    unit_order = " smhd"
-    units = {"s": 1, "m": 60, "h": 60*60, "d": 60*60*24}
-    num_re = re.compile("[0-9]+")
-    units[":"] = units[start_unit]
-    seconds = 0
-    field = full_field
-    nmatch = num_re.match(field)
-    while nmatch:
-        end = nmatch.end()
-        num = int(field[:end])
-        if len(field) == end or field[end] == ":":
-            sep = start_unit
-            start_unit = unit_order[unit_order.find(start_unit)-1]
-        else:
-            sep = field[end]
-        if sep not in units:
-            raise ValueError("Invalid time unit encountered %s" % (sep))
-        seconds += num * units[sep]
-        if ":" in units:
-            del units[":"]
-        field = field[end+1:]
-        nmatch = num_re.match(field)
-    if field:
-        raise ValueError("Invalid time field encountered %s" % (full_field))
-    return seconds
-
-def parse_timecontrol(tc_str):
-    field_re = re.compile("[^/]*")
-    def split_tc(tstr):
-        fmatch = field_re.match(tc_str)
-        if not fmatch:
-            f_str = tstr
-            rest = ""
-        else:
-            end = fmatch.end()
-            f_str = tstr[:end]
-            rest = tstr[end + 1:]
-        return (f_str, rest)
-    if tc_str.lower() == "none":
-        return None
-    tc = {}
-    f_str, tc_str = split_tc(tc_str)
-    tc['move'] = parse_timefield(f_str)
-    f_str, tc_str = split_tc(tc_str)
-    tc['reserve'] = parse_timefield(f_str)
-    f_str, tc_str = split_tc(tc_str)
-    if f_str:
-        tc['percent'] = int(f_str)
-    else:
-        tc['percent'] = 100
-    f_str, tc_str = split_tc(tc_str)
-    tc['max'] = parse_timefield(f_str)
-    f_str, tc_str = split_tc(tc_str)
-    if f_str[-1] == 't':
-        tc['turns'] = int(f_str[:-1])
-        tc['total'] = 0
-    else:
-        tc['turns'] = 0
-        tc['total'] = parse_timefield(f_str, "h")
-    tc['turntime'] = parse_timefield(tc_str)
-    return tc
-
 def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
     engines = (gold_eng, silver_eng)
     if timecontrol:
-        time_incr = timecontrol['move']
+        time_incr = timecontrol.move
         reserves = [0, 0]
-        reserves[0] = reserves[1] = timecontrol['reserve']
-        reserve_per = timecontrol['percent'] / 100.0
-        reserve_max = timecontrol['max']
-        max_moves = timecontrol['turns']
-        max_gametime = timecontrol['total']
-        max_turn = timecontrol['turntime']
+        reserves[0] = reserves[1] = timecontrol.reserve
+        reserve_per = timecontrol.percent / 100.0
+        reserve_max = timecontrol.max_reserve
+        max_moves = timecontrol.turn_limit
+        max_gametime = timecontrol.time_limit
+        max_turn = timecontrol.max_turntime
         for eng in engines:
             eng.setoption("tcmove", time_incr)
-            eng.setoption("tcreserve", timecontrol['reserve'])
-            eng.setoption("tcpercent", timecontrol['percent'])
+            eng.setoption("tcreserve", timecontrol.reserve)
+            eng.setoption("tcpercent", timecontrol.percent)
             eng.setoption("tcmax", reserve_max)
             eng.setoption("tcturns", max_moves)
             eng.setoption("tctotal", max_gametime)
@@ -200,6 +138,7 @@ def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
                         reserves[side] = min(reserves[side], reserve_max)
             move = resp.move
             mn = position.movenumber
+            print "%d%s %s" % (mn, "gs"[position.color], move)
             position = position.do_move_str(move)
             if position.color == Color.GOLD:
                 mn += 1
@@ -236,6 +175,9 @@ def run_bot(bot, config, global_options):
         engine = StdioEngine(cmdline, log=log)
     elif com_method == "socket":
         engine = SocketEngine(cmdline, log=log)
+    else:
+        raise ValueError("Bad communication method (%s) given for bot %s"
+                % (com_method, bot['name']))
     engine = EngineController(engine)
     for option, value in global_options:
         engine.setoption(option, value)
@@ -272,8 +214,11 @@ def main():
     print "Number of rounds: ", rounds
     try:
         tctl_str = config.get("global", "timecontrol")
-        timecontrol = parse_timecontrol(tctl_str)
-        print "At timecontrol %s" % (tctl_str,)
+        if tctl_str.lower() == "none":
+            timecontrol = None
+        else:
+            timecontrol = TimeControl(tctl_str)
+            print "At timecontrol %s" % (tctl_str,)
     except NoOptionError:
         timecontrol = None
 
