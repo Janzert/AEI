@@ -27,7 +27,8 @@ from board import BLANK_BOARD, Color, Position
 log = logging.getLogger("game")
 
 class Game(object):
-    def __init__(self, gold, silver, timecontrol=None, start_position=None):
+    def __init__(self, gold, silver, timecontrol=None, start_position=None,
+            strict_setup=True):
         self.engines = (gold, silver)
         self.timecontrol = timecontrol
         if timecontrol:
@@ -50,6 +51,7 @@ class Game(object):
         if not start_position:
             self.insetup = True
             self.position = Position(Color.GOLD, 4, BLANK_BOARD)
+        self.strict_setup = strict_setup
         self.movenumber = 1
         self.limit_winner = 1
         self.moves = []
@@ -122,7 +124,11 @@ class Game(object):
             move = resp.move
             self.moves.append("%d%s %s" % (self.movenumber,
                 "gs"[position.color], move))
-            position = position.do_move_str(move)
+            if self.insetup:
+                position = position.do_move_str(move,
+                        strict_checks=self.strict_setup)
+            else:
+                position = position.do_move_str(move)
             self.position = position
             if position.color == Color.GOLD:
                 self.movenumber += 1

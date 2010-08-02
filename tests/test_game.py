@@ -21,7 +21,7 @@
 import time
 import unittest
 
-from pyrimaa.board import Color, Position, BASIC_SETUP
+from pyrimaa.board import Color, Position, BASIC_SETUP, IllegalMove
 from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
 
@@ -262,6 +262,13 @@ elim_moves = """1g Ra1 Rb1 Rc1 Cd1 Re1 Rf1 Dg1 Rh1 Ra2 Db2 Mc2 Cd2 Ee2 Hf2 Hg2 R
 32s Rb2e hb3s Rc2n Rc3x hb2e"""
 elim_moves = elim_moves.splitlines()
 
+handicap_moves = """1g Rc2 Ee5
+1s rc7 rf7 ed7
+2g Ee5n Ee6n rf7s rf6x Ee7e
+2s ed7s rc7s rc6s rc5s
+3g Rc2n Rc3x"""
+handicap_moves = handicap_moves.splitlines()
+
 class MockResponse(object):
     def __init__(self, msg_type="bestmove"):
         self.type = msg_type
@@ -329,6 +336,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game.insetup, False)
 
     def test_play(self):
+        # check basic endings, goal, immobilization and elimination
         p = MockEngine()
         game = Game(p, p)
         self.assertEqual(game.play(), (0, 'g'))
@@ -342,6 +350,7 @@ class GameTest(unittest.TestCase):
         p = MockEngine(moves=elim_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'e'))
+        # check timecontrol enforcement
         tc = TimeControl("1s/0s/0")
         p = MockEngine(delay=[0, 0, 1.1])
         game = Game(p, p, tc)
@@ -369,5 +378,10 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 0, 0, 2.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
-
+        # check loose setup enforcement
+        p = MockEngine(moves=handicap_moves)
+        game = Game(p, p)
+        self.assertRaises(IllegalMove, game.play)
+        game = Game(p, p, strict_setup=False)
+        self.assertEqual(game.play(), (1, 'e'))
 

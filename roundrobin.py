@@ -104,6 +104,12 @@ def main():
             print "Attempted to set unrecognized log level"
             return 1
 
+    strict_setup = True
+    if config.has_option("global", "strict_setup"):
+        strict_setup = config.getboolean("global", "strict_setup")
+        if not strict_setup:
+            print "Disabling strict checks on setup moves"
+
     global_options = []
     for name, value in config.items("global"):
         if name.startswith("bot_"):
@@ -154,7 +160,8 @@ def main():
                 gbot['gold'] += 1
                 gengine = run_bot(gbot, config, global_options)
                 sengine = run_bot(sbot, config, global_options)
-                game = Game(gengine, sengine, timecontrol)
+                game = Game(gengine, sengine, timecontrol,
+                        strict_setup=strict_setup)
                 wside, reason = game.play()
                 gengine.quit()
                 sengine.quit()
