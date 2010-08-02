@@ -178,11 +178,14 @@ def main():
                     results = ['1-0', '0-1']
                     pgn_file.write('[White "%s"]\n' % (gbot['name'],))
                     pgn_file.write('[Black "%s"]\n' % (sbot['name'],))
-                    pgn_file.write('[Result "%s"]\n' % (results[wside],))
-                    pgn_file.write('[ResultCode "%s"]\n' % (reason,))
-                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count,))
                     if timecontrol:
                         pgn_file.write('[TimeControl "%s"]\n' % (tctl_str,))
+                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count,))
+                    pgn_file.write('[ResultCode "%s"]\n' % (reason,))
+                    pgn_file.write('[Result "%s"]\n' % (results[wside],))
+                    pgn_file.write('\n')
+                    for move in game.moves:
+                        pgn_file.write('%s\n' % (move,))
                     pgn_file.write('%s\n\n' % (results[wside]))
                     pgn_file.flush()
 
