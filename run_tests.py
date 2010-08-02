@@ -21,9 +21,11 @@
 import unittest
 
 import tests.test_util
+import tests.test_game
 
 loader = unittest.TestLoader()
 suite = loader.loadTestsFromModule(tests.test_util)
+suite.addTests(loader.loadTestsFromModule(tests.test_game))
 runner = unittest.TextTestRunner(verbosity=2)
 result = runner.run(suite)
 
