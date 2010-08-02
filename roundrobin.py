@@ -29,140 +29,11 @@ import time
 from ConfigParser import SafeConfigParser, NoOptionError
 
 from pyrimaa.aei import EngineController, StdioEngine, SocketEngine
-from pyrimaa import board
-from pyrimaa.board import Color, Position
+from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
 
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger("roundrobin")
-
-def playgame(gold_eng, silver_eng, timecontrol=None, position=None):
-    engines = (gold_eng, silver_eng)
-    if timecontrol:
-        time_incr = timecontrol.move
-        reserves = [0, 0]
-        reserves[0] = reserves[1] = timecontrol.reserve
-        reserve_per = timecontrol.percent / 100.0
-        reserve_max = timecontrol.max_reserve
-        max_moves = timecontrol.turn_limit
-        max_gametime = timecontrol.time_limit
-        max_turn = timecontrol.max_turntime
-        for eng in engines:
-            eng.setoption("tcmove", time_incr)
-            eng.setoption("tcreserve", timecontrol.reserve)
-            eng.setoption("tcpercent", timecontrol.percent)
-            eng.setoption("tcmax", reserve_max)
-            eng.setoption("tcturns", max_moves)
-            eng.setoption("tctotal", max_gametime)
-            eng.setoption("tcturntime", max_turn)
-    else:
-        max_gametime = 0
-        max_moves = 0
-    for eng in engines:
-        eng.newgame()
-        if position:
-            eng.setposition(position)
-        eng.isready()
-    insetup = False
-    if not position:
-        insetup = True
-        position = Position(Color.GOLD, 4, board.BLANK_BOARD)
-    starttime = time.time()
-    if max_gametime:
-        endtime_limit = starttime + max_gametime
-    position.movenumber = 1
-    limit_winner = 1
-    while insetup or not position.is_end_state():
-        #print "%d%s" % (position.movenumber, "gs"[position.color])
-        #print position.board_to_str()
-        side = position.color
-        engine = engines[side]
-        if timecontrol:
-            if engine.protocol_version > 0:
-                engine.setoption("greserve", int(reserves[0]))
-                engine.setoption("sreserve", int(reserves[1]))
-            else:
-                engine.setoption("wreserve", int(reserves[0]))
-                engine.setoption("breserve", int(reserves[1]))
-                engine.setoption("tcmoveused", 0)
-            movestart = time.time()
-            engine.setoption("moveused", 0)
-        engine.go()
-        if timecontrol:
-            timeout = movestart + time_incr + reserves[side]
-            if max_turn and starttime + max_turn > timeout:
-                timeout = starttime + max_turn
-            if max_gametime and endtime_limit < timeout:
-                timeout = endtime_limit
-            bstr = position.board_to_str("short")
-            gp = 0
-            for p in "EMHDCR":
-                gp += bstr.count(p)
-            sp = 0
-            for p in "emhdcr":
-                sp += bstr.count(p)
-            if gp > sp:
-                limit_winner = 0
-            elif sp > gp:
-                limit_winner = 1
-        else:
-            timeout = None
-        resp = None
-        try:
-            while not timeout or time.time() < timeout:
-                if timeout:
-                    wait = timeout - time.time()
-                else:
-                    wait = None
-                resp = engine.get_response(wait)
-                if resp.type == "bestmove":
-                    break
-                if resp.type == "info":
-                    log.info("%s info: %s" % ("gs"[side], resp.message))
-                elif resp.type == "log":
-                    log.info("%s log: %s" % ("gs"[side], resp.message))
-        except socket.timeout:
-            engine.stop()
-        endtime = time.time()
-
-        if resp and resp.type == "bestmove":
-            if timecontrol:
-                moveend = time.time()
-                if moveend > timeout:
-                    return (side^1, "t", position)
-                if not insetup:
-                    reserve_incr = ((time_incr - (moveend - movestart))
-                            * reserve_per)
-                    reserves[side] += reserve_incr
-                    if reserve_max:
-                        reserves[side] = min(reserves[side], reserve_max)
-            move = resp.move
-            mn = position.movenumber
-            print "%d%s %s" % (mn, "gs"[position.color], move)
-            position = position.do_move_str(move)
-            if position.color == Color.GOLD:
-                mn += 1
-            position.movenumber = mn
-            log.info("position:\n%s", position.board_to_str())
-            for eng in engines:
-                eng.makemove(move)
-            if insetup and side == Color.SILVER:
-                insetup = False
-            if max_moves and position.movenumber > max_moves:
-                return (limit_winner, "s", position)
-        elif not max_gametime or endtime < endtime_limit:
-            return (side^1, "t", position)
-        else: # exceeded game time limit
-            return (limit_winner, "s", position)
-
-    if position.is_goal():
-        result = (min(position.is_goal(), 0), "g", position)
-    elif position.is_rabbit_loss():
-        result = (min(position.is_rabbit_loss(), 0), "e", position)
-    else: # immobilization
-        assert len(position.get_steps()) == 0
-        result = (position.color^1, "m", position)
-    return result
 
 def run_bot(bot, config, global_options):
     cmdline = config.get(bot['name'], "cmdline")
@@ -283,13 +154,13 @@ def main():
                 gbot['gold'] += 1
                 gengine = run_bot(gbot, config, global_options)
                 sengine = run_bot(sbot, config, global_options)
-                wside, reason, position = playgame(gengine, sengine,
-                        timecontrol)
+                game = Game(gengine, sengine, timecontrol)
+                wside, reason = game.play()
                 gengine.quit()
                 sengine.quit()
                 winner = [gbot, sbot][wside]
-                print "%d%s" % (position.movenumber, "gs"[position.color])
-                print position.board_to_str()
+                print "%d%s" % (game.movenumber, "gs"[game.position.color])
+                print game.position.board_to_str()
                 print "%s wins because of %s playing side %s" % (
                         winner['name'], reason, "gs"[wside])
                 winner['wins'] += 1
@@ -299,8 +170,8 @@ def main():
 
                 # write game result to pgn file
                 if write_pgn:
-                    ply_count = position.movenumber * 2
-                    if position.color:
+                    ply_count = game.movenumber * 2
+                    if game.position.color:
                         ply_count -= 1
                     else:
                         ply_count -= 2

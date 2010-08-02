@@ -286,7 +286,7 @@ class MockEngine(object):
             raise ValueError("Moves did not match: %s %s" % (move, cur_move))
 
     def newgame(self):
-        self.move = -1
+        self.move = -3
 
     def isready(self):
         pass
@@ -299,11 +299,18 @@ class MockEngine(object):
 
     def get_response(self, timeout=None):
         self.move += 1
-        move = self.moves[self.move].split()[1:]
-        resp = MockResponse()
-        resp.move = " ".join(move)
-        if self.delay and len(self.delay) > self.move:
-            time.sleep(self.delay[self.move])
+        if self.move == -2:
+            resp = MockResponse("info")
+            resp.message = "Test info message"
+        elif self.move == -1:
+            resp = MockResponse("log")
+            resp.message = "Test log message"
+        else:
+            move = self.moves[self.move].split()[1:]
+            resp = MockResponse()
+            resp.move = " ".join(move)
+            if self.delay and len(self.delay) > self.move:
+                time.sleep(self.delay[self.move])
         return resp
 
 

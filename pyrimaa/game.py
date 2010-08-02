@@ -95,7 +95,7 @@ class Game(object):
                     if resp.type == "bestmove":
                         break
                     if resp.type == "info":
-                        log.info("% info: %s" % ("gs"[side], resp.message))
+                        log.info("%s info: %s" % ("gs"[side], resp.message))
                     elif resp.type == "log":
                         log.info("%s log: %s" % ("gs"[side], resp.message))
             except socket.timeout:
