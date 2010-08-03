@@ -166,10 +166,15 @@ def main():
                 gengine.quit()
                 sengine.quit()
                 winner = [gbot, sbot][wside]
+                loser = [gbot,sbot][wside^1]
+
+                # Display result of game
                 print "%d%s" % (game.movenumber, "gs"[game.position.color])
                 print game.position.board_to_str()
-                print "%s wins because of %s playing side %s" % (
-                        winner['name'], reason, "gs"[wside])
+                print "%s beat %s because of %s playing side %s" % (
+                        winner['name'], loser['name'],reason, "gs"[wside])
+
+                # Record game result stats
                 winner['wins'] += 1
                 if reason == 't':
                     [gbot, sbot][wside ^ 1]['timeouts'] += 1
