@@ -168,8 +168,8 @@ def main():
                 gbot['gold'] += 1
                 gengine = run_bot(gbot, config, global_options)
                 sengine = run_bot(sbot, config, global_options)
-		tc = [timecontrol, timecontrol]
-		if gbot.has_key('timecontrol'):
+                tc = [timecontrol, timecontrol]
+                if gbot.has_key('timecontrol'):
                     tc[0] = gbot['timecontrol']
                 if sbot.has_key('timecontrol'):
                     tc[1] = sbot['timecontrol']
