@@ -141,6 +141,14 @@ def main():
                         bot_options.append((name[4:], value))
                 bot = {'name': bsection, 'options': bot_options, 'gold': 0,
                         'wins': 0, 'timeouts': 0, 'reasons': dict()}
+                if config.has_option(bsection, "timecontrol"):
+                    tctl_str = config.get(bsection, "timecontrol")
+                    if tctl_str.lower() == "none":
+                        tc = None
+                    else:
+                        tc = TimeControl(tctl_str)
+                        print "bot %s at timecontrol %s" % (bsection, tctl_str)
+                    bot['timecontrol'] = tc
                 bots.append(bot)
                 break
         else:
@@ -160,13 +168,17 @@ def main():
                 gbot['gold'] += 1
                 gengine = run_bot(gbot, config, global_options)
                 sengine = run_bot(sbot, config, global_options)
-                game = Game(gengine, sengine, timecontrol,
-                        strict_setup=strict_setup)
+		tc = [timecontrol, timecontrol]
+		if gbot.has_key('timecontrol'):
+                    tc[0] = gbot['timecontrol']
+                if sbot.has_key('timecontrol'):
+                    tc[1] = sbot['timecontrol']
+                game = Game(gengine, sengine, tc, strict_setup=strict_setup)
                 wside, reason = game.play()
                 gengine.quit()
                 sengine.quit()
                 winner = [gbot, sbot][wside]
-                loser = [gbot,sbot][wside^1]
+                loser = [gbot, sbot][wside^1]
 
                 # Display result of game
                 print "%d%s" % (game.movenumber, "gs"[game.position.color])

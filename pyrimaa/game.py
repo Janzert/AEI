@@ -30,17 +30,25 @@ class Game(object):
     def __init__(self, gold, silver, timecontrol=None, start_position=None,
             strict_setup=True):
         self.engines = (gold, silver)
-        self.timecontrol = timecontrol
+        try:
+            self.timecontrol = timecontrol[0]
+            self.side_tc = timecontrol
+        except TypeError:
+            self.timecontrol = timecontrol
+            self.side_tc = [timecontrol, timecontrol]
+        self.reserves = [None, None]
         if timecontrol:
-            self.reserves = [timecontrol.reserve, timecontrol.reserve]
-            for eng in self.engines:
-                eng.setoption("tcmove", timecontrol.move)
-                eng.setoption("tcreserve", timecontrol.reserve)
-                eng.setoption("tcpercent", timecontrol.percent)
-                eng.setoption("tcmax", timecontrol.max_reserve)
-                eng.setoption("tcturns", timecontrol.turn_limit)
-                eng.setoption("tctotal", timecontrol.time_limit)
-                eng.setoption("tcturntime", timecontrol.max_turntime)
+            for side, eng in enumerate(self.engines):
+                if not self.side_tc[side]:
+                    continue
+                self.reserves[side] = self.side_tc[side].reserve
+                eng.setoption("tcmove", self.side_tc[side].move)
+                eng.setoption("tcreserve", self.side_tc[side].reserve)
+                eng.setoption("tcpercent", self.side_tc[side].percent)
+                eng.setoption("tcmax", self.side_tc[side].max_reserve)
+                eng.setoption("tcturns", self.side_tc[side].turn_limit)
+                eng.setoption("tctotal", self.side_tc[side].time_limit)
+                eng.setoption("tcturntime", self.side_tc[side].max_turntime)
         for eng in self.engines:
             eng.newgame()
             if start_position:
@@ -61,20 +69,24 @@ class Game(object):
         if self.result:
             raise RuntimeError("Tried to play a game that was already played.")
         position = self.position
-        tc = self.timecontrol
         starttime = time.time()
-        if tc and tc.time_limit:
-            endtime_limit = starttime + tc.time_limit
         while not position.is_end_state() or self.insetup:
             side = position.color
             engine = self.engines[side]
+            tc = self.side_tc[side]
             if tc:
+                if tc.time_limit:
+                    endtime_limit = starttime + tc.time_limit
                 if engine.protocol_version == 0:
-                    engine.setoption("wreserve", int(self.reserves[0]))
-                    engine.setoption("breserve", int(self.reserves[1]))
+                    if self.reserves[0] is not None:
+                        engine.setoption("wreserve", int(self.reserves[0]))
+                    if self.reserves[1] is not None:
+                        engine.setoption("breserve", int(self.reserves[1]))
                     engine.setoption("tcmoveused", 0)
-                engine.setoption("greserve", int(self.reserves[0]))
-                engine.setoption("sreserve", int(self.reserves[1]))
+                if self.reserves[0] is not None:
+                    engine.setoption("greserve", int(self.reserves[0]))
+                if self.reserves[1] is not None:
+                    engine.setoption("sreserve", int(self.reserves[1]))
                 engine.setoption("moveused", 0)
             movestart = time.time()
             engine.go()
