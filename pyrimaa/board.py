@@ -657,6 +657,8 @@ class Position(object):
     def do_move(self, steps, strict_checks=True):
         """ Generate a new position from the given move steps """
         pos = self
+        if len(steps) > self.stepsLeft:
+            raise IllegalMove("Tried to take more than 4 steps")
         for step in steps:
             if strict_checks:
                 is_legal = pos.check_step(step)

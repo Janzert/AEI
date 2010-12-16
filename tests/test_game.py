@@ -269,6 +269,14 @@ handicap_moves = """1g Rc2 Ee5
 3g Rc2n Rc3x"""
 handicap_moves = handicap_moves.splitlines()
 
+extra_step_moves = """1g Ra1 Rb1 Rc1 Cd1 Re1 Rf1 Dg1 Rh1 Ra2 Db2 Mc2 Cd2 Ee2 Hf2 Hg2 Rh2
+1s ed7 mg7 he7 df7 ce8 hb7 dc7 cd8 ra7 rh7 ra8 rb8 rc8 rf8 rg8 rh8
+2g Ee2n Hg2n Dg1n Ee3w
+2s ed7s ed6s ed5s mg7s
+3g Ed3e Ee3n Ee4n Ee5e ed4w
+3s ra7s ra6s ra5s"""
+extra_step_moves = extra_step_moves.splitlines()
+
 class MockResponse(object):
     def __init__(self, msg_type="bestmove"):
         self.type = msg_type
@@ -313,6 +321,8 @@ class MockEngine(object):
             resp = MockResponse("log")
             resp.message = "Test log message"
         else:
+            if self.move >= len(self.moves):
+                raise ValueError("Game not stopped before end of moves")
             move = self.moves[self.move].split()[1:]
             resp = MockResponse()
             resp.move = " ".join(move)
@@ -350,6 +360,11 @@ class GameTest(unittest.TestCase):
         p = MockEngine(moves=elim_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'e'))
+        # check illegality of taking opponent steps
+        p = MockEngine(moves=extra_step_moves)
+        game = Game(p, p)
+        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(p.move, 4)
         # check timecontrol enforcement
         tc = TimeControl("1s/0s/0")
         p = MockEngine(delay=[0, 0, 1.1])
