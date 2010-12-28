@@ -24,12 +24,61 @@ import socket
 import sys
 import os
 
-if sys.platform == 'win32':
-    import ctypes
-
 from threading import Thread, Event
 from Queue import Queue, Empty
 from subprocess import Popen, PIPE
+
+if sys.platform == 'win32':
+    import ctypes
+    from collections import defaultdict
+
+def _get_child_pids():
+    class ProcessEntry(ctypes.Structure):
+        _fields_ = [("dwSize", ctypes.c_ulong),
+                    ("cntUsage", ctypes.c_ulong),
+                    ("th32ProcessID", ctypes.c_ulong),
+                    ("th32DefaultHeapID", ctypes.c_void_p),
+                    ("th32ModuleID", ctypes.c_ulong),
+                    ("cntThreads", ctypes.c_ulong),
+                    ("th32ParentProcessID", ctypes.c_ulong),
+                    ("pcPriClassBase", ctypes.c_long),
+                    ("dwFlags", ctypes.c_ulong),
+                    ("szExeFile", ctypes.c_char * 260),
+                    ]
+    TH32CS_SNAPPROCESS = 0x2
+    kernel32 = ctypes.windll.kernel32
+    psnap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    childIDs = defaultdict(list)
+    entry = ProcessEntry()
+    entry.dwSize = ctypes.sizeof(ProcessEntry)
+    kernel32.Process32First.argtypes = [ctypes.c_ulong,
+            ctypes.POINTER(ProcessEntry)]
+    if kernel32.Process32First(psnap, ctypes.byref(entry)) == 0:
+        errno = kernel32.GetLastError()
+        raise OSError("Received error from Process32First, %d" % (errno,))
+    else:
+        childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
+    while kernel32.Process32Next(psnap, ctypes.pointer(entry)):
+        childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
+    errno = kernel32.GetLastError()
+    if errno != 18:
+        raise OSError("Received error from Process32Next, %d" % (errno,))
+    kernel32.CloseHandle(psnap)
+    return childIDs
+
+def _kill_proc_tree(pid, cid_map = None):
+    if cid_map is None:
+        cid_map = _get_child_pids()
+    if len(cid_map[pid]) > 0:
+        for cid in cid_map[pid]:
+            _kill_proc_tree(cid, cid_map)
+    PROCESS_TERMINATE = 0x1
+    handle = ctypes.windll.kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
+    if handle is not None:
+        ctypes.windll.kernel32.TerminateProcess(handle, -1)
+        ctypes.windll.kernel32.CloseHandle(handle)
+    else:
+        raise OSError("Could not kill process, %d" % (pid,))
 
 START_TIME = 5.0
 INIT_TIME = 15.0
@@ -105,9 +154,7 @@ class StdioEngine:
         self.proc_com.stop.set()
         if self.proc.poll() is None:
             if sys.platform == 'win32':
-                # send CTRL+BREAK signal to kill engine shell
-                pid = self.proc.pid
-                ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, pid)
+                _kill_proc_tree(self.proc.pid)
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
@@ -225,9 +272,7 @@ class SocketEngine:
         self.sock.close()
         if self.proc and self.proc.poll() is None:
             if sys.platform == 'win32':
-                # send CTRL+BREAK signal to kill engine shell
-                pid = self.proc.pid
-                ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, pid)
+                _kill_proc_tree(self.proc.pid)
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
