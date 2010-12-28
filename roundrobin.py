@@ -46,6 +46,8 @@ def run_bot(bot, config, global_options):
         engine = StdioEngine(cmdline, log=log)
     elif com_method == "socket":
         engine = SocketEngine(cmdline, log=log)
+    elif com_method == "2008cc":
+        engine = SocketEngine(cmdline, legacy_mode=True, log=log)
     else:
         raise ValueError("Bad communication method (%s) given for bot %s"
                 % (com_method, bot['name']))
