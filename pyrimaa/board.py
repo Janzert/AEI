@@ -471,7 +471,8 @@ class Position(object):
         else:
             raise ValueError("Tried to remove non-existant piece")
         piece = Piece.GRABBIT
-        while not (self.bitBoards[piece] & bit):
+        while (self.bitBoards[piece] is None
+                or not (self.bitBoards[piece] & bit)):
             piece += 1
         newBoards = [b for b in self.bitBoards]
         newPlacement = [self.placement[0], self.placement[1]]
