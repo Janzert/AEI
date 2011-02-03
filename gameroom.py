@@ -811,7 +811,7 @@ def main(args):
                             gameid_or_opponent, side)
                     engine_ctl.quit()
                     engine_ctl.cleanup()
-                    break
+                    sys.exit(1)
             # Set the game to play in to current game id in case of a restart
             gameid_or_opponent = table.gid
 
@@ -885,7 +885,7 @@ def main(args):
                 unknowns_caught, traceback.format_exc()))
             time.sleep(2)
             if unknowns_caught > 5:
-                break
+                sys.exit(2)
 
 
 if __name__ == "__main__":
