@@ -52,7 +52,7 @@ import time
 import urllib
 import urllib2
 
-from pyrimaa.aei import StdioEngine, SocketEngine, EngineController
+from pyrimaa import aei
 
 _GR_CGI = "bot1gr.cgi"
 
@@ -738,25 +738,18 @@ def main(args):
         return
 
     bot_section = config.get("global", "default_engine")
-    com_method = config.get(bot_section, "communication_method").lower()
+    if config.has_option(bot_section, "communication_method"):
+        com_method = config.get(bot_section, "communication_method").lower()
+    else:
+        com_method = "stdio"
     enginecmd = config.get(bot_section, "cmdline")
 
     gameid_or_opponent = options['against']
     unknowns_caught = 0
     while True:
         try:
-            if com_method == "2008cc":
-                engine_ctl = EngineController(SocketEngine(enginecmd,
-                    log=aeilog, legacy_mode=True))
-            elif com_method == "socket":
-                engine_ctl = EngineController(SocketEngine(enginecmd,
-                    log=aeilog))
-            elif com_method == "stdio":
-                engine_ctl = EngineController(StdioEngine(enginecmd,
-                    log=aeilog))
-            else:
-                raise ValueError("Unrecognized communication method, %s"
-                        % (com_method))
+            engine_com = aei.get_engine(com_method, enginecmd, log=aeilog)
+            engine_ctl = aei.EngineController(engine_com)
         except OSError, exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
             sys.exit(1)

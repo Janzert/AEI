@@ -276,6 +276,21 @@ class SocketEngine:
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
+def get_engine(channel, cmd, log=None):
+    """Get the appropriate Engine for a given communication channel.
+    Valid channel types are 'stdio', 'socket' and '2008cc'
+    """
+    if channel == "stdio":
+        engine = StdioEngine(cmd, log=log)
+    elif channel == "socket":
+        engine = SocketEngine(cmd, log=log)
+    elif channel == "2008cc":
+        engine = SocketEngine(cmd, legacy_mode=True, log=log)
+    else:
+        raise ValueError("Unrecognized channel given to get_engine (%s)"
+                % channel)
+    return engine
+
 class EngineResponse:
     def __init__(self, msg_type):
         self.type = msg_type
