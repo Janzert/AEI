@@ -103,7 +103,11 @@ def post(url, values, logname="network"):
     info = parsebody(body)
     if info.has_key('error'):
         log.error("Error in response to %s: %s", logname, info['error'])
-    return parsebody(body)
+        if (info['error'].startswith("Gameserver: No Game Data")
+                or info['error'].startswith("Gameserver: Invalid Session Id")):
+            raise ValueError("Game server did not recognize game session: %s"
+                    % (info['error'],))
+    return info
 
 def unquote(qstr):
     """Unquote a string from the server."""
