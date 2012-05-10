@@ -52,7 +52,7 @@ import time
 import urllib
 import urllib2
 
-from pyrimaa.aei import StdioEngine, SocketEngine, EngineController
+from pyrimaa import aei
 
 _GR_CGI = "bot1gr.cgi"
 
@@ -103,7 +103,11 @@ def post(url, values, logname="network"):
     info = parsebody(body)
     if info.has_key('error'):
         log.error("Error in response to %s: %s", logname, info['error'])
-    return parsebody(body)
+        if (info['error'].startswith("Gameserver: No Game Data")
+                or info['error'].startswith("Gameserver: Invalid Session Id")):
+            raise ValueError("Game server did not recognize game session: %s"
+                    % (info['error'],))
+    return info
 
 def unquote(qstr):
     """Unquote a string from the server."""
@@ -738,25 +742,18 @@ def main(args):
         return
 
     bot_section = config.get("global", "default_engine")
-    com_method = config.get(bot_section, "communication_method").lower()
+    if config.has_option(bot_section, "communication_method"):
+        com_method = config.get(bot_section, "communication_method").lower()
+    else:
+        com_method = "stdio"
     enginecmd = config.get(bot_section, "cmdline")
 
     gameid_or_opponent = options['against']
     unknowns_caught = 0
     while True:
         try:
-            if com_method == "2008cc":
-                engine_ctl = EngineController(SocketEngine(enginecmd,
-                    log=aeilog, legacy_mode=True))
-            elif com_method == "socket":
-                engine_ctl = EngineController(SocketEngine(enginecmd,
-                    log=aeilog))
-            elif com_method == "stdio":
-                engine_ctl = EngineController(StdioEngine(enginecmd,
-                    log=aeilog))
-            else:
-                raise ValueError("Unrecognized communication method, %s"
-                        % (com_method))
+            engine_com = aei.get_engine(com_method, enginecmd, log=aeilog)
+            engine_ctl = aei.EngineController(engine_com)
         except OSError, exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
             sys.exit(1)
@@ -818,7 +815,7 @@ def main(args):
                             gameid_or_opponent, side)
                     engine_ctl.quit()
                     engine_ctl.cleanup()
-                    break
+                    sys.exit(1)
             # Set the game to play in to current game id in case of a restart
             gameid_or_opponent = table.gid
 
@@ -892,7 +889,7 @@ def main(args):
                 unknowns_caught, traceback.format_exc()))
             time.sleep(2)
             if unknowns_caught > 5:
-                break
+                sys.exit(2)
 
 
 if __name__ == "__main__":

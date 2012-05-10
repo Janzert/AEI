@@ -7,9 +7,7 @@ import time
 
 from ConfigParser import SafeConfigParser
 
-from pyrimaa import board
-
-from pyrimaa.aei import SocketEngine, StdioEngine, EngineController
+from pyrimaa import aei, board
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("analyze")
@@ -58,15 +56,8 @@ else:
     com_method = "stdio"
 enginecmd = config.get(bot_section, "cmdline")
 
-if com_method == "2008cc":
-    eng_com = SocketEngine(enginecmd, legacy_mode=True, log=log)
-elif com_method == "socket":
-    eng_com = SocketEngine(enginecmd, log=log)
-elif com_method == "stdio":
-    eng_com = StdioEngine(enginecmd, log=log)
-else:
-    raise ValueError("Unrecognized communication method: %s" % (com_method,))
-eng = EngineController(eng_com)
+eng_com = aei.get_engine(com_method, enginecmd, log)
+eng = aei.EngineController(eng_com)
 
 for option in config.options(bot_section):
     if option.startswith("bot_"):

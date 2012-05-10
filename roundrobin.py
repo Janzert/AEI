@@ -28,7 +28,7 @@ import time
 
 from ConfigParser import SafeConfigParser, NoOptionError
 
-from pyrimaa.aei import EngineController, StdioEngine, SocketEngine
+from pyrimaa import aei
 from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
 
@@ -42,14 +42,8 @@ def run_bot(bot, config, global_options):
                 "communication_method").lower()
     else:
         com_method = "stdio"
-    if com_method == "stdio":
-        engine = StdioEngine(cmdline, log=log)
-    elif com_method == "socket":
-        engine = SocketEngine(cmdline, log=log)
-    else:
-        raise ValueError("Bad communication method (%s) given for bot %s"
-                % (com_method, bot['name']))
-    engine = EngineController(engine)
+    eng_com = aei.get_engine(com_method, cmdline, log)
+    engine = aei.EngineController(eng_com)
     for option, value in global_options:
         engine.setoption(option, value)
     for name, value in config.items(bot['name']):
