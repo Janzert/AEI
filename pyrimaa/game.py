@@ -21,8 +21,9 @@
 import logging
 import time
 import socket
+from collections import defaultdict
 
-from board import BLANK_BOARD, Color, Position
+from board import BLANK_BOARD, Color, IllegalMove, Position
 
 log = logging.getLogger("game")
 
@@ -63,6 +64,7 @@ class Game(object):
         self.movenumber = 1
         self.limit_winner = 1
         self.moves = []
+        self.repetition_count = defaultdict(int)
         self.result = None
 
     def play(self):
@@ -144,6 +146,9 @@ class Game(object):
                         strict_checks=self.strict_setup)
             else:
                 position = position.do_move_str(move)
+            self.repetition_count[position] += 1
+            if self.repetition_count[position] > 2:
+                raise IllegalMove("Tried move resulting in a 3rd time repetition")
             self.position = position
             if position.color == Color.GOLD:
                 self.movenumber += 1
