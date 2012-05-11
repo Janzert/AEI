@@ -127,9 +127,12 @@ class Game(object):
                         "Stopped waiting without a timeout or a move")
             if tc:
                 if not self.insetup:
-                    reserve_incr = ((tc.move - (moveend - movestart))
-                            * (tc.percent / 100.0))
-                    self.reserves[side] += reserve_incr
+                    reserve_change = tc.move - (moveend - movestart)
+                    if reserve_change > 0:
+                        # if we are adding to the reserve only apply the
+                        # percentage specified by the time control
+                        reserve_change *= tc.percent / 100.0
+                    self.reserves[side] += reserve_change
                     if tc.max_reserve:
                         self.reserves[side] = min(self.reserves[side],
                                 tc.max_reserve)

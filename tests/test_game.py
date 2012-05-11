@@ -365,11 +365,20 @@ class GameTest(unittest.TestCase):
         game = Game(p, p)
         self.assertRaises(IllegalMove, game.play)
         self.assertEqual(p.move, 4)
+        # check loose setup enforcement
+        p = MockEngine(moves=handicap_moves)
+        game = Game(p, p)
+        self.assertRaises(IllegalMove, game.play)
+        game = Game(p, p, strict_setup=False)
+        self.assertEqual(game.play(), (1, 'e'))
+
+    def test_timecontrol_handling(self):
         # check timecontrol enforcement
         tc = TimeControl("1s/0s/0")
         p = MockEngine(delay=[0, 0, 1.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
         p = MockEngine(delay=[0, 0, 0, 0, 1.2])
         game = Game(p, p, tc)
@@ -377,22 +386,32 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        # check reserve is correctly deducted when reserve addition is not 100%
+        tc = TimeControl("1s/1s/50")
+        p = MockEngine(delay=[0, 0, 1.5, 0, 1.6])
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (1, 't'))
+        # check maximum reserve
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 2.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 't'))
+        # check game time limit
         tc = TimeControl("1s/1s/100/0/2s")
         p = MockEngine(delay=[0, 0, 1, 1, 0.1])
         game = Game(p, p, tc)
+        # check game move limit
         self.assertEqual(game.play(), (1, 's'))
         tc = TimeControl("1s/1s/100/0/33t")
         p = MockEngine()
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 's'))
+        # check maximum move time limit
         tc = TimeControl("1s/1s/100/0/0/2s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        # check differing time control for each player
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1, 2.1])
         game = Game(p, p, [None, tc])
@@ -408,10 +427,4 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 0, 0, 7.5])
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (0, 't'))
-        # check loose setup enforcement
-        p = MockEngine(moves=handicap_moves)
-        game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
-        game = Game(p, p, strict_setup=False)
-        self.assertEqual(game.play(), (1, 'e'))
 
