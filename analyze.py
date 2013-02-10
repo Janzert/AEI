@@ -49,6 +49,21 @@ if config.read("analyze.cfg") != ["analyze.cfg"]:
     print "Could not open 'analyze.cfg'"
     sys.exit(1)
 
+strict_checks = False
+if config.has_option("global", "strict_checks"):
+    strict_checks = config.getboolean("global", "strict_checks")
+    if strict_checks:
+        print "Enabling full legality checking on moves"
+
+strict_setup = None
+if config.has_option("global", "strict_setup"):
+    strict_setup = config.getboolean("global", "strict_setup")
+    if strict_setup:
+        print "Enabling full legality checking on setup"
+    else:
+        print "Disabling full legality checking on setup"
+
+
 bot_section = config.get("global", "default_engine")
 if config.has_option(bot_section, "communication_method"):
     com_method = config.get(bot_section, "communication_method").lower()
@@ -69,9 +84,13 @@ if have_board:
     eng.setposition(pos)
 else:
     pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
-    for move in move_list:
+    for mnum, move in enumerate(move_list):
         move = move[3:]
-        pos = pos.do_move_str(move)
+        if mnum < 2 and setup_checks is not None:
+            do_checks = setup_checks
+        else:
+            do_checks = strict_checks
+        pos = pos.do_move_str(move, do_checks)
         eng.makemove(move)
 print pos.board_to_str()
 

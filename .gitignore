@@ -1,3 +1,7 @@
 *.*~
 *.pyc
 
+analyze.cfg
+gameroom.cfg
+roundrobin.cfg
+
