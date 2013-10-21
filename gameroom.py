@@ -40,6 +40,7 @@ removed in the future)
 """
 
 from ConfigParser import SafeConfigParser
+import optparse
 import logging
 import os
 import os.path
@@ -442,13 +443,15 @@ class Table:
                     except socket.timeout:
                         pass
                 engine.makemove(response.move)
-                log.info("Sending move %s", response.move)
                 endtime = time.time()
                 if (self.min_move_time > endtime-starttime
                     and int(state.get('plycount', 0)) > 1):
                     stime = self.min_move_time - (endtime-starttime)
                     if stime > 0:
+                        log.info("Waiting %.2f seconds before sending move",
+                                stime)
                         time.sleep(stime)
+                log.info("Sending move %s", response.move)
                 self.move(response.move)
                 if self.ponder and not stopsent:
                     engine.go("ponder")
@@ -487,6 +490,7 @@ class GameRoom:
                 action = "login")
         response = post(self.url, values, "GameRoom.login")
         self.sid = response['sid']
+        log.info("Logged into gameroom as %s", username)
 
     def logout(self):
         if not self.sid:
@@ -539,15 +543,32 @@ class GameRoom:
         return games
 
 def parseargs(args):
+    parser = optparse.OptionParser(
+        usage="usage: %prog [-c CONFIG] [play|move opponent|game] [side]",
+        description="Interface to the Arimaa gameserver",
+        epilog="".join(["Positional arguments: ",
+            "'play' or 'move' as the first argument specify whether to play ",
+            "an existing full game or just one move before exiting . They ",
+            "must be followed by either the name of the opponents game to ",
+            "join or an explicit game number. ",
+            "The side to play can be given by itself or following the ",
+            "previous arguments."]))
+    parser.add_option('-c', '--config', default="gameroom.cfg",
+            help="Configuration file to use.")
+    options, args = parser.parse_args(args)
+    ret = dict()
+    ret['config'] = options.config
     if len(args) < 2:
-        return dict(against='', side='b', onemove=False)
+        ret.update(dict(against='', side='b', onemove=False))
+        return ret
     first = args[1].lower()
     if len(first) == 1 and first in "wbgs":
-        return dict(against='', side=first, onemove=False)
+        ret.update(dict(against='', side=first, onemove=False))
+        return ret
     if first == "play" or first == "move":
         if len(args) < 3:
             raise ValueError("Not enough arguments given for command")
-        ret = dict(against = args[2].lower())
+        ret.update(dict(against = args[2].lower()))
         if len(args) > 3:
             ret['side'] = args[3].lower()
         else:
@@ -557,6 +578,7 @@ def parseargs(args):
         else:
             ret['onemove'] = False
         return ret
+    parser.print_help()
     raise ValueError("Bad commandline arguments")
 
 def touch_run_file(run_dir, rfile):
@@ -667,15 +689,14 @@ def main(args):
         options = parseargs(args)
     except ValueError:
         print "Command not understood '%s'" % (" ".join(args[1:]))
-        print
-        print __doc__
         sys.exit(2)
 
     config = SafeConfigParser()
+    config_filename = options['config']
     try:
-        config.readfp(open('gameroom.cfg', 'rU'))
+        config.readfp(open(config_filename, 'rU'))
     except IOError:
-        print "Could not open 'gameroom.cfg'"
+        print "Could not open '%s'" % (config_filename,)
         print "this file must be readable and contain the configuration"
         print "for connecting to the gameroom."
         sys.exit(1)
