@@ -72,9 +72,10 @@ def post(url, values, logname="network"):
     req = urllib2.Request(url, data)
     oldtimeout = socket.getdefaulttimeout()
     if values.get('wait', 0) != 0:
-        socket.setdefaulttimeout(values['maxwait'] + 20)
+        stimeout = max(5, values['maxwait'] + 2)
+        socket.setdefaulttimeout(stimeout)
     else:
-        socket.setdefaulttimeout(300)
+        socket.setdefaulttimeout(5)
     try:
         body = ""
         for try_num in range(1, 6):
@@ -84,20 +85,25 @@ def post(url, values, logname="network"):
                     response = urllib2.urlopen(req)
                     body = response.read()
                 except socket.timeout:
+                    netlog.debug("Socket timed out to server")
                     body = ""
             except urllib2.URLError, err:
-                if (not hasattr(err, "reason")
-                        or type(err.reason) != socket.gaierror):
-                    raise
-                if err.reason[0] == 10060:
+                if isinstance(err.reason, socket.timeout):
+                    # time out probably in urlopen
+                    netlog.debug("Socket timed out with URLError: %s", err)
+                    body = ""
+                elif (isinstance(err.reason, socket.gaierror) and
+                        err.reason[0] == 10060):
+                    netlog.debug(
+                            "URLError: getaddressinfo connection timed out")
                     body = ""
                 else:
                     raise
             if body != "":
                 break
             netlog.info("bad response from server trying again in %d seconds",
-                    try_num * 10)
-            time.sleep(try_num * 10)
+                    try_num ** 2)
+            time.sleep(try_num ** 2)
     finally:
         socket.setdefaulttimeout(oldtimeout)
     netlog.debug("%s response body:\n%s", logname, body)
@@ -321,9 +327,20 @@ class Table:
                         self._check_engine(0)
                 except socket.timeout:
                     pass
-                # XXX: This wait should probably really be based off
-                # the opponents time left
-                state = self.updatestate(30)
+                # To safeguard against broken tcp connections never wait more
+                # than the move time minus 5 seconds. To keep from flooding the
+                # server with new requests never wait less than a quarter of
+                # the move time. Otherwise wait till the end of the opponents
+                # regular turn time.
+                tused_key = "%sused" % ("wb"[("wb".index(self.side)+1) % 2],)
+                if state.has_key(tused_key):
+                    moveused = int(state[tused_key])
+                else:
+                    moveused = 0
+                movetime = int(state['tcmove'])
+                waittime = max(movetime / 4, movetime - moveused)
+                waittime = min(movetime - 5, waittime)
+                state = self.updatestate(waittime)
                 if not oplogged and state.get(opplayer, "") != "":
                     opname = state[opplayer]
                     if opname.startswith('*'):
