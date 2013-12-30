@@ -112,6 +112,12 @@ goal_moves = """1g Ra2 Db2 Hc2 Ed2 Me2 Hf2 Dg2 Rh2 Ra1 Rb1 Rc1 Cd1 Ce1 Rf1 Rg1 R
 43g cb7n Hb6n Ra7n"""
 goal_moves = goal_moves.splitlines()
 
+resign_moves = """1g Ra2 Db2 Hc2 Ed2 Me2 Hf2 Dg2 Rh2 Ra1 Rb1 Rc1 Cd1 Ce1 Rf1 Rg1 Rh1
+1s rh7 ra7 rh8 rg8 rf8 rc8 rb8 ra8 cc7 cd8 df7 de8 hg7 hb7 md7 ee7
+2g Ed2n Ed3n Ed4n Dg2n
+2s resign"""
+resign_moves = resign_moves.splitlines()
+
 immo_moves = """1g Rh1 Rg1 Rf1 Rc1 Rb1 Ra1 Rh2 Ra2 Cd1 Cf2 De1 Dc2 Hg2 Hb2 Md2 Ee2
 1s ra7 hb7 dc7 ed7 me7 df7 hg7 rh7 ra8 rb8 rc8 cd8 ce8 rf8 rg8 rh8
 2g Ee2n Ee3n Ee4n Ee5n
@@ -371,6 +377,9 @@ class GameTest(unittest.TestCase):
             self.assertEqual(move, goal_moves[num])
         self.assertEqual(game.result, (0, 'g'))
         self.assertRaises(RuntimeError, game.play)
+        p = MockEngine(moves=resign_moves)
+        game = Game(p, p)
+        self.assertEqual(game.play(), (0, 'r'))
         p = MockEngine(moves=immo_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'm'))

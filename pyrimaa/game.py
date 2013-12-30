@@ -139,6 +139,9 @@ class Game(object):
                         self.reserves[side] = min(self.reserves[side],
                                 tc.max_reserve)
             move = resp.move
+            if move.lower() == "resign":
+              self.result = (side^1, "r")
+              return self.result
             self.moves.append("%d%s %s" % (self.movenumber,
                 "gs"[position.color], move))
             if self.insetup:
