@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE
 
+import socket
 import time
 import unittest
 
@@ -111,6 +112,12 @@ goal_moves = """1g Ra2 Db2 Hc2 Ed2 Me2 Hf2 Dg2 Rh2 Ra1 Rb1 Rc1 Cd1 Ce1 Rf1 Rg1 R
 42s rh8w hb5w ha5n Da4n
 43g cb7n Hb6n Ra7n"""
 goal_moves = goal_moves.splitlines()
+
+resign_moves = """1g Ra2 Db2 Hc2 Ed2 Me2 Hf2 Dg2 Rh2 Ra1 Rb1 Rc1 Cd1 Ce1 Rf1 Rg1 Rh1
+1s rh7 ra7 rh8 rg8 rf8 rc8 rb8 ra8 cc7 cd8 df7 de8 hg7 hb7 md7 ee7
+2g Ed2n Ed3n Ed4n Dg2n
+2s resign"""
+resign_moves = resign_moves.splitlines()
 
 immo_moves = """1g Rh1 Rg1 Rf1 Rc1 Rb1 Ra1 Rh2 Ra2 Cd1 Cf2 De1 Dc2 Hg2 Hb2 Md2 Ee2
 1s ra7 hb7 dc7 ed7 me7 df7 hg7 rh7 ra8 rb8 rc8 cd8 ce8 rf8 rg8 rh8
@@ -304,6 +311,8 @@ class MockEngine(object):
         self.moves = moves
         self.delay = delay
         self.protocol_version = 1
+        self.stopCount = 0
+        self.stopMove = None
 
     def setoption(self, opt, val):
         pass
@@ -327,7 +336,8 @@ class MockEngine(object):
         pass
 
     def stop(self):
-        pass
+        self.stopCount += 1
+        self.stopMove = self.move
 
     def get_response(self, timeout=None):
         self.move += 1
@@ -344,7 +354,16 @@ class MockEngine(object):
             resp = MockResponse()
             resp.move = " ".join(move)
             if self.delay and len(self.delay) > self.move:
-                time.sleep(self.delay[self.move])
+                if not timeout or timeout > self.delay[self.move]:
+                    time.sleep(self.delay[self.move])
+                else:
+                    # sleep as long as we can
+                    time.sleep(timeout)
+                    # account for time slept
+                    self.delay[self.move] -= timeout
+                    # try the same move next time we're asked
+                    self.move -= 1
+                    raise socket.timeout()
         return resp
 
 
@@ -371,6 +390,9 @@ class GameTest(unittest.TestCase):
             self.assertEqual(move, goal_moves[num])
         self.assertEqual(game.result, (0, 'g'))
         self.assertRaises(RuntimeError, game.play)
+        p = MockEngine(moves=resign_moves)
+        game = Game(p, p)
+        self.assertEqual(game.play(), (0, 'r'))
         p = MockEngine(moves=immo_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'm'))
@@ -393,6 +415,21 @@ class GameTest(unittest.TestCase):
         self.assertRaises(IllegalMove, game.play)
         game = Game(p, p, strict_setup=False)
         self.assertEqual(game.play(), (1, 'e'))
+
+    def test_mintimeleft_handling(self):
+        # check timecontrol enforcement
+        tc = TimeControl("3s/0s/0")
+        p = MockEngine(delay=[0, 1.1, 3.1])
+        game = Game(p, p, tc, min_timeleft=1.1)
+        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 1)
+        self.assertEqual(p.stopMove, 1)
+        tc = TimeControl("3s/0s/0")
+        p = MockEngine(delay=[2.1, 2.2, 0])
+        game = Game(p, p, tc, min_timeleft=1.1)
+        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 2)
+        self.assertEqual(p.stopMove, 0)
 
     def test_timecontrol_handling(self):
         # check timecontrol enforcement
