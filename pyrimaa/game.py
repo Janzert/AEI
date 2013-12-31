@@ -101,18 +101,16 @@ class Game(object):
                     timeout = endtime_limit
             else:
                 timeout = None
+            waittime = 10
             resp = None
             stopsent = False
-            waittime = 10
-            stoptime = timeout
-            if timeout and stoptime and self.min_timeleft:
-                stoptime -= self.min_timeleft
+            stoptime = None
+            if timeout and self.min_timeleft:
+                stoptime = timeout - self.min_timeleft
             while True:
                 now = time.time()
                 if stoptime and not stopsent and now + waittime > stoptime:
-                    waittime = (stoptime - now) + 0.2
-                    if waittime < 0:
-                        waittime = 0
+                    waittime = max(0, (stoptime - now) + 0.2)
                 if stoptime and not stopsent and now >= stoptime:
                     # try and get a move before time runs out
                     engine.stop()

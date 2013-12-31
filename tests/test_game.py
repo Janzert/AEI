@@ -357,10 +357,12 @@ class MockEngine(object):
                 if not timeout or timeout > self.delay[self.move]:
                     time.sleep(self.delay[self.move])
                 else:
+                    start = time.time()
                     # sleep as long as we can
                     time.sleep(timeout)
+                    sleep_time = time.time() - start
                     # account for time slept
-                    self.delay[self.move] -= timeout
+                    self.delay[self.move] -= sleep_time
                     # try the same move next time we're asked
                     self.move -= 1
                     raise socket.timeout()
@@ -390,15 +392,16 @@ class GameTest(unittest.TestCase):
             self.assertEqual(move, goal_moves[num])
         self.assertEqual(game.result, (0, 'g'))
         self.assertRaises(RuntimeError, game.play)
-        p = MockEngine(moves=resign_moves)
-        game = Game(p, p)
-        self.assertEqual(game.play(), (0, 'r'))
         p = MockEngine(moves=immo_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'm'))
         p = MockEngine(moves=elim_moves)
         game = Game(p, p)
         self.assertEqual(game.play(), (1, 'e'))
+        # check bot resign ending
+        p = MockEngine(moves=resign_moves)
+        game = Game(p, p)
+        self.assertEqual(game.play(), (0, 'r'))
         # check illegality of taking opponent steps
         p = MockEngine(moves=extra_step_moves)
         game = Game(p, p)
@@ -417,7 +420,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game.play(), (1, 'e'))
 
     def test_mintimeleft_handling(self):
-        # check timecontrol enforcement
+        # check sending stop to bot with low time left
         tc = TimeControl("3s/0s/0")
         p = MockEngine(delay=[0, 1.1, 3.1])
         game = Game(p, p, tc, min_timeleft=1.1)
@@ -425,8 +428,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(p.stopCount, 1)
         self.assertEqual(p.stopMove, 1)
         tc = TimeControl("3s/0s/0")
-        p = MockEngine(delay=[2.1, 2.2, 0])
-        game = Game(p, p, tc, min_timeleft=1.1)
+        p = MockEngine(delay=[2, 2, 0])
+        game = Game(p, p, tc, min_timeleft=1.5)
         self.assertEqual(game.play(), (0, 'g'))
         self.assertEqual(p.stopCount, 2)
         self.assertEqual(p.stopMove, 0)
@@ -437,53 +440,65 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 1.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 0)
         # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
         p = MockEngine(delay=[0, 0, 0, 0, 1.2])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 0)
         # check reserve is correctly deducted when reserve addition is not 100%
         tc = TimeControl("1s/1s/50")
         p = MockEngine(delay=[0, 0, 1.5, 0, 1.6])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 0)
         # check maximum reserve
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 2.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(p.stopCount, 0)
         # check game time limit
         tc = TimeControl("1s/1s/100/0/2s")
         p = MockEngine(delay=[0, 0, 1, 1, 0.1])
         game = Game(p, p, tc)
-        # check game move limit
         self.assertEqual(game.play(), (1, 's'))
+        self.assertEqual(p.stopCount, 0)
+        # check game move limit
         tc = TimeControl("1s/1s/100/0/33t")
         p = MockEngine()
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 's'))
+        self.assertEqual(p.stopCount, 0)
         # check maximum move time limit
         tc = TimeControl("1s/1s/100/0/0/2s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1])
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 0)
         # check differing time control for each player
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1, 2.1])
         game = Game(p, p, [None, tc])
         self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(p.stopCount, 0)
         tc1 = TimeControl("2s/0s/100")
         tc2 = TimeControl("1s/4s/100/6s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 5, 0, 0, 7.5])
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 5])
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 0, 0, 7.5])
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(p.stopCount, 0)
 
