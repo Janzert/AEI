@@ -29,7 +29,7 @@ log = logging.getLogger("game")
 
 class Game(object):
     def __init__(self, gold, silver, timecontrol=None, start_position=None,
-            strict_setup=True):
+            strict_setup=True, min_timeleft=None):
         self.engines = (gold, silver)
         try:
             self.timecontrol = timecontrol[0]
@@ -61,6 +61,7 @@ class Game(object):
             self.insetup = True
             self.position = Position(Color.GOLD, 4, BLANK_BOARD)
         self.strict_setup = strict_setup
+        self.min_timeleft = min_timeleft
         self.movenumber = 1
         self.limit_winner = 1
         self.moves = []
@@ -101,21 +102,37 @@ class Game(object):
             else:
                 timeout = None
             resp = None
-            try:
-                while not timeout or time.time() < timeout:
-                    if timeout:
-                        wait = timeout - time.time()
-                    else:
-                        wait = None
-                    resp = engine.get_response(wait)
+            stopsent = False
+            waittime = 10
+            stoptime = timeout
+            if timeout and stoptime and self.min_timeleft:
+                stoptime -= self.min_timeleft
+            while True:
+                now = time.time()
+                if stoptime and not stopsent and now + waittime > stoptime:
+                    waittime = (stoptime - now) + 0.2
+                    if waittime < 0:
+                        waittime = 0
+                if stoptime and not stopsent and now >= stoptime:
+                    # try and get a move before time runs out
+                    engine.stop()
+                    log.info("Engine sent stop command to prevent timeout")
+                    waittime = 10
+                    stopsent = True
+                if timeout and now > timeout:
+                    if not stopsent:
+                        engine.stop()
+                    break
+                try:
+                    resp = engine.get_response(waittime)
                     if resp.type == "bestmove":
                         break
                     if resp.type == "info":
                         log.info("%s info: %s" % ("gs"[side], resp.message))
                     elif resp.type == "log":
                         log.info("%s log: %s" % ("gs"[side], resp.message))
-            except socket.timeout:
-                engine.stop()
+                except socket.timeout:
+                    pass
             moveend = time.time()
 
             if tc and moveend > timeout:

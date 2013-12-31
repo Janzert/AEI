@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE
 
+import socket
 import time
 import unittest
 
@@ -310,6 +311,8 @@ class MockEngine(object):
         self.moves = moves
         self.delay = delay
         self.protocol_version = 1
+        self.stopCount = 0
+        self.stopMove = None
 
     def setoption(self, opt, val):
         pass
@@ -333,7 +336,8 @@ class MockEngine(object):
         pass
 
     def stop(self):
-        pass
+        self.stopCount += 1
+        self.stopMove = self.move
 
     def get_response(self, timeout=None):
         self.move += 1
@@ -350,7 +354,16 @@ class MockEngine(object):
             resp = MockResponse()
             resp.move = " ".join(move)
             if self.delay and len(self.delay) > self.move:
-                time.sleep(self.delay[self.move])
+                if not timeout or timeout > self.delay[self.move]:
+                    time.sleep(self.delay[self.move])
+                else:
+                    # sleep as long as we can
+                    time.sleep(timeout)
+                    # account for time slept
+                    self.delay[self.move] -= timeout
+                    # try the same move next time we're asked
+                    self.move -= 1
+                    raise socket.timeout()
         return resp
 
 
@@ -402,6 +415,21 @@ class GameTest(unittest.TestCase):
         self.assertRaises(IllegalMove, game.play)
         game = Game(p, p, strict_setup=False)
         self.assertEqual(game.play(), (1, 'e'))
+
+    def test_mintimeleft_handling(self):
+        # check timecontrol enforcement
+        tc = TimeControl("3s/0s/0")
+        p = MockEngine(delay=[0, 1.1, 3.1])
+        game = Game(p, p, tc, min_timeleft=1.1)
+        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(p.stopCount, 1)
+        self.assertEqual(p.stopMove, 1)
+        tc = TimeControl("3s/0s/0")
+        p = MockEngine(delay=[2.1, 2.2, 0])
+        game = Game(p, p, tc, min_timeleft=1.1)
+        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 2)
+        self.assertEqual(p.stopMove, 0)
 
     def test_timecontrol_handling(self):
         # check timecontrol enforcement

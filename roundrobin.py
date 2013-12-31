@@ -104,6 +104,11 @@ def main():
         if not strict_setup:
             print "Disabling strict checks on setup moves"
 
+    if config.has_option("global", "min_time_left"):
+        min_timeleft = config.getint("global", "min_time_left")
+    else:
+        min_timeleft = 5
+
     global_options = []
     for name, value in config.items("global"):
         if name.startswith("bot_"):
@@ -167,7 +172,7 @@ def main():
                     tc[0] = gbot['timecontrol']
                 if sbot.has_key('timecontrol'):
                     tc[1] = sbot['timecontrol']
-                game = Game(gengine, sengine, tc, strict_setup=strict_setup)
+                game = Game(gengine, sengine, tc, strict_setup=strict_setup, min_timeleft=min_timeleft)
                 wside, reason = game.play()
                 gengine.quit()
                 sengine.quit()
