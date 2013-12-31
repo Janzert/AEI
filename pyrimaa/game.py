@@ -101,7 +101,7 @@ class Game(object):
                     timeout = endtime_limit
             else:
                 timeout = None
-            waittime = 10
+            waittime = None
             resp = None
             stopsent = False
             stoptime = None
@@ -109,18 +109,19 @@ class Game(object):
                 stoptime = timeout - self.min_timeleft
             while True:
                 now = time.time()
-                if stoptime and not stopsent and now + waittime > stoptime:
-                    waittime = max(0, (stoptime - now) + 0.2)
                 if stoptime and not stopsent and now >= stoptime:
                     # try and get a move before time runs out
                     engine.stop()
                     log.info("Engine sent stop command to prevent timeout")
-                    waittime = 10
                     stopsent = True
                 if timeout and now > timeout:
                     if not stopsent:
                         engine.stop()
                     break
+                if timeout:
+                    waittime = timeout - now
+                    if stoptime and not stopsent and now + waittime > stoptime:
+                        waittime = max(0, (stoptime - now) + 0.2)
                 try:
                     resp = engine.get_response(waittime)
                     if resp.type == "bestmove":
