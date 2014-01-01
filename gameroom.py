@@ -199,7 +199,10 @@ class Table:
                 grid = self.seat['grid'],
                 action = "sit")
         response = post(self.url, values, "Table.sitdown")
-        self.sid = response['sid']
+        try:
+            self.sid = response['sid']
+        except KeyError:
+            pass
 
     def leave(self):
         values = dict(sid = self.sid,
