@@ -482,17 +482,14 @@ class Table:
             win = "I lost"
         log.info("Game over, %s result: '%s'", win, state['result'])
         log.info("Getting permanent id from %s", self.gid)
-        permanent_id = None
+        permanent_id = state.get("finishedId", None)
         get_id_tries = 0
-        while True:
+        while not permanent_id and get_id_tries <= 3:
+            time.sleep(2 * get_id_tries)
             permanent_id = post(self.gameroom.url,
                     {"action": "findgameid", "tid": self.gid},
                     "Table.findgameid").get("gid", None)
             get_id_tries += 1
-            if not permanent_id and get_id_tries <= 3:
-                time.sleep(2 * get_id_tries)
-            else:
-                break
         if permanent_id:
             log.info("Permanent game id is #%s", permanent_id)
 
