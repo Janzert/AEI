@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Brian Haskin Jr.
+# Copyright (c) 2010-2014 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -90,4 +90,16 @@ class TestTimeControl(TestCase):
         self.assertEqual(tc.max_turntime, 120)
         tc = TimeControl("30s/10s/100/0/0/1:30")
         self.assertEqual(tc.max_turntime, 90)
+
+    def test_str(self):
+        tc = TimeControl("0/0/0")
+        self.assertEqual(str(tc), "0/0/0/0")
+        tc = TimeControl("1:30/5/100/0")
+        self.assertEqual(str(tc), "1m30s/5m")
+        tc = TimeControl("60m/15h/50")
+        self.assertEqual(str(tc), "1h/15h/50")
+        tc = TimeControl("1/1/100/10/5/5")
+        self.assertEqual(str(tc), "1m/1m/100/10m/5h/5m")
+        tc = TimeControl("1/1/100/0/50t/5")
+        self.assertEqual(str(tc), "1m/1m/100/0/50t/5m")
 

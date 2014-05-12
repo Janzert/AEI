@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Brian Haskin Jr.
+# Copyright (c) 2010-2014 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@ def _parse_timefield(full_field, start_unit="m"):
     units[":"] = units[start_unit]
     seconds = 0
     field = full_field
+    if field.startswith(":"):
+        field = "0" + field
     nmatch = num_re.match(field)
     while nmatch:
         end = nmatch.end()
@@ -46,6 +48,20 @@ def _parse_timefield(full_field, start_unit="m"):
     if field:
         raise ValueError("Invalid time field encountered %s" % (full_field))
     return seconds
+
+def _time_str(seconds):
+    units = [("d", 60*60*24), ("h", 60*60), ("m", 60)]
+    out = list()
+    for tag, length in units:
+        span = seconds // length
+        if span != 0:
+            out.append("%s%s" % (int(span), tag))
+        seconds -= span * length
+    if seconds != 0:
+        out.append("%gs" % (seconds,))
+    if len(out) == 0:
+        out = ["0"]
+    return "".join(out)
 
 field_re = re.compile("[^/]*")
 
@@ -83,3 +99,19 @@ class TimeControl(object):
             self.time_limit = _parse_timefield(f_str, "h")
         self.max_turntime = _parse_timefield(tc_str)
 
+    def __str__(self):
+        out = [_time_str(self.move), _time_str(self.reserve)]
+        out.append(str(self.percent))
+        out.append(_time_str(self.max_reserve))
+        if self.turn_limit:
+            out.append("%st" % (self.turn_limit,))
+        else:
+            out.append(_time_str(self.time_limit))
+        out.append(_time_str(self.max_turntime))
+        defaults = (None, None, "100", "0", "0", "0")
+        while out[-1] == defaults[-1]:
+            out = out[:-1]
+            defaults = defaults[:-1]
+        if out == ["0", "0", "0"]:
+            out = ["0", "0", "0", "0"]
+        return "/".join(out)

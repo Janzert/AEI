@@ -1,4 +1,6 @@
-# Copyright (c) 2010 Brian Haskin Jr.
+#! /usr/bin/python
+
+# Copyright (c) 2010-2014 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +22,11 @@
 
 import unittest
 
-import tests.test_util
-import tests.test_game
+from pyrimaa.tests import test_util, test_game
 
 loader = unittest.TestLoader()
-suite = loader.loadTestsFromModule(tests.test_util)
-suite.addTests(loader.loadTestsFromModule(tests.test_game))
+suite = loader.loadTestsFromModule(test_util)
+suite.addTests(loader.loadTestsFromModule(test_game))
 runner = unittest.TextTestRunner(verbosity=2)
 result = runner.run(suite)
 
