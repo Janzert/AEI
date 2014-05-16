@@ -39,52 +39,53 @@ def log(message):
     plfile.write(logline)
     plfile.close()
 
-
-config = SafeConfigParser()
-try:
-    config.readfp(open('gameroom.cfg', 'r'))
-except IOError:
-    print "Could not open 'gameroom.cfg'."
-    sys.exit(1)
-
-gameroom_url = config.get("global", "gameroom_url")
-bot_section = config.get("global", "default_engine")
-bot_name = config.get(bot_section, "username")
-bot_passwd = config.get(bot_section, "password")
-
-while True:
+def main():
+    config = SafeConfigParser()
     try:
-        open("stop_postal", 'r')
-        log("Exiting after finding stop file")
-        sys.exit()
+        config.readfp(open('gameroom.cfg', 'r'))
     except IOError:
-        pass
-    gr_con = gameroom.GameRoom(gameroom_url)
-    gr_con.login(bot_name, bot_passwd)
-    games = gr_con.mygames()
-    gr_con.logout()
-    total_games = len(games)
-    games = [g for g in games if g['postal'] == '1']
-    postal_games = len(games)
-    games = [g for g in games if g['turn'] == g['side']]
-    my_turn_games = len(games)
-    log("Found %d games with %d postal games and %d on my turn." % (
-        total_games, postal_games, my_turn_games))
-    if games:
-        games.sort(key=lambda x: x['turnts'])
-        for game_num, game in enumerate(games):
-            try:
-                open("stop_postal", 'r')
-                log("Exiting after finding stop file")
-                sys.exit()
-            except IOError:
-                pass
-            log("%d/%d: Playing move against %s game #%s" % (
-                    game_num+1, my_turn_games, game['player'], game['gid']))
-            proc = Popen(["./gameroom.py", "move", game['gid']])
-            proc.wait()
-    else:
-        log("No postal games with a turn found, sleeping.")
-        time.sleep(300)
+        print "Could not open 'gameroom.cfg'."
+        sys.exit(1)
 
+    gameroom_url = config.get("global", "gameroom_url")
+    bot_section = config.get("global", "default_engine")
+    bot_name = config.get(bot_section, "username")
+    bot_passwd = config.get(bot_section, "password")
 
+    while True:
+        try:
+            open("stop_postal", 'r')
+            log("Exiting after finding stop file")
+            sys.exit()
+        except IOError:
+            pass
+        gr_con = gameroom.GameRoom(gameroom_url)
+        gr_con.login(bot_name, bot_passwd)
+        games = gr_con.mygames()
+        gr_con.logout()
+        total_games = len(games)
+        games = [g for g in games if g['postal'] == '1']
+        postal_games = len(games)
+        games = [g for g in games if g['turn'] == g['side']]
+        my_turn_games = len(games)
+        log("Found %d games with %d postal games and %d on my turn." % (
+            total_games, postal_games, my_turn_games))
+        if games:
+            games.sort(key=lambda x: x['turnts'])
+            for game_num, game in enumerate(games):
+                try:
+                    open("stop_postal", 'r')
+                    log("Exiting after finding stop file")
+                    sys.exit()
+                except IOError:
+                    pass
+                log("%d/%d: Playing move against %s game #%s" % (
+                        game_num+1, my_turn_games, game['player'], game['gid']))
+                proc = Popen(["./gameroom.py", "move", game['gid']])
+                proc.wait()
+        else:
+            log("No postal games with a turn found, sleeping.")
+            time.sleep(300)
+
+if __name__ == "__main__":
+    main()
