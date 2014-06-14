@@ -23,7 +23,7 @@ import time
 import socket
 from collections import defaultdict
 
-from board import BLANK_BOARD, Color, IllegalMove, Position
+from pyrimaa.board import BLANK_BOARD, Color, IllegalMove, Position
 
 log = logging.getLogger("game")
 
