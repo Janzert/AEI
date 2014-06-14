@@ -1,11 +1,13 @@
+#!/usr/bin/python
 
 import sys
 
 from threading import Thread, Event
 from Queue import Queue, Empty
 
-from pyrimaa import board
-from pyrimaa.board import Position, Color
+from pyrimaa.board import (
+        BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos, Position,
+        )
 
 class _ComThread(Thread):
     def __init__(self):
@@ -44,12 +46,12 @@ class AEIEngine(object):
         self.newgame()
 
     def newgame(self):
-        self.position = Position(Color.GOLD, 4, board.BLANK_BOARD)
+        self.position = Position(Color.GOLD, 4, BLANK_BOARD)
         self.insetup = True
 
     def setposition(self, side_str, pos_str):
         side = "gswb".find(side_str) % 2
-        self.position = board.parse_short_pos(side, 4, pos_str)
+        self.position = parse_short_pos(side, 4, pos_str)
         self.insetup = False
 
     def setoption(self, name, value):
@@ -68,7 +70,7 @@ class AEIEngine(object):
     def go(self):
         pos = self.position
         if self.insetup:
-            setup = Position(Color.GOLD, 4, board.BASIC_SETUP)
+            setup = Position(Color.GOLD, 4, BASIC_SETUP)
             setup_moves = setup.to_placing_move()
             move_str = setup_moves[pos.color][2:]
         else:
