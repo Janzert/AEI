@@ -116,7 +116,7 @@ class AEIEngine(object):
             elif msg == "quit":
                 return
 
-if __name__ == "__main__":
+def main():
     ctl = _ComThread()
     ctl.start()
     try:
@@ -124,5 +124,6 @@ if __name__ == "__main__":
         eng.main()
     finally:
         ctl.stop.set()
-    sys.exit()
 
+if __name__ == "__main__":
+    main()

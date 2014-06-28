@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 # Copyright (c) 2010-2014 Brian Haskin Jr.
 #
@@ -24,9 +24,12 @@ import unittest
 
 from pyrimaa.tests import test_util, test_game
 
-loader = unittest.TestLoader()
-suite = loader.loadTestsFromModule(test_util)
-suite.addTests(loader.loadTestsFromModule(test_game))
-runner = unittest.TextTestRunner(verbosity=2)
-result = runner.run(suite)
+def main():
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromModule(test_util)
+    suite.addTests(loader.loadTestsFromModule(test_game))
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
 
+if __name__ == "__main__":
+    main()

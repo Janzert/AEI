@@ -17,4 +17,13 @@ setup(name='AEI',
       url='http://arimaa.janzert.com/aei',
       keywords='arimaa',
       packages=find_packages(exclude=["tests"]),
+      entry_points="""\
+      [console_scripts]
+      analyze = pyrimaa.analyze:main
+      gameroom = pyrimaa.gameroom:main
+      postal_controller = pyrimaa.postal_controller:main
+      pyrimaa_tests = pyrimaa.test_runner:main
+      roundrobin = pyrimaa.roundrobin:main
+      simple_engine = pyrimaa.simple_engine:main
+      """,
       )
