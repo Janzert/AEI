@@ -17,21 +17,25 @@ engine by adding "--server <dotted quad ip>" and "--port <port number>" options
 to its command line. The engine should connect to the specified address and
 expect the AEI protocol identifier from the controller.
 
-The scripts included to work with an AEI engine are:
+The scripts included for working with an AEI engine are:
 
-``analyze.py``
+``analyze``
   A simple script that runs an engine and has it search a given position or
   move sequence.
-``gameroom.py``
+``gameroom``
   AEI controller that connects to the arimaa.com gameroom and plays a game.
-``roundrobin.py``
+``postal_controller``
+  Keeps a bot making moves as needed in any postal games it is a participant
+  in.
+``roundrobin``
   Plays engines against each other in a round robin tournament.
+``simple_engine``
+  Very basic AEI engine, just plays random step moves.
 
-There are also a few helper modules located in the python pyrimaa package:
+Basic examples of using the scripts can be found in the file ``usage.rst``.
 
-``aei.py``
-  Implementation of the controller side of the AEI protocol
-``board.py``
-  Implements an Arimaa board, step and move generator and some
-  related utility functions.
+The pyrimaa package also includes modules implementing the controller side of
+the AEI protocol (``aei.py``), the Arimaa position representation (as bitboards
+in ``board.py`` and x88 in ``x88board.py``), and a few utility functions for
+handling Arimaa timecontrols (``util.py``).
 
