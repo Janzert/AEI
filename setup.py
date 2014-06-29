@@ -3,7 +3,7 @@ import os
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'readme.txt')).read()
+README = open(os.path.join(here, 'readme.rst')).read()
 
 setup(name='AEI',
       version='1.2.dev',
