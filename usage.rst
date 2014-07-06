@@ -51,7 +51,7 @@ Example of the output::
     2| . C . . R . . . |
     1| . R . . . D . M |
      +-----------------+
-       a b c d e f g h  
+       a b c d e f g h
     Random beat Randomer because of g playing side g
     After round 1 and 0s:
     Random has 1 wins and 0 timeouts
@@ -71,7 +71,7 @@ Example of the output::
     2| . . . . . . . . |
     1| . . . . d . . . |
      +-----------------+
-       a b c d e f g h  
+       a b c d e f g h
     Randomer beat Random because of e playing side g
     After round 100 and 2m22s:
     Random has 59 wins and 0 timeouts
@@ -118,3 +118,25 @@ ________
 
 AEI controller that connects to the arimaa.com gameroom and plays a game.
 
+Starting a new game:
+
+    gameroom.py [<side>]
+
+The first usage starts a single game and waits for an opponent, after which
+it plays a full game with that opponent. <side> indicates the side to play
+and should be either 'g' for Gold or 's' for Silver, or if not specified,
+then it is random. (w or b will also work but may be removed in the future)
+
+Joining an existing game:
+
+    gameroom.py (play|move) <opponent name or game number> [<side>]
+
+Starts and controls an engine then plays a game or move on the server as
+specified by the command line arguments. Configuration is provided in the file
+'gameroom.cfg'.
+
+The second usage joins a game and either plays a full game or just one move.
+'play' indicates the full game should be played. 'move' will play only one
+move at most then exit, if it is the opponent's move the interface will exit
+immediately. This is handy for postal games. As in the first usage, <side>
+optionally indicates which side to play.
