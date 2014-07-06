@@ -125,7 +125,7 @@ Starting a new game:
 The first usage starts a single game and waits for an opponent, after which
 it plays a full game with that opponent. <side> indicates the side to play
 and should be either 'g' for Gold or 's' for Silver, or if not specified,
-then it is random. (w or b will also work but may be removed in the future)
+then it is s. (w or b will also work but may be removed in the future)
 
 Joining an existing game:
 
