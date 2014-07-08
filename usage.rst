@@ -118,7 +118,11 @@ ________
 
 AEI controller that connects to the arimaa.com gameroom and plays a game.
 
-Starting a new game:
+Similiar to roundrobin or analyze above you'll need to first setup
+a ``gameroom.cfg`` file with the bot configuration and gameroom login
+information.
+
+Then starting a new game is as simple as:
 
     gameroom.py [<side>]
 
