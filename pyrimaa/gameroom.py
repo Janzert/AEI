@@ -693,7 +693,7 @@ def shutdown_engine(engine_ctl):
     engine_ctl.cleanup()
     time.sleep(1)
 
-def main(args):
+def main(args=sys.argv):
     """Main entry for script.
 
     Parses the command line. Reads 'gameroom.cfg' for the configuration.
