@@ -22,6 +22,7 @@ import socket
 import time
 import unittest
 
+import pyrimaa.game
 from pyrimaa.board import Color, Position, BASIC_SETUP, IllegalMove
 from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
@@ -313,6 +314,10 @@ class MockEngine(object):
         self.protocol_version = 1
         self.stopCount = 0
         self.stopMove = None
+        self.curtime = 10
+
+    def _time(self):
+        return self.curtime
 
     def setoption(self, opt, val):
         pass
@@ -355,18 +360,24 @@ class MockEngine(object):
             resp.move = " ".join(move)
             if self.delay and len(self.delay) > self.move:
                 if not timeout or timeout > self.delay[self.move]:
-                    time.sleep(self.delay[self.move])
+                    self.curtime += self.delay[self.move]
                 else:
-                    start = time.time()
-                    # sleep as long as we can
-                    time.sleep(timeout)
-                    sleep_time = time.time() - start
+                    sleep_time = timeout + 0.00001
                     # account for time slept
                     self.delay[self.move] -= sleep_time
+                    self.curtime += sleep_time
                     # try the same move next time we're asked
                     self.move -= 1
                     raise socket.timeout()
         return resp
+
+
+class MockTime:
+    def __init__(self, eng):
+        self.eng = eng
+
+    def time(self):
+        return self.eng._time()
 
 
 class GameTest(unittest.TestCase):
@@ -420,85 +431,103 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game.play(), (1, 'e'))
 
     def test_mintimeleft_handling(self):
+        rt = pyrimaa.game.time
         # check sending stop to bot with low time left
         tc = TimeControl("3s/0s/0")
         p = MockEngine(delay=[0, 1.1, 3.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc, min_timeleft=1.1)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         self.assertEqual(p.stopMove, 1)
         tc = TimeControl("3s/0s/0")
         p = MockEngine(delay=[2, 2, 0])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc, min_timeleft=1.5)
         self.assertEqual(game.play(), (0, 'g'))
         self.assertEqual(p.stopCount, 2)
         self.assertEqual(p.stopMove, 0)
+        pyrimaa.game.time = rt
 
     def test_timecontrol_handling(self):
+        rt = pyrimaa.game.time
         # check timecontrol enforcement
         tc = TimeControl("1s/0s/0")
         p = MockEngine(delay=[0, 0, 1.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
         p = MockEngine(delay=[0, 0, 0, 0, 1.2])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 'g'))
         self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         # check reserve is correctly deducted when reserve addition is not 100%
         tc = TimeControl("1s/1s/50")
         p = MockEngine(delay=[0, 0, 1.5, 0, 1.6])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         # check maximum reserve
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 2.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 't'))
         self.assertEqual(p.stopCount, 1)
         # check game time limit
         tc = TimeControl("1s/1s/100/0/2s")
         p = MockEngine(delay=[0, 0, 1, 1, 0.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 's'))
         self.assertEqual(p.stopCount, 1)
         # check game move limit
         tc = TimeControl("1s/1s/100/0/33t")
         p = MockEngine()
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, 's'))
         self.assertEqual(p.stopCount, 0)
         # check maximum move time limit
         tc = TimeControl("1s/1s/100/0/0/2s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         # check differing time control for each player
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1, 2.1])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [None, tc])
         self.assertEqual(game.play(), (0, 't'))
         self.assertEqual(p.stopCount, 1)
         tc1 = TimeControl("2s/0s/100")
         tc2 = TimeControl("1s/4s/100/6s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 5, 0, 0, 7.5])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (0, 'g'))
         self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 5])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 0, 0, 7.5])
+        pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
         self.assertEqual(game.play(), (0, 't'))
         self.assertEqual(p.stopCount, 1)
+        pyrimaa.game.time = rt
 
