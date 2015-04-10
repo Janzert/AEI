@@ -22,15 +22,13 @@
 
 import unittest
 
-from pyrimaa.tests import test_aei, test_game, test_util
 
 def main():
     loader = unittest.TestLoader()
-    suite = loader.loadTestsFromModule(test_util)
-    suite.addTests(loader.loadTestsFromModule(test_game))
-    suite.addTests(loader.loadTestsFromModule(test_aei))
+    suite = loader.discover(".")
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
+
 
 if __name__ == "__main__":
     main()

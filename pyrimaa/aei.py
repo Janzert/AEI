@@ -122,6 +122,9 @@ class StdioEngine:
         if self.active:
             self.cleanup()
 
+    def is_running(self):
+        return self.proc.poll() is None
+
     def send(self, msg):
         if self.log:
             self.log.debug("Sending to bot: %s" % repr(msg))
@@ -199,6 +202,9 @@ class SocketEngine:
     def __del__(self):
         if self.active:
             self.cleanup()
+
+    def is_running(self):
+        return self.proc.poll() is None
 
     def send(self, msg):
         if self.log is not None:
@@ -326,7 +332,7 @@ class EngineController:
         self.engine.cleanup()
 
     def is_running(self):
-        return self.engine.proc.poll() is None
+        return self.engine.is_running()
 
     def get_response(self, timeout=None):
         rstr = self.engine.readline(timeout=timeout)
