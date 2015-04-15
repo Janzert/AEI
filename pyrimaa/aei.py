@@ -305,7 +305,10 @@ class EngineController:
     def __init__(self, engine):
         self.engine = engine
         engine.send("aei\n")
-        response = engine.waitfor("aeiok", START_TIME)
+        try:
+            response = engine.waitfor("aeiok", START_TIME)
+        except socket.timeout:
+            raise EngineException("No aeiok received from engine.")
 
         self.protocol_version = 0
         if response[0].lstrip().startswith("protocol-version"):
