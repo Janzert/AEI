@@ -80,7 +80,7 @@ def get_config(args=None):
     except NoOptionError:
         loglevel = None
     loglevel = loglevel if args.log is None else args.log
-    if args.log is not None:
+    if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
             print "Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (
