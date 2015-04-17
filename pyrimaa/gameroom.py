@@ -18,7 +18,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
 """Interface to the arimaa gameserver.
 
 Usage: gameroom.py [play|move opponent_name or game_number] [side to play]
@@ -63,8 +62,10 @@ positionlog = logging.getLogger("gameroom.position")
 enginelog = logging.getLogger("gameroom.engine")
 console = None
 
+
 class EngineCrashException(Exception):
     pass
+
 
 def post(url, values, logname="network"):
     """Send a post request to the specified url."""
@@ -93,16 +94,16 @@ def post(url, values, logname="network"):
                     netlog.debug("Socket timed out with URLError: %s", err)
                     body = ""
                 elif (isinstance(err.reason, socket.gaierror) and
-                        err.reason[0] == 10060):
+                      err.reason[0] == 10060):
                     netlog.debug(
-                            "URLError: getaddressinfo connection timed out")
+                        "URLError: getaddressinfo connection timed out")
                     body = ""
                 else:
                     raise
             if body != "":
                 break
             netlog.info("bad response from server trying again in %d seconds",
-                    try_num ** 2)
+                        try_num ** 2)
             time.sleep(try_num ** 2)
     finally:
         socket.setdefaulttimeout(oldtimeout)
@@ -110,17 +111,19 @@ def post(url, values, logname="network"):
     info = parsebody(body)
     if info.has_key('error'):
         log.error("Error in response to %s: %s", logname, info['error'])
-        if (info['error'].startswith("Gameserver: No Game Data")
-                or info['error'].startswith("Gameserver: Invalid Session Id")):
-            raise ValueError("Game server did not recognize game session: %s"
-                    % (info['error'],))
+        if (info['error'].startswith("Gameserver: No Game Data") or
+            info['error'].startswith("Gameserver: Invalid Session Id")):
+            raise ValueError("Game server did not recognize game session: %s" %
+                             (info['error'], ))
     return info
+
 
 def unquote(qstr):
     """Unquote a string from the server."""
     qstr = qstr.replace("%13", "\n")
     qstr = qstr.replace("%25", "%")
     return qstr
+
 
 def parsebody(body):
     """Parse a message from the server returning a dict."""
@@ -130,11 +133,11 @@ def parsebody(body):
         equal_ix = line.find('=')
         if equal_ix > 0:
             key = line[:equal_ix]
-            data[key] = unquote(line[equal_ix+1:])
+            data[key] = unquote(line[equal_ix + 1:])
     return data
 
-class Table:
 
+class Table:
     def __init__(self, gameroom, tableinfo):
         self.min_move_time = 5
         self.min_timeleft = 5
@@ -145,9 +148,15 @@ class Table:
         self.sid = None
         self.auth = ""
         self.state = {}
-        self.sent_tc = {'tcmove': None, 'tcreserve': None, 'tcpercent': None,
-                'tcmax': None, 'tctotal': None, 'tcturns': None,
-                'tcturntime': None}
+        self.sent_tc = {
+            'tcmove': None,
+            'tcreserve': None,
+            'tcpercent': None,
+            'tcmax': None,
+            'tctotal': None,
+            'tcturns': None,
+            'tcturntime': None
+        }
 
     def _check_engine(self, timeout=None):
         if self.engine.engine.proc.poll() is not None:
@@ -169,16 +178,15 @@ class Table:
         except socket.timeout:
             raise
         except socket.error, exc:
-            if (hasattr(exc, "args")
-                and len(exc.args) > 0
-                and exc.args[0] == 32):
+            if (hasattr(exc, "args") and len(exc.args) > 0 and
+                exc.args[0] == 32):
                 raise EngineCrashException("Socket reset")
             else:
                 raise
 
     def _update_timecontrol(self, state):
         tc_vars = ['tcmove', 'tcreserve', 'tcpercent', 'tcmax', 'tctotal',
-                'tcturns', 'tcturntime']
+                   'tcturns', 'tcturntime']
         for var in tc_vars:
             if state.has_key(var) and self.sent_tc.get(var, None) != state[var]:
                 log.info("Sending %s of %s to engine.", var, state[var])
@@ -187,17 +195,17 @@ class Table:
 
     def reserveseat(self):
         gameroom = self.gameroom
-        values = dict(gid = self.gid,
-                side = self.side,
-                sid = gameroom.sid,
-                action = "reserve")
+        values = dict(gid=self.gid,
+                      side=self.side,
+                      sid=gameroom.sid,
+                      action="reserve")
         self.seat = post(gameroom.url, values, "Table.reserveseat")
-        self.url = self.seat['base'] +'/'+ self.seat['cgi']
+        self.url = self.seat['base'] + '/' + self.seat['cgi']
 
     def sitdown(self):
-        values = dict(sid = self.seat['tid'],
-                grid = self.seat['grid'],
-                action = "sit")
+        values = dict(sid=self.seat['tid'],
+                      grid=self.seat['grid'],
+                      action="sit")
         response = post(self.url, values, "Table.sitdown")
         try:
             self.sid = response['sid']
@@ -205,9 +213,7 @@ class Table:
             pass
 
     def leave(self):
-        values = dict(sid = self.sid,
-                auth = self.auth,
-                action = "leave")
+        values = dict(sid=self.sid, auth=self.auth, action="leave")
         try:
             response = post(self.url, values, "Table.leave")
         except urllib2.URLError:
@@ -218,15 +224,14 @@ class Table:
             ret = False
         return ret
 
-    def updatestate(self, wait = 0):
+    def updatestate(self, wait=0):
         lastchange = 0
-        if (self.state
-                and (self.state.get('lastchange', "") != "")):
+        if (self.state and (self.state.get('lastchange', "") != "")):
             lastchange = self.state['lastchange']
-        values = dict(sid = self.sid,
-                what = "gamestate",
-                wait = 0,
-                lastchange = lastchange)
+        values = dict(sid=self.sid,
+                      what="gamestate",
+                      wait=0,
+                      lastchange=lastchange)
         if wait:
             values['wait'] = 1
             values['maxwait'] = wait
@@ -237,9 +242,7 @@ class Table:
         return gamestate
 
     def startgame(self):
-        values = dict(sid = self.sid,
-                action = "startmove",
-                auth = self.auth)
+        values = dict(sid=self.sid, action="startmove", auth=self.auth)
         response = post(self.url, values, "Table.startgame")
         try:
             ret = bool(int(response.get('ok', 0)))
@@ -248,10 +251,7 @@ class Table:
         return ret
 
     def move(self, move):
-        values = dict(sid = self.sid,
-                action = "move",
-                move = move,
-                auth = self.auth)
+        values = dict(sid=self.sid, action="move", move=move, auth=self.auth)
         if move.lower() == "resign":
             values['action'] = "resign"
             values['move'] = ""
@@ -263,10 +263,10 @@ class Table:
         return ret
 
     def chat(self, message):
-        values = dict(sid = self.sid,
-                action = "chat",
-                chat = message,
-                auth = self.auth)
+        values = dict(sid=self.sid,
+                      action="chat",
+                      chat=message,
+                      auth=self.auth)
         response = post(self.url, values, "Table.chat")
         try:
             ret = bool(int(response.get('ok', 0)))
@@ -283,9 +283,9 @@ class Table:
         opmove_re = re.compile(r"\b(\d+%s [^\n]+)\n[^\n]*$" % (opside))
         opplayer = opside + "player"
         state = self.updatestate()
-        if (int(state.get('postal', "0"))
-                and (state.get(opplayer, "") == ""
-                    or state.get('turn', "") != self.side)):
+        if (int(state.get('postal', "0")) and
+            (state.get(opplayer, "") == "" or
+             state.get('turn', "") != self.side)):
             log.info("Postal game and it's not my turn")
             return
 
@@ -320,8 +320,9 @@ class Table:
         oplogged = False
         while state.get('result', "") == "":
             turnchange = time.time()
-            while (state.get('result', "") == ""
-                    and state.get('turn' "") != self.side):
+            while (state.get('result', "") == "" and state.get('turn'
+                                                               "") != self.side
+                  ):
                 if onemove:
                     return
                 try:
@@ -335,7 +336,7 @@ class Table:
                 # server with new requests never wait less than a quarter of
                 # the move time. Otherwise wait till the end of the opponents
                 # regular turn time.
-                tused_key = "%sused" % ("wb"[("wb".index(self.side)+1) % 2],)
+                tused_key = "%sused" % ("wb" [("wb".index(self.side) + 1) % 2], )
                 if state.has_key(tused_key):
                     moveused = int(state[tused_key])
                 else:
@@ -349,18 +350,19 @@ class Table:
                     if opname.startswith('*'):
                         opname = opname[2:]
                     log.info("Playing against %s", opname)
-                    engine.setoption("rating", state[self.side+"rating"])
+                    engine.setoption("rating", state[self.side + "rating"])
                     engine.setoption("opponent", opname)
-                    engine.setoption("opponent_rating", state[opside+"rating"])
+                    engine.setoption("opponent_rating",
+                                     state[opside + "rating"])
                     engine.setoption("rated", state.get('rated', 1))
                     oplogged = True
                 oppresent = opside + "present"
-                if (state.get('starttime', "") == ""
-                        and state.get(opplayer, "") != ""
-                        and int(state.get(oppresent, "0")) < 1
-                        and state.get('timecontrol', "") != ""):
-                    while (time.time() - turnchange < 5*60
-                            and int(state.get(oppresent, "0")) < 1):
+                if (state.get('starttime', "") == "" and
+                    state.get(opplayer, "") != "" and
+                    int(state.get(oppresent, "0")) < 1 and
+                    state.get('timecontrol', "") != ""):
+                    while (time.time() - turnchange < 5 * 60 and
+                           int(state.get(oppresent, "0")) < 1):
                         time.sleep(10)
                         state = self.updatestate()
                     if int(state.get(oppresent, "0")) < 1:
@@ -371,9 +373,9 @@ class Table:
                 if opname.startswith('*'):
                     opname = opname[2:]
                 log.info("Playing against %s", opname)
-                engine.setoption("rating", state[self.side+"rating"])
+                engine.setoption("rating", state[self.side + "rating"])
                 engine.setoption("opponent", opname)
-                engine.setoption("opponent_rating", state[opside+"rating"])
+                engine.setoption("opponent_rating", state[opside + "rating"])
                 engine.setoption("rated", state.get('rated', 1))
                 oplogged = True
             if not oplogged and int(state.get('postal', "0")) < 1:
@@ -397,7 +399,7 @@ class Table:
                         self._check_engine(0)
                 except socket.timeout:
                     pass
-                tused_key = "%sused" % (self.side,)
+                tused_key = "%sused" % (self.side, )
                 if state.has_key(tused_key):
                     moveused = int(state[tused_key])
                 else:
@@ -425,15 +427,15 @@ class Table:
                 if state.has_key('lastmoveused'):
                     if engine.protocol_version == 0:
                         engine.setoption("tclastmoveused",
-                                state['lastmoveused'])
+                                         state['lastmoveused'])
                     engine.setoption("lastmoveused", state['lastmoveused'])
                 engine.go()
                 stopsent = False
-                myreserve = "tc%sreserve2" % (self.side,)
+                myreserve = "tc%sreserve2" % (self.side, )
                 stoptime = starttime + int(state['tcmove']) + int(
-                        state[myreserve])
-                if (state.has_key('turntime')
-                    and (starttime + state['turntime']) < stoptime):
+                    state[myreserve])
+                if (state.has_key('turntime') and
+                    (starttime + state['turntime']) < stoptime):
                     stoptime = int(starttime + state['turntime'])
                 stoptime -= self.min_timeleft
                 waittime = 10
@@ -454,22 +456,22 @@ class Table:
                         response = self._check_engine(waittime)
                         if response.type == "bestmove":
                             break
-                        if (response.type == "info"
-                                and response.message.startswith("time")
-                                and not secondtimeupdate):
+                        if (response.type == "info" and
+                            response.message.startswith("time") and
+                            not secondtimeupdate):
                             engine.setoption(timeusedname,
-                                    int(time.time() - starttime))
+                                             int(time.time() - starttime))
                             secondtimeupdate = True
                     except socket.timeout:
                         pass
                 engine.makemove(response.move)
                 endtime = time.time()
-                if (self.min_move_time > endtime-starttime
-                    and int(state.get('plycount', 0)) > 1):
-                    stime = self.min_move_time - (endtime-starttime)
+                if (self.min_move_time > endtime - starttime and
+                    int(state.get('plycount', 0)) > 1):
+                    stime = self.min_move_time - (endtime - starttime)
                     if stime > 0:
                         log.info("Waiting %.2f seconds before sending move",
-                                stime)
+                                 stime)
                         time.sleep(stime)
                 log.info("Sending move %s", response.move)
                 self.move(response.move)
@@ -487,11 +489,13 @@ class Table:
         while not permanent_id and get_id_tries <= 3:
             time.sleep(2 * get_id_tries)
             permanent_id = post(self.gameroom.url,
-                    {"action": "findgameid", "tid": self.gid},
-                    "Table.findgameid").get("gid", None)
+                                {"action": "findgameid",
+                                 "tid": self.gid},
+                                "Table.findgameid").get("gid", None)
             get_id_tries += 1
         if permanent_id:
             log.info("Permanent game id is #%s", permanent_id)
+
 
 class GameRoom:
     def __init__(self, url):
@@ -502,9 +506,7 @@ class GameRoom:
         self.sid = None
 
     def login(self, username, password):
-        values = dict(username = username,
-                password = password,
-                action = "login")
+        values = dict(username=username, password=password, action="login")
         response = post(self.url, values, "GameRoom.login")
         self.sid = response['sid']
         log.info("Logged into gameroom as %s", username)
@@ -513,7 +515,7 @@ class GameRoom:
         if not self.sid:
             log.warn("GameRoom.logout called before sid set.")
             return '0'
-        values = dict(sid = self.sid, action = "leave")
+        values = dict(sid=self.sid, action="leave")
         response = post(self.url, values, "GameRoom.logout")
         try:
             ret = bool(int(response['ok']))
@@ -530,18 +532,17 @@ class GameRoom:
         if (side != 'b') and (side != 'w'):
             raise ValueError("Invalid value for side, %s" % (side))
 
-        values = dict(timecontrol = timecontrol,
-                rated = rated,
-                side = side,
-                sid = self.sid,
-                action = "newGame")
+        values = dict(timecontrol=timecontrol,
+                      rated=rated,
+                      side=side,
+                      sid=self.sid,
+                      action="newGame")
         tableinfo = post(self.url, values, "GameRoom.newgame")
         tableinfo = parsebody(tableinfo.values()[0])
         return Table(self, tableinfo)
 
     def mygames(self):
-        values = dict(sid = self.sid,
-                what = "myGames")
+        values = dict(sid=self.sid, what="myGames")
         gamedata = post(self.url, values, "GameRoom.mygames")
         games = list()
         for gameid, gameinfo in gamedata.items():
@@ -550,8 +551,7 @@ class GameRoom:
         return games
 
     def opengames(self):
-        values = dict(sid = self.sid,
-                what = "join")
+        values = dict(sid=self.sid, what="join")
         gamedata = post(self.url, values, "GameRoom.opengames")
         games = list()
         for gameid, gameinfo in gamedata.items():
@@ -559,19 +559,22 @@ class GameRoom:
                 games.append(parsebody(gameinfo))
         return games
 
+
 def parseargs(args):
     parser = optparse.OptionParser(
         usage="usage: %prog [-c CONFIG] [play|move opponent|game] [side]",
         description="Interface to the Arimaa gameserver",
-        epilog="".join(["Positional arguments: ",
-            "'play' or 'move' as the first argument specify whether to play ",
-            "an existing full game or just one move before exiting . They ",
-            "must be followed by either the name of the opponents game to ",
-            "join or an explicit game number. ",
-            "The side to play can be given by itself or following the ",
-            "previous arguments."]))
-    parser.add_option('-c', '--config', default="gameroom.cfg",
-            help="Configuration file to use.")
+        epilog="".join(
+            ["Positional arguments: ",
+             "'play' or 'move' as the first argument specify whether to play ",
+             "an existing full game or just one move before exiting . They ",
+             "must be followed by either the name of the opponents game to ",
+             "join or an explicit game number. ",
+             "The side to play can be given by itself or following the ",
+             "previous arguments."]))
+    parser.add_option('-c', '--config',
+                      default="gameroom.cfg",
+                      help="Configuration file to use.")
     options, args = parser.parse_args(args)
     ret = dict()
     ret['config'] = options.config
@@ -585,7 +588,7 @@ def parseargs(args):
     if first == "play" or first == "move":
         if len(args) < 3:
             raise ValueError("Not enough arguments given for command")
-        ret.update(dict(against = args[2].lower()))
+        ret.update(dict(against=args[2].lower()))
         if len(args) > 3:
             ret['side'] = args[3].lower()
         else:
@@ -598,12 +601,14 @@ def parseargs(args):
     parser.print_help()
     raise ValueError("Bad commandline arguments")
 
+
 def touch_run_file(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
     run_file = open(filename, 'w')
     run_file.write("%d\n" % os.getpid())
     run_file.close()
     log.info("Created run file at %s" % filename)
+
 
 def remove_run_file(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
@@ -612,6 +617,7 @@ def remove_run_file(run_dir, rfile):
     except OSError:
         pass
     log.info("Removed run file at %s" % filename)
+
 
 def how_many_bots(run_dir):
     files = os.listdir(run_dir)
@@ -633,6 +639,7 @@ def how_many_bots(run_dir):
                 pass
     return count
 
+
 def already_playing(run_dir, gameid, side):
     isplaying = False
     runfn = os.path.join(run_dir, "%s%s.bot" % (gameid, side))
@@ -652,9 +659,10 @@ def already_playing(run_dir, gameid, side):
             pass
     except IOError:
         pass
-    log.info("The file %s indicates we are already playing at %s on side %s"
-            % (runfn, gameid, side))
+    log.info("The file %s indicates we are already playing at %s on side %s" %
+             (runfn, gameid, side))
     return isplaying
+
 
 def str_loglevel(strlevel):
     strlevel = strlevel.lower()
@@ -668,6 +676,7 @@ def str_loglevel(strlevel):
         return logging.ERROR
     else:
         raise ValueError("Unrecognised logging level")
+
 
 def shutdown_engine(engine_ctl):
     try:
@@ -693,6 +702,7 @@ def shutdown_engine(engine_ctl):
     engine_ctl.cleanup()
     time.sleep(1)
 
+
 def main(args=sys.argv):
     """Main entry for script.
 
@@ -713,7 +723,7 @@ def main(args=sys.argv):
     try:
         config.readfp(open(config_filename, 'rU'))
     except IOError:
-        print "Could not open '%s'" % (config_filename,)
+        print "Could not open '%s'" % (config_filename, )
         print "this file must be readable and contain the configuration"
         print "for connecting to the gameroom."
         return 1
@@ -723,25 +733,25 @@ def main(args=sys.argv):
         logdir = config.get("Logging", "directory")
         if not os.path.exists(logdir):
             print "Log directory '%s' not found, attempting to create it." % (
-                    logdir)
+                logdir
+            )
             os.makedirs(logdir)
         logfilename = "%s-%s.log" % (time.strftime("%Y%m%d-%H%M"),
-                    str(os.getpid()),
-                    )
+                                     str(os.getpid()), )
         logfilename = os.path.join(logdir, logfilename)
         if config.has_option("Logging", "level"):
             loglevel = str_loglevel(config.get("Logging", "level"))
         else:
             loglevel = logging.WARN
 
-        logging.basicConfig(level = loglevel,
-                filename = logfilename,
-                datefmt="%Y-%m-%d %H:%M:%S",
-                format="%(asctime)s %(levelname)s:%(name)s:%(message)s",
-                )
+        logging.basicConfig(
+            level=loglevel,
+            filename=logfilename,
+            datefmt="%Y-%m-%d %H:%M:%S",
+            format="%(asctime)s %(levelname)s:%(name)s:%(message)s", )
 
-        if (config.has_option("Logging", "console")
-            and config.getboolean("Logging", "console")):
+        if (config.has_option("Logging", "console") and
+            config.getboolean("Logging", "console")):
             global console
             console = logging.StreamHandler()
             if config.has_option("Logging", "console_level"):
@@ -763,19 +773,19 @@ def main(args=sys.argv):
             aeilog.setLevel(str_loglevel(config.get("Logging", "aei_level")))
 
         positionlog.setLevel(logging.ERROR)
-        if (config.has_option("Logging", "log_position")
-            and config.getboolean("Logging", "log_position")):
+        if (config.has_option("Logging", "log_position") and
+            config.getboolean("Logging", "log_position")):
             positionlog.setLevel(logging.INFO)
-
 
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
         log.warn("Run file directory '%s' not found, attempting to create it."
-                % (run_dir))
+                 % (run_dir))
         os.makedirs(run_dir)
     bot_count = how_many_bots(run_dir)
     if bot_count >= config.getint("global", "max_bots"):
-        log.info("Max number of bot limit %d reached, need to wait until some bots finish."
+        log.info(
+            "Max number of bot limit %d reached, need to wait until some bots finish."
             % (config.getint("global", "max_bots")))
         return
 
@@ -823,35 +833,35 @@ def main(args=sys.argv):
                     side = 'b'
                 timecontrol = config.get(bot_section, "timecontrol")
                 rated = config.getboolean(bot_section, "rated")
-                log.info("Will play on side %s, using timecontrol %s"
-                        % (side, timecontrol))
+                log.info("Will play on side %s, using timecontrol %s" %
+                         (side, timecontrol))
                 table = gameroom.newgame(side, timecontrol, rated)
             else:
                 # look through my games for correct opponent and side
                 games = gameroom.mygames()
                 for game in games:
-                    if (gameid_or_opponent == game['player'].lower()
-                            or gameid_or_opponent == game['gid']):
-                        if (side == "" or side == game['side']
-                            and not already_playing(run_dir, game['gid'],
-                                game['side'])):
+                    if (gameid_or_opponent == game['player'].lower() or
+                        gameid_or_opponent == game['gid']):
+                        if (side == "" or
+                            side == game['side'] and not already_playing(
+                                run_dir, game['gid'], game['side'])):
                             table = Table(gameroom, game)
                             log.info("Found in progress game")
                             break
                 if table == None:
                     games = gameroom.opengames()
                     for game in games:
-                        if (gameid_or_opponent == game['player'].lower()
-                                or gameid_or_opponent == game['gid']):
-                            if (side == "" or side == game['side']
-                                and not already_playing(run_dir, game['gid'],
-                                    game['side'])):
+                        if (gameid_or_opponent == game['player'].lower() or
+                            gameid_or_opponent == game['gid']):
+                            if (side == "" or
+                                side == game['side'] and not already_playing(
+                                    run_dir, game['gid'], game['side'])):
                                 table = Table(gameroom, game)
                                 log.info("Found game to join")
                                 break
                 if table == None:
                     log.error("Could not find game against %s with side '%s'",
-                            gameid_or_opponent, side)
+                              gameid_or_opponent, side)
                     engine_ctl.quit()
                     engine_ctl.cleanup()
                     return 1
@@ -859,8 +869,9 @@ def main(args=sys.argv):
             gameid_or_opponent = table.gid
 
             if options['against'] != "":
-                joinmsg = "Joined game gid=%s side=%s; against %s" % (table.gid,
-                        table.side, options['against'])
+                joinmsg = "Joined game gid=%s side=%s; against %s" % (
+                    table.gid, table.side, options['against']
+                )
             else:
                 joinmsg = "Created game gid=%s side=%s; waiting for opponent"\
                         % (table.gid, table.side)
@@ -883,13 +894,13 @@ def main(args=sys.argv):
             if config.has_option("global", "min_move_time"):
                 table.min_move_time = config.getint("global", "min_move_time")
                 log.info("Set minimum move time to %d seconds.",
-                        table.min_move_time)
+                         table.min_move_time)
             else:
                 table.min_move_time = 5
             if config.has_option("global", "min_time_left"):
                 table.min_timeleft = config.getint("global", "min_time_left")
-                log.info("Setting emergency stop time to %d seconds"
-                        % table.min_timeleft)
+                log.info("Setting emergency stop time to %d seconds" %
+                         table.min_timeleft)
             else:
                 table.min_timeleft = 5
         except:
@@ -904,15 +915,15 @@ def main(args=sys.argv):
                 table.updatestate()
                 engine_ctl.setoption("rated", table.state.get('rated', 1))
                 try:
-                    touch_run_file(run_dir, "%s%s.bot"
-                            % (table.gid, table.side))
-                    time.sleep(1) # Give the server a small break.
+                    touch_run_file(run_dir, "%s%s.bot" %
+                                   (table.gid, table.side))
+                    time.sleep(1)  # Give the server a small break.
                     log.info("Starting play")
                     table.playgame(engine_ctl, bot_greeting, options['onemove'])
                 finally:
                     log.info("Leaving game")
-                    remove_run_file(run_dir, "%s%s.bot"
-                            % (table.gid, table.side))
+                    remove_run_file(run_dir, "%s%s.bot" %
+                                    (table.gid, table.side))
                     table.leave()
                 break
             finally:
@@ -927,10 +938,9 @@ def main(args=sys.argv):
         except Exception:
             unknowns_caught += 1
             if unknowns_caught > 5:
-                log.error("Caught 6 unknown exceptions, giving up.\n%s" % (
-                    traceback.format_exc(), ))
+                log.error("Caught 6 unknown exceptions, giving up.\n%s" %
+                          (traceback.format_exc(), ))
                 return 2
-            log.error("Caught unkown exception #%d, restarting.\n%s" % (
-                unknowns_caught, traceback.format_exc()))
+            log.error("Caught unkown exception #%d, restarting.\n%s" %
+                      (unknowns_caught, traceback.format_exc()))
             time.sleep(2)
-
