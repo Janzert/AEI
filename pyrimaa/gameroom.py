@@ -706,7 +706,7 @@ def main(args=sys.argv):
         options = parseargs(args)
     except ValueError:
         print "Command not understood '%s'" % (" ".join(args[1:]))
-        sys.exit(2)
+        return 2
 
     config = SafeConfigParser()
     config_filename = options['config']
@@ -716,7 +716,7 @@ def main(args=sys.argv):
         print "Could not open '%s'" % (config_filename,)
         print "this file must be readable and contain the configuration"
         print "for connecting to the gameroom."
-        sys.exit(1)
+        return 1
 
     aeilog = logging.getLogger("gameroom.aei")
     if config.has_section("Logging"):
@@ -788,13 +788,14 @@ def main(args=sys.argv):
 
     gameid_or_opponent = options['against']
     unknowns_caught = 0
+    bot_crashes = 0
     while True:
         try:
             engine_com = aei.get_engine(com_method, enginecmd, log=aeilog)
             engine_ctl = aei.EngineController(engine_com)
         except OSError, exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
-            sys.exit(1)
+            return 1
 
         try:
             for option in config.options(bot_section):
@@ -853,7 +854,7 @@ def main(args=sys.argv):
                             gameid_or_opponent, side)
                     engine_ctl.quit()
                     engine_ctl.cleanup()
-                    sys.exit(1)
+                    return 1
             # Set the game to play in to current game id in case of a restart
             gameid_or_opponent = table.gid
 
@@ -916,20 +917,20 @@ def main(args=sys.argv):
                 break
             finally:
                 shutdown_engine(engine_ctl)
-        except (KeyboardInterrupt, SystemExit):
-            raise
         except EngineCrashException, exc:
+            bot_crashes += 1
+            if bot_crashes >= 1000:
+                log.error("Bot engine crashed 1000 times, giving up.")
+                return 2
             log.error("Bot engine crashed (%s), restarting.", exc.args[0])
             time.sleep(1)
-        except:
+        except Exception:
             unknowns_caught += 1
+            if unknowns_caught > 5:
+                log.error("Caught 6 unknown exceptions, giving up.\n%s" % (
+                    traceback.format_exc(), ))
+                return 2
             log.error("Caught unkown exception #%d, restarting.\n%s" % (
                 unknowns_caught, traceback.format_exc()))
             time.sleep(2)
-            if unknowns_caught > 5:
-                sys.exit(2)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
 
