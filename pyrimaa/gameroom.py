@@ -753,7 +753,8 @@ def main(args=sys.argv):
         if (config.has_option("Logging", "console") and
             config.getboolean("Logging", "console")):
             global console
-            console = logging.StreamHandler()
+            if console is None:
+                console = logging.StreamHandler()
             if config.has_option("Logging", "console_level"):
                 conlevel = str_loglevel(config.get("Logging", "console_level"))
             else:
