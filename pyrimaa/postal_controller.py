@@ -23,7 +23,6 @@ import sys
 import time
 
 from ConfigParser import SafeConfigParser
-from subprocess import Popen
 
 import gameroom
 
@@ -81,11 +80,7 @@ def main():
                     pass
                 log("%d/%d: Playing move against %s game #%s" % (
                         game_num+1, my_turn_games, game['player'], game['gid']))
-                proc = Popen(["./gameroom.py", "move", game['gid']])
-                proc.wait()
+                gameroom.main(["gameroom", "move", game['gid']])
         else:
             log("No postal games with a turn found, sleeping.")
             time.sleep(300)
-
-if __name__ == "__main__":
-    main()
