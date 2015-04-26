@@ -27,7 +27,7 @@ def parse_start(start_lines, stop_move=None):
     if len(start_lines) < 2 or start_lines[1][0] != '+':
         have_board = False
         start = []
-        while plines and start_lines[0][0].isdigit():
+        while start_lines and start_lines[0][0].isdigit():
             move = start_lines.pop(0)
             if stop_move and move.startswith(stop_move):
                 break
@@ -182,12 +182,12 @@ def main(args=None):
             eng.setposition(pos)
         else:
             pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
-            for mnum, move in enumerate(move_list):
+            for mnum, move in enumerate(start):
                 move = move[3:]
-                if mnum < 2 and setup_checks is not None:
-                    do_checks = setup_checks
+                if mnum < 2 and cfg.strict_setup is not None:
+                    do_checks = cfg.strict_setup
                 else:
-                    do_checks = strict_checks
+                    do_checks = cfg.strict_checks
                 pos = pos.do_move_str(move, do_checks)
                 eng.makemove(move)
         print pos.board_to_str()
