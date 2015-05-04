@@ -38,7 +38,7 @@ removed in the future)
 
 """
 
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError
 import optparse
 import logging
 import os
@@ -74,12 +74,14 @@ def post(url, values, logname="network"):
     oldtimeout = socket.getdefaulttimeout()
     if values.get('wait', 0) != 0:
         stimeout = max(5, values['maxwait'] + 2)
-        socket.setdefaulttimeout(stimeout)
     else:
-        socket.setdefaulttimeout(5)
+        stimeout = 5
+    netlog.debug("Setting server connection timeout to %d", stimeout)
+    socket.setdefaulttimeout(stimeout)
     try:
         body = ""
         for try_num in range(1, 6):
+            timedout = False
             try:
                 try:
                     netlog.debug("%s request:\n%s", logname, req.get_data())
@@ -88,11 +90,13 @@ def post(url, values, logname="network"):
                 except socket.timeout:
                     netlog.debug("Socket timed out to server")
                     body = ""
+                    timedout = True
             except urllib2.URLError, err:
                 if isinstance(err.reason, socket.timeout):
                     # time out probably in urlopen
                     netlog.debug("Socket timed out with URLError: %s", err)
                     body = ""
+                    timedout = True
                 elif (isinstance(err.reason, socket.gaierror) and
                       err.reason[0] == 10060):
                     netlog.debug(
@@ -102,9 +106,14 @@ def post(url, values, logname="network"):
                     raise
             if body != "":
                 break
-            netlog.info("bad response from server trying again in %d seconds",
+            if timedout:
+                netlog.info("Timed out connecting to server retrying (%d).",
+                        try_num)
+                socket.setdefaulttimeout(stimeout + try_num)
+            else:
+                netlog.info("Retrying server connection in %d seconds",
                         try_num ** 2)
-            time.sleep(try_num ** 2)
+                time.sleep(try_num ** 2)
     finally:
         socket.setdefaulttimeout(oldtimeout)
     netlog.debug("%s response body:\n%s", logname, body)
@@ -736,7 +745,7 @@ def main(args=sys.argv):
                 logdir
             )
             os.makedirs(logdir)
-        logfilename = "%s-%s.log" % (time.strftime("%Y%m%d-%H%M"),
+        logfilename = "%s-%s" % (time.strftime("%Y%m%d-%H%M"),
                                      str(os.getpid()), )
         logfilename = os.path.join(logdir, logfilename)
         if config.has_option("Logging", "level"):
@@ -746,7 +755,7 @@ def main(args=sys.argv):
 
         logging.basicConfig(
             level=loglevel,
-            filename=logfilename,
+            filename=logfilename + ".log",
             datefmt="%Y-%m-%d %H:%M:%S",
             format="%(asctime)s %(levelname)s:%(name)s:%(message)s", )
 
@@ -777,6 +786,14 @@ def main(args=sys.argv):
         if (config.has_option("Logging", "log_position") and
             config.getboolean("Logging", "log_position")):
             positionlog.setLevel(logging.INFO)
+
+        if (config.has_option("Logging", "separate_net_log") and
+            config.getboolean("Logging", "separate_net_log")):
+            nethandler = logging.FileHandler(logfilename + "-net.log")
+            netlog.addHandler(nethandler)
+            netlog.propagate = False
+            log.info("Created net log file %s at level %s" % (
+                logfilename + "-net.log", logging.getLevelName(netlevel)))
 
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
