@@ -573,7 +573,7 @@ class GameRoom:
 
 def parseargs(args):
     parser = optparse.OptionParser(
-        usage="usage: %prog [-c CONFIG] [play|move opponent|game] [side]",
+        usage="usage: %prog [-c CONFIG] [-b BOT] [play|move opponent|id] [side]",
         description="Interface to the Arimaa gameserver",
         epilog="".join(
             ["Positional arguments: ",
@@ -586,9 +586,12 @@ def parseargs(args):
     parser.add_option('-c', '--config',
                       default="gameroom.cfg",
                       help="Configuration file to use.")
+    parser.add_option('-b', '--bot',
+                      help="bot section to use from configuration.")
     options, args = parser.parse_args(args)
     ret = dict()
     ret['config'] = options.config
+    ret['bot'] = options.bot
     if len(args) < 2:
         ret.update(dict(against='', side='b', onemove=False))
         return ret
@@ -809,7 +812,10 @@ def main(args=sys.argv):
             % (config.getint("global", "max_bots")))
         return
 
-    bot_section = config.get("global", "default_engine")
+    if options['bot']:
+        bot_section = options['bot']
+    else:
+        bot_section = config.get("global", "default_engine")
     if config.has_option(bot_section, "communication_method"):
         com_method = config.get(bot_section, "communication_method").lower()
     else:
