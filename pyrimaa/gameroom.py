@@ -794,7 +794,11 @@ def main(args=sys.argv):
 
         if (config.has_option("Logging", "separate_net_log") and
             config.getboolean("Logging", "separate_net_log")):
+            netfmt = logging.Formatter(
+                    fmt="%(asctime)s %(levelname)s: %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S")
             nethandler = logging.FileHandler(logfilename + "-net.log")
+            nethandler.setFormatter(netfmt)
             netlog.addHandler(nethandler)
             netlog.propagate = False
             log.info("Created net log file %s at level %s" % (
