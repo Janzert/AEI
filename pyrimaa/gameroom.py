@@ -80,7 +80,9 @@ def post(url, values, logname="network"):
     socket.setdefaulttimeout(stimeout)
     try:
         body = ""
-        for try_num in range(1, 6):
+        try_num = 0
+        while True:
+            try_num += 1
             timedout = False
             try:
                 try:
@@ -104,7 +106,7 @@ def post(url, values, logname="network"):
                     body = ""
                 else:
                     raise
-            if body != "":
+            if body != "" or try_num == 5:
                 break
             if timedout:
                 netlog.info("Timed out connecting to server retrying (%d).",
