@@ -125,7 +125,7 @@ Similiar to roundrobin or analyze above you'll need to first setup
 a ``gameroom.cfg`` file with the bot configuration and gameroom login
 information.
 
-Then starting a new game is as simple as:
+Then starting a new game is as simple as::
 
     gameroom [side]
 
@@ -134,7 +134,7 @@ it plays a full game with that opponent. <side> indicates the side to play
 and should be either 'g' for Gold or 's' for Silver, or if not specified,
 then it is s. (w or b will also work but may be removed in the future)
 
-To join an existing game use:
+To join an existing game use::
 
     gameroom play|move <opponent name or game number> [side]
 
