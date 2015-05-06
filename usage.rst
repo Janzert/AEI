@@ -13,7 +13,7 @@ random moves::
     analyze example_position.txt
 
 If you replace the simple_engine.py with your own bot that implements AEI you
-can point any position at your bot.
+can point your bot at any position.
 
 roundrobin
 __________
@@ -21,10 +21,9 @@ __________
 Plays engines against each other in a round robin tournament.  This is a very
 handy way to test your bot against other bots.
 
-The example_roundrobin.cfg contains config for matching bot_opfor against the
-simple_engine.py that makes random moves.  It is a good idea to try doing this
-first to make sure the AEI tournament is working properly before you put your
-own bot in there.
+The example_roundrobin.cfg contains a config for playing simple_engine against
+itself.  It is a good idea to try doing this first to make sure the AEI
+tournament is working properly before you put your own bot in there.
 
 First you'll need to make a copy of the example cfg file::
 
@@ -94,7 +93,11 @@ an executable that responds to the AEI protocol), e.g.
 
 And to add the bot to the tournament modify the bots property::
 
-    bots = OpFor Random MyBot
+    bots = random randomer MyBot
+
+or simply replacing one with your own::
+
+    bots = random MyBot
 
 getMove and Older Bots
 ______________________
@@ -124,20 +127,20 @@ information.
 
 Then starting a new game is as simple as:
 
-    gameroom.py [<side>]
+    gameroom [side]
 
 The first usage starts a single game and waits for an opponent, after which
 it plays a full game with that opponent. <side> indicates the side to play
 and should be either 'g' for Gold or 's' for Silver, or if not specified,
 then it is s. (w or b will also work but may be removed in the future)
 
-Joining an existing game:
+To join an existing game use:
 
-    gameroom.py (play|move) <opponent name or game number> [<side>]
+    gameroom play|move <opponent name or game number> [side]
 
-Starts and controls an engine then plays a game or move on the server as
+This starts an engine then plays a game or move on the server as
 specified by the command line arguments. Configuration is provided in the file
-'gameroom.cfg'.
+``gameroom.cfg``.
 
 The second usage joins a game and either plays a full game or just one move.
 'play' indicates the full game should be played. 'move' will play only one
