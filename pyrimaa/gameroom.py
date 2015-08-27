@@ -845,8 +845,16 @@ def main(args=sys.argv):
                     log.info("Setting bot option %s = %s", option[4:], value)
             engine_ctl.isready()
 
-            bot_username = config.get(bot_section, "username")
-            bot_password = config.get(bot_section, "password")
+            try:
+                bot_username = config.get(bot_section, "username")
+                bot_password = config.get(bot_section, "password")
+            except NoOptionError:
+                try:
+                    bot_username = config.get("global", "username")
+                    bot_password = config.get("global", "password")
+                except NoOptionError:
+                    log.error("Could not find username/password in config.")
+                    return 1
             bot_greeting = config.get(bot_section, "greeting")
 
             gameroom = GameRoom(config.get("global", "gameroom_url"))
