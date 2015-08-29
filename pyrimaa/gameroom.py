@@ -638,19 +638,19 @@ def how_many_bots(run_dir):
     count = 0
     for filename in files:
         if filename.endswith('.bot'):
-            run_file = open(os.path.join(run_dir, filename), 'r')
-            try:
-                pid = int(run_file.read())
-                if sys.platform == 'win32':
-                    count += 1
-                else:
-                    try:
-                        if os.kill(pid, signal.SIGCONT) > 0:
-                            count += 1
-                    except OSError:
-                        pass
-            except ValueError:
-                pass
+            with open(os.path.join(run_dir, filename), 'r') as run_file:
+                try:
+                    pid = int(run_file.read())
+                    if sys.platform == 'win32':
+                        count += 1
+                    else:
+                        try:
+                            if os.kill(pid, signal.SIGCONT) > 0:
+                                count += 1
+                        except OSError:
+                            pass
+                except ValueError:
+                    pass
     return count
 
 
@@ -658,19 +658,19 @@ def already_playing(run_dir, gameid, side):
     isplaying = False
     runfn = os.path.join(run_dir, "%s%s.bot" % (gameid, side))
     try:
-        run_file = open(runfn, 'r')
-        try:
-            pid = int(run_file.read())
-            if sys.platform == 'win32':
-                isplaying = True
-            else:
-                try:
-                    if os.kill(pid, signal.SIGCONT) > 0:
-                        isplaying = True
-                except OSError:
-                    pass
-        except ValueError:
-            pass
+        with open(runfn, 'r') as run_file:
+            try:
+                pid = int(run_file.read())
+                if sys.platform == 'win32':
+                    isplaying = True
+                else:
+                    try:
+                        if os.kill(pid, signal.SIGCONT) > 0:
+                            isplaying = True
+                    except OSError:
+                        pass
+            except ValueError:
+                pass
     except IOError:
         pass
     log.info("The file %s indicates we are already playing at %s on side %s" %
