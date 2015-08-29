@@ -19,47 +19,78 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import ConfigParser
+import logging
+import optparse
 import sys
 import time
 
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError
 
 import gameroom
 
-LOG_FILE = "postal.log"
+log = logging.getLogger("postal")
 
-def log(message):
-    print message
-    plfile = open(LOG_FILE, "a")
-    logline = [time.strftime("%Y-%m-%d %a %H:%M:%S")]
-    logline.append(message)
-    logline.append("\n")
-    logline = " ".join(logline)
-    plfile.write(logline)
-    plfile.close()
 
-def main():
+def main(args=sys.argv):
+    opt_parser = optparse.OptionParser(
+        usage="usage: %prog [-c CONFIG] [-b BOT]",
+        description="Manage bot playing multiple postal games.")
+    opt_parser.add_option('-c', '--config',
+                      default="gameroom.cfg",
+                      help="Configuration file to use.")
+    opt_parser.add_option('-b', '--bot', help="Bot section to use as the default.")
+    options, args = opt_parser.parse_args(args)
+    if len(args) > 1:
+        print "Unrecognized command line arguments", args[1:]
+        return 1
     config = SafeConfigParser()
     try:
-        config.readfp(open('gameroom.cfg', 'r'))
+        config.readfp(open(options.config, 'rU'))
     except IOError:
-        print "Could not open 'gameroom.cfg'."
-        sys.exit(1)
+        print "Could not open '%s'." % (options.config, )
+        return 1
+
+    try:
+        log_filename = config.get("postal", "log_file")
+    except ConfigParser.Error:
+        log_filename = "postal-" + time.strftime("%Y-%m") + ".log"
+    logfmt = logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s",
+                               datefmt="%Y-%m-%d %H:%M:%S")
+    loghandler = logging.FileHandler(log_filename)
+    loghandler.setFormatter(logfmt)
+    log.addHandler(loghandler)
+    consolehandler = logging.StreamHandler()
+    consolehandler.setFormatter(logfmt)
+    log.addHandler(consolehandler)
+    log.propagate = False
+    gameroom.init_logging(config)
 
     gameroom_url = config.get("global", "gameroom_url")
-    bot_section = config.get("global", "default_engine")
-    bot_name = config.get(bot_section, "username")
-    bot_passwd = config.get(bot_section, "password")
+    if options.bot:
+        bot_section = options.bot
+    else:
+        bot_section = config.get("global", "default_engine")
+    try:
+        bot_username = config.get(bot_section, "username")
+        bot_password = config.get(bot_section, "password")
+    except ConfigParser.Error:
+        try:
+            bot_username = config.get("global", "username")
+            bot_password = config.get("global", "password")
+        except NoOptionError:
+            log.error("Could not find username/password in config.")
+            return 1
 
     while True:
         try:
             open("stop_postal", 'r')
-            log("Exiting after finding stop file")
+            log.info("Exiting after finding stop file")
             sys.exit()
         except IOError:
             pass
         gr_con = gameroom.GameRoom(gameroom_url)
-        gr_con.login(bot_name, bot_passwd)
+        gr_con.login(bot_username, bot_password)
         games = gr_con.mygames()
         gr_con.logout()
         total_games = len(games)
@@ -67,20 +98,25 @@ def main():
         postal_games = len(games)
         games = [g for g in games if g['turn'] == g['side']]
         my_turn_games = len(games)
-        log("Found %d games with %d postal games and %d on my turn." % (
-            total_games, postal_games, my_turn_games))
+        log.info("Found %d games with %d postal games and %d on my turn." %
+                 (total_games, postal_games, my_turn_games))
         if games:
             games.sort(key=lambda x: x['turnts'])
             for game_num, game in enumerate(games):
                 try:
                     open("stop_postal", 'r')
-                    log("Exiting after finding stop file")
+                    log.info("Exiting after finding stop file")
                     sys.exit()
                 except IOError:
                     pass
-                log("%d/%d: Playing move against %s game #%s" % (
-                        game_num+1, my_turn_games, game['player'], game['gid']))
-                gameroom.main(["gameroom", "move", game['gid']])
+                log.info("%d/%d: Playing move against %s game #%s" %
+                         (game_num + 1, my_turn_games, game['player'],
+                          game['gid']))
+                gmoptions = gameroom.parseargs(
+                        ["gameroom", "move", game['gid'], game['side']])
+                res = gameroom.run_game(gmoptions, config)
+                if res is not None and res != 0:
+                    log.warning("Error result from gameroom run %d." % (res,))
         else:
-            log("No postal games with a turn found, sleeping.")
+            log.info("No postal games with a turn found, sleeping.")
             time.sleep(300)

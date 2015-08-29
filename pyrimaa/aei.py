@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import logging
 import time
 import signal
 import socket
@@ -282,10 +283,14 @@ class SocketEngine:
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
-def get_engine(channel, cmd, log=None):
+def get_engine(channel, cmd, logname=None):
     """Get the appropriate Engine for a given communication channel.
     Valid channel types are 'stdio', 'socket' and '2008cc'
     """
+    if logname is not None:
+        log = logging.getLogger(logname)
+    else:
+        log = None
     if channel == "stdio":
         engine = StdioEngine(cmd, log=log)
     elif channel == "socket":

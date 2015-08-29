@@ -164,7 +164,7 @@ def main(args=None):
         else:
             print "Disabling full legality checking on setup"
 
-    eng_com = aei.get_engine(cfg.com_method, cfg.enginecmd, log)
+    eng_com = aei.get_engine(cfg.com_method, cfg.enginecmd, "analyze.aei")
     try:
         eng = aei.EngineController(eng_com)
     except aei.EngineException as exc:

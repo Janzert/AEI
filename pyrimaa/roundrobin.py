@@ -43,7 +43,7 @@ def run_bot(bot, config, global_options):
         com_method = config.get(bot['name'], "communication_method").lower()
     else:
         com_method = "stdio"
-    eng_com = aei.get_engine(com_method, cmdline, log)
+    eng_com = aei.get_engine(com_method, cmdline, "roundrobin.aei")
     engine = aei.EngineController(eng_com)
     for option, value in global_options:
         engine.setoption(option, value)

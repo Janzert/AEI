@@ -717,31 +717,7 @@ def shutdown_engine(engine_ctl):
     time.sleep(1)
 
 
-def main(args=sys.argv):
-    """Main entry for script.
-
-    Parses the command line. Reads 'gameroom.cfg' for the configuration.
-    Starts the engine and gives it any initial configuration. Joins or creates
-    the specified game. Then finally controls the engine passing it the game
-    information and sending engine responses back to the server.
-
-    """
-    try:
-        options = parseargs(args)
-    except ValueError:
-        print "Command not understood '%s'" % (" ".join(args[1:]))
-        return 2
-
-    config = SafeConfigParser()
-    config_filename = options['config']
-    try:
-        config.readfp(open(config_filename, 'rU'))
-    except IOError:
-        print "Could not open '%s'" % (config_filename, )
-        print "this file must be readable and contain the configuration"
-        print "for connecting to the gameroom."
-        return 1
-
+def init_logging(config):
     aeilog = logging.getLogger("gameroom.aei")
     if config.has_section("Logging"):
         logdir = config.get("Logging", "directory")
@@ -751,7 +727,7 @@ def main(args=sys.argv):
             )
             os.makedirs(logdir)
         logfilename = "%s-%s" % (time.strftime("%Y%m%d-%H%M"),
-                                     str(os.getpid()), )
+                                 str(os.getpid()), )
         logfilename = os.path.join(logdir, logfilename)
         if config.has_option("Logging", "level"):
             loglevel = str_loglevel(config.get("Logging", "level"))
@@ -795,15 +771,18 @@ def main(args=sys.argv):
         if (config.has_option("Logging", "separate_net_log") and
             config.getboolean("Logging", "separate_net_log")):
             netfmt = logging.Formatter(
-                    fmt="%(asctime)s %(levelname)s: %(message)s",
-                    datefmt="%Y-%m-%d %H:%M:%S")
+                fmt="%(asctime)s %(levelname)s: %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S")
             nethandler = logging.FileHandler(logfilename + "-net.log")
             nethandler.setFormatter(netfmt)
             netlog.addHandler(nethandler)
             netlog.propagate = False
-            log.info("Created net log file %s at level %s" % (
-                logfilename + "-net.log", logging.getLevelName(netlevel)))
+            log.info("Created net log file %s at level %s" %
+                     (logfilename + "-net.log",
+                      logging.getLevelName(netlevel)))
 
+
+def run_game(options, config):
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
         log.warn("Run file directory '%s' not found, attempting to create it."
@@ -831,7 +810,8 @@ def main(args=sys.argv):
     bot_crashes = 0
     while True:
         try:
-            engine_com = aei.get_engine(com_method, enginecmd, log=aeilog)
+            engine_com = aei.get_engine(com_method, enginecmd,
+                                        logname="gameroom.aei")
             engine_ctl = aei.EngineController(engine_com)
         except OSError, exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
@@ -982,3 +962,32 @@ def main(args=sys.argv):
             log.error("Caught unkown exception #%d, restarting.\n%s" %
                       (unknowns_caught, traceback.format_exc()))
             time.sleep(2)
+
+
+def main(args=sys.argv):
+    """Main entry for script.
+
+    Parses the command line. Reads 'gameroom.cfg' for the configuration.
+    Starts the engine and gives it any initial configuration. Joins or creates
+    the specified game. Then finally controls the engine passing it the game
+    information and sending engine responses back to the server.
+
+    """
+    try:
+        options = parseargs(args)
+    except ValueError:
+        print "Command not understood '%s'" % (" ".join(args[1:]))
+        return 2
+
+    config = SafeConfigParser()
+    config_filename = options['config']
+    try:
+        config.readfp(open(config_filename, 'rU'))
+    except IOError:
+        print "Could not open '%s'" % (config_filename, )
+        print "this file must be readable and contain the configuration"
+        print "for connecting to the gameroom."
+        return 1
+
+    init_logging(config)
+    return run_game(options, config)
