@@ -37,9 +37,10 @@ def main(args=sys.argv):
         usage="usage: %prog [-c CONFIG] [-b BOT]",
         description="Manage bot playing multiple postal games.")
     opt_parser.add_option('-c', '--config',
-                      default="gameroom.cfg",
-                      help="Configuration file to use.")
-    opt_parser.add_option('-b', '--bot', help="Bot section to use as the default.")
+                          default="gameroom.cfg",
+                          help="Configuration file to use.")
+    opt_parser.add_option('-b', '--bot',
+                          help="Bot section to use as the default.")
     options, args = opt_parser.parse_args(args)
     if len(args) > 1:
         print "Unrecognized command line arguments", args[1:]
@@ -112,11 +113,11 @@ def main(args=sys.argv):
                 log.info("%d/%d: Playing move against %s game #%s" %
                          (game_num + 1, my_turn_games, game['player'],
                           game['gid']))
-                gmoptions = gameroom.parseargs(
-                        ["gameroom", "move", game['gid'], game['side']])
+                gmoptions = gameroom.parseargs(["gameroom", "move",
+                                                game['gid'], game['side']])
                 res = gameroom.run_game(gmoptions, config)
                 if res is not None and res != 0:
-                    log.warning("Error result from gameroom run %d." % (res,))
+                    log.warning("Error result from gameroom run %d." % (res, ))
         else:
             log.info("No postal games with a turn found, sleeping.")
             time.sleep(300)

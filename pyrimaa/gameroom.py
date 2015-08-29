@@ -110,11 +110,10 @@ def post(url, values, logname="network"):
                 break
             if timedout:
                 netlog.info("Timed out connecting to server retrying (%d).",
-                        try_num)
+                            try_num)
                 socket.setdefaulttimeout(stimeout + try_num)
             else:
-                netlog.info("Retrying server connection in %d seconds",
-                        try_num ** 2)
+                netlog.info("Retrying connection in %d seconds", try_num ** 2)
                 time.sleep(try_num ** 2)
     finally:
         socket.setdefaulttimeout(oldtimeout)
