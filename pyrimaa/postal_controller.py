@@ -22,10 +22,11 @@
 import ConfigParser
 import logging
 import optparse
+import os.path
 import sys
 import time
 
-from ConfigParser import SafeConfigParser, NoOptionError
+from ConfigParser import SafeConfigParser
 
 import gameroom
 
@@ -53,12 +54,26 @@ def main(args=sys.argv):
         return 1
 
     try:
+        log_dir = config.get("postal", "log_dir")
+    except ConfigParser.Error:
+        try:
+            log_dir = config.get("Logging", "directory")
+        except ConfigParser.Error:
+            log_dir = "."
+    if not os.path.exists(log_dir):
+        print "Log directory '%s' not found, attempting to create it." % (
+            log_dir
+        )
+        os.makedirs(log_dir)
+
+    try:
         log_filename = config.get("postal", "log_file")
     except ConfigParser.Error:
         log_filename = "postal-" + time.strftime("%Y-%m") + ".log"
+    log_path = os.path.join(log_dir, log_filename)
     logfmt = logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s",
                                datefmt="%Y-%m-%d %H:%M:%S")
-    loghandler = logging.FileHandler(log_filename)
+    loghandler = logging.FileHandler(log_path)
     loghandler.setFormatter(logfmt)
     log.addHandler(loghandler)
     consolehandler = logging.StreamHandler()
