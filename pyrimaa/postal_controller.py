@@ -128,8 +128,18 @@ def main(args=sys.argv):
                 log.info("%d/%d: Playing move against %s game #%s" %
                          (game_num + 1, my_turn_games, game['player'],
                           game['gid']))
-                gmoptions = gameroom.parseargs(["gameroom", "move",
-                                                game['gid'], game['side']])
+                game_args = ["gameroom", "move", game['gid'], game['side']]
+                if config.has_option("postal", game['gid']):
+                    section = config.get("postal", game['gid'])
+                    game_args += ["-b", section]
+                    log.info("Using section %s for use with gid #%s" %
+                             (section, game['gid']))
+                elif config.has_option("postal", game['player']):
+                    section = config.get("postal", game['player'])
+                    game_args += ["-b", section]
+                    log.info("Using section %s for use against %s" %
+                             (section, game['player']))
+                gmoptions = gameroom.parseargs(game_args)
                 res = gameroom.run_game(gmoptions, config)
                 if res is not None and res != 0:
                     log.warning("Error result from gameroom run %d." % (res, ))

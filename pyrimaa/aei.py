@@ -342,22 +342,32 @@ class EngineController:
     def is_running(self):
         return self.engine.is_running()
 
+    def _parse_resp(self, rstr):
+        resp = EngineResponse(rstr.split()[0].lower())
+        if resp.type == "info":
+            resp.message = rstr[rstr.find("info") + len("info"):].strip()
+        if resp.type == "log":
+            resp.message = rstr[rstr.find("log") + len("log"):].strip()
+        if resp.type == "bestmove":
+            resp.move = rstr[rstr.find("bestmove") + len("bestmove"):].strip()
+        return resp
+
     def get_response(self, timeout=None):
         rstr = self.engine.readline(timeout=timeout)
         if rstr == "":
             raise socket.timeout()
-        resp = EngineResponse(rstr.split()[0].lower())
-        if resp.type == "info":
-            resp.message = rstr[rstr.find("info")+len("info"):].strip()
-        if resp.type == "log":
-            resp.message = rstr[rstr.find("log")+len("log"):].strip()
-        if resp.type == "bestmove":
-            resp.move = rstr[rstr.find("bestmove")+len("bestmove"):].strip()
-        return resp
+        return self._parse_resp(rstr)
 
     def isready(self, timeout=15):
         self.engine.send("isready\n")
-        self.engine.waitfor("readyok", timeout)
+        rstrs = self.engine.waitfor("readyok", timeout)
+        if rstrs[-1].strip().lower() != "readyok":
+            raise EngineException("Unexpected final response to isready (%s)" %
+                                  (rstrs[-1], ))
+        responses = []
+        for rstr in rstrs[:-1]:
+            responses.append(self._parse_resp(rstr))
+        return responses
 
     def newgame(self):
         self.engine.send("newgame\n")

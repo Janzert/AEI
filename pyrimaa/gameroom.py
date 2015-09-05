@@ -147,6 +147,24 @@ def parsebody(body):
     return data
 
 
+def log_response(response, unexpected=None):
+    if response.type == "info":
+        enginelog.info("%s", response.message)
+    elif response.type == "log":
+        if response.message.startswith("Error:"):
+            enginelog.error("%s", response.message)
+        elif response.message.startswith("Warning:"):
+            enginelog.warn("%s", response.message)
+        elif response.message.startswith("Debug:"):
+            enginelog.debug("%s", response.message)
+        else:
+            enginelog.info("%s", response.message)
+    elif unexpected is not None:
+        if response.type not in ["info", "log"]:
+            log.warn("Unexpected response %s (%s)." %
+                     (unexpected, response.type))
+
+
 class Table:
     def __init__(self, gameroom, tableinfo):
         self.min_move_time = 5
@@ -173,17 +191,7 @@ class Table:
             raise EngineCrashException("Process gone")
         try:
             response = self.engine.get_response(timeout)
-            if response.type == "info":
-                enginelog.info("%s", response.message)
-            elif response.type == "log":
-                if response.message.startswith("Error:"):
-                    enginelog.error("%s", response.message)
-                elif response.message.startswith("Warning:"):
-                    enginelog.warn("%s", response.message)
-                elif response.message.startswith("Debug:"):
-                    enginelog.debug("%s", response.message)
-                else:
-                    enginelog.info("%s", response.message)
+            log_response(response)
             return response
         except socket.timeout:
             raise
@@ -300,10 +308,14 @@ class Table:
             return
 
         engine.newgame()
-        engine.isready()
+        resps = engine.isready()
+        for response in resps:
+            log_response(response, unexpected="after newgame command")
 
         self._update_timecontrol(state)
-        engine.isready()
+        resps = engine.isready()
+        for response in resps:
+            log_response(response, unexpected="after timecontrol sent")
 
         if len(state.get('moves', "")) > 4:
             log.info("Catching engine up to current move.")
@@ -321,7 +333,10 @@ class Table:
                     steps = move.split()[1:]
                     log.debug("sending move to engine: %s" % " ".join(steps))
                     engine.makemove(" ".join(steps))
-                    engine.isready()
+                    resps = engine.isready()
+                    for response in resps:
+                        log_response(response,
+                                     unexpected="while sending moves")
 
         if int(state.get('plycount', "0")) <= 1:
             # send a greeting if it's the first move of the game.
@@ -822,7 +837,9 @@ def run_game(options, config):
                     value = config.get(bot_section, option)
                     engine_ctl.setoption(option[4:], value)
                     log.info("Setting bot option %s = %s", option[4:], value)
-            engine_ctl.isready()
+            resps = engine_ctl.isready()
+            for response in resps:
+                log_response(response, "while sending bot options")
 
             try:
                 bot_username = config.get(bot_section, "username")
