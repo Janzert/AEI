@@ -20,9 +20,10 @@
 
 import re
 
+
 def _parse_timefield(full_field, start_unit="m"):
     unit_order = " smhd"
-    units = {"s": 1, "m": 60, "h": 60*60, "d": 60*60*24}
+    units = {"s": 1, "m": 60, "h": 60 * 60, "d": 60 * 60 * 24}
     num_re = re.compile("[0-9]+")
     units[":"] = units[start_unit]
     seconds = 0
@@ -35,7 +36,7 @@ def _parse_timefield(full_field, start_unit="m"):
         num = int(field[:end])
         if len(field) == end or field[end] == ":":
             sep = start_unit
-            start_unit = unit_order[unit_order.find(start_unit)-1]
+            start_unit = unit_order[unit_order.find(start_unit) - 1]
         else:
             sep = field[end]
         if sep not in units:
@@ -43,14 +44,15 @@ def _parse_timefield(full_field, start_unit="m"):
         seconds += num * units[sep]
         if ":" in units:
             del units[":"]
-        field = field[end+1:]
+        field = field[end + 1:]
         nmatch = num_re.match(field)
     if field:
         raise ValueError("Invalid time field encountered %s" % (full_field))
     return seconds
 
+
 def _time_str(seconds):
-    units = [("d", 60*60*24), ("h", 60*60), ("m", 60)]
+    units = [("d", 60 * 60 * 24), ("h", 60 * 60), ("m", 60)]
     out = list()
     for tag, length in units:
         span = seconds // length
@@ -58,12 +60,14 @@ def _time_str(seconds):
             out.append("%s%s" % (int(span), tag))
         seconds -= span * length
     if seconds != 0:
-        out.append("%gs" % (seconds,))
+        out.append("%gs" % (seconds, ))
     if len(out) == 0:
         out = ["0"]
     return "".join(out)
 
+
 field_re = re.compile("[^/]*")
+
 
 class TimeControl(object):
     def __init__(self, tc_str):
@@ -77,6 +81,7 @@ class TimeControl(object):
                 f_str = tstr[:end]
                 rest = tstr[end + 1:]
             return (f_str, rest)
+
         f_str, tc_str = _split_tc(tc_str)
         self.move = _parse_timefield(f_str)
         f_str, tc_str = _split_tc(tc_str)
@@ -104,7 +109,7 @@ class TimeControl(object):
         out.append(str(self.percent))
         out.append(_time_str(self.max_reserve))
         if self.turn_limit:
-            out.append("%st" % (self.turn_limit,))
+            out.append("%st" % (self.turn_limit, ))
         else:
             out.append(_time_str(self.time_limit))
         out.append(_time_str(self.max_turntime))

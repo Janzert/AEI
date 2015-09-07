@@ -29,8 +29,11 @@ log = logging.getLogger("game")
 
 
 class Game(object):
-    def __init__(self, gold, silver, timecontrol=None, start_position=None,
-            strict_setup=True, min_timeleft=None):
+    def __init__(self, gold, silver,
+                 timecontrol=None,
+                 start_position=None,
+                 strict_setup=True,
+                 min_timeleft=None):
         self.engines = (gold, silver)
         try:
             self.timecontrol = timecontrol[0]
@@ -56,7 +59,7 @@ class Game(object):
             if start_position:
                 eng.setposition(start_position)
             resps = eng.isready()
-            side = "gs"[self.engines.index(eng)]
+            side = "gs" [self.engines.index(eng)]
             eng_name = eng.ident["name"]
             for response in resps:
                 if response.type == "info":
@@ -143,10 +146,10 @@ class Game(object):
                         break
                     if resp.type == "info":
                         log.info("%s (%s) info: %s", engine.ident["name"],
-                                 "gs"[side], resp.message)
+                                 "gs" [side], resp.message)
                     elif resp.type == "log":
                         log.info("%s (%s) log: %s", engine.ident["name"],
-                                 "gs"[side], resp.message)
+                                 "gs" [side], resp.message)
                 except socket.timeout:
                     pass
             moveend = time.time()
@@ -155,11 +158,11 @@ class Game(object):
                 if tc.time_limit and endtime_limit < moveend:
                     self.result = (self.limit_winner, "s")
                 else:
-                    self.result = (side^1, "t")
+                    self.result = (side ^ 1, "t")
                 return self.result
             if not resp or resp.type != "bestmove":
                 raise RuntimeError(
-                        "Stopped waiting without a timeout or a move")
+                    "Stopped waiting without a timeout or a move")
             if tc:
                 if not self.insetup:
                     reserve_change = tc.move - (moveend - movestart)
@@ -170,21 +173,23 @@ class Game(object):
                     self.reserves[side] += reserve_change
                     if tc.max_reserve:
                         self.reserves[side] = min(self.reserves[side],
-                                tc.max_reserve)
+                                                  tc.max_reserve)
             move = resp.move
             if move.lower() == "resign":
-              self.result = (side^1, "r")
-              return self.result
+                self.result = (side ^ 1, "r")
+                return self.result
             self.moves.append("%d%s %s" % (self.movenumber,
-                "gs"[position.color], move))
+                                           "gs" [position.color], move))
             if self.insetup:
-                position = position.do_move_str(move,
-                        strict_checks=self.strict_setup)
+                position = position.do_move_str(
+                    move,
+                    strict_checks=self.strict_setup)
             else:
                 position = position.do_move_str(move)
             self.repetition_count[position] += 1
             if self.repetition_count[position] > 2:
-                raise IllegalMove("Tried move resulting in a 3rd time repetition")
+                raise IllegalMove(
+                    "Tried move resulting in a 3rd time repetition")
             self.position = position
             if position.color == Color.GOLD:
                 self.movenumber += 1
@@ -210,12 +215,11 @@ class Game(object):
                 return self.result
 
         if position.is_goal():
-            result = (0-min(position.is_goal(), 0), "g")
+            result = (0 - min(position.is_goal(), 0), "g")
         elif position.is_rabbit_loss():
-            result = (0-min(position.is_rabbit_loss(), 0), "e")
-        else: # immobilization
+            result = (0 - min(position.is_rabbit_loss(), 0), "e")
+        else:  # immobilization
             assert len(position.get_steps()) == 0
-            result = (position.color^1, "m")
+            result = (position.color ^ 1, "m")
         self.result = result
         return result
-

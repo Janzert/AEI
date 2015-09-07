@@ -21,9 +21,11 @@
 import random
 import sys
 
+
 class Color(object):
     GOLD = 0
     SILVER = 1
+
 
 class Piece(object):
     EMPTY = 0
@@ -44,28 +46,35 @@ class Piece(object):
     PCHARS = " RCDHMExxrcdhme"
     DECOLOR = ~SCOLOR
 
+
 def index_to_sq(ix):
     return ((ix // 16), (ix & 7))
+
 
 def sq_to_index(sq):
     return (sq[0] * 16) + sq[1]
 
+
 def index_to_alg(ix):
     """Convert an index to algebraic notation"""
     rank, column = index_to_sq(ix)
-    return "abcdefgh"[column] + "12345678"[rank]
+    return "abcdefgh" [column] + "12345678" [rank]
+
 
 def alg_to_index(str):
     """Convert algebraic notation for a square to an index"""
-    return sq_to_index((int(str[1])-1, "abcdefgh".index(str[0])))
+    return sq_to_index((int(str[1]) - 1, "abcdefgh".index(str[0])))
+
 
 def packed_to_index(ix):
     """Convert 0-63 index to 0x88 index"""
     return ix + (ix & ~7)
 
+
 def index_to_packed(px):
     """Convert 0x88 index to 0-63 index"""
     return ((px & ~7) // 2) + (px & 7)
+
 
 def bit_neighbors(bit):
     """ get the neighboring bits to a set of bits """
@@ -74,6 +83,7 @@ def bit_neighbors(bit):
     bitboard |= (bit & 0xFFFFFFFFFFFFFF00) >> 8
     bitboard |= (bit & 0x00FFFFFFFFFFFFFF) << 8
     return bitboard
+
 
 def bit_to_packed(bit):
     cnt = (bit & 0xAAAAAAAAAAAAAAAAL) != 0L
@@ -84,9 +94,11 @@ def bit_to_packed(bit):
     cnt |= ((bit & 0xFFFFFFFF00000000L) != 0L) << 5
     return cnt
 
+
 ALL_BITS = 0xFFFFFFFFFFFFFFFFL
 
 ZOBRIST_KEYS = [0, [], []]
+
 
 # generate zobrist keys, assuring no duplicate keys or 0
 def _zobrist_newkey(used_keys, rnd):
@@ -95,6 +107,7 @@ def _zobrist_newkey(used_keys, rnd):
         candidate = rnd.randint(-sys.maxint, sys.maxint)
     used_keys.append(candidate)
     return candidate
+
 
 def _generate_zobrist_keys():
     rnd = random.Random()
@@ -112,14 +125,22 @@ def _generate_zobrist_keys():
                 ZOBRIST_KEYS[2][piece].append(_zobrist_newkey(used_keys, rnd))
     for step in xrange(5):
         ZOBRIST_KEYS[1].append(_zobrist_newkey(used_keys, rnd))
+
+
 _generate_zobrist_keys()
+
 
 class IllegalStepException(Exception):
     pass
 
+
 class Position(object):
-    def __init__(self, side, steps, board_array, last_piece=Piece.EMPTY,
-            last_from=0x08, inpush=False, zobrist=None, frozen=None):
+    def __init__(self, side, steps, board_array,
+                 last_piece=Piece.EMPTY,
+                 last_from=0x08,
+                 inpush=False,
+                 zobrist=None,
+                 frozen=None):
         self.color = side
         self.steps = steps
         self.board = board_array
@@ -161,11 +182,10 @@ class Position(object):
 
     def __eq__(self, other):
         try:
-            if (self.color != other.color
-                    or self.steps != other.steps):
+            if (self.color != other.color or self.steps != other.steps):
                 return False
-            if (self.last_from != other.last_from
-                    or self.last_piece != other.last_piece):
+            if (self.last_from != other.last_from or
+                self.last_piece != other.last_piece):
                 return False
             if self.board != other.board:
                 return False
@@ -257,13 +277,12 @@ class Position(object):
         brepr = [" +-----------------+"]
         for rank in range(8, 0, -1):
             rank_rep = ["%d| " % rank]
-            rix = sq_to_index((rank-1, 0))
+            rix = sq_to_index((rank - 1, 0))
             for col in range(8):
                 ix = rix + col
                 piece = board[ix]
-                if (piece == Piece.EMPTY
-                        and (rank in [3, 6])
-                        and (col in [2, 5])):
+                if (piece == Piece.EMPTY and (rank in [3, 6]) and
+                    (col in [2, 5])):
                     rank_rep.append("x")
                 else:
                     rank_rep.append(piece_rep[piece])
@@ -334,10 +353,10 @@ class Position(object):
         board = self.board
         if board[step[0]] == Piece.EMPTY:
             raise IllegalStepException("Tried to move from empty square %s" %
-                    index_to_alg(step[0]))
+                                       index_to_alg(step[0]))
         if board[step[1]] != Piece.EMPTY:
             raise IllegalStepException("Tried to move to a full square %s" %
-                    index_to_alg(step[1]))
+                                       index_to_alg(step[1]))
         offsets = (-1, 1, -16, 16)
         ispush = False
         ispull = False
@@ -352,26 +371,26 @@ class Position(object):
             if isfrozen:
                 print self.to_long_board()
                 print hex(self.frozen)
-                raise IllegalStepException("Tried to move frozen piece %s%s" %
-                        (Piece.PCHARS[piece], index_to_alg(newfrom)))
+                raise IllegalStepException(
+                    "Tried to move frozen piece %s%s" %
+                    (Piece.PCHARS[piece], index_to_alg(newfrom)))
             if pstrength == Piece.GRABBIT:
                 illegal_dir = [-16, 16][pcolor]
                 if step[1] == newfrom + illegal_dir:
                     raise IllegalStepException("Tried to move rabbit back %s" %
-                            index_to_alg(newfrom))
+                                               index_to_alg(newfrom))
             if self.in_push and pstrength <= (self.last_piece & Piece.DECOLOR):
                 raise IllegalStepException(
-                        "Tried to finish push with weak piece %s%s" %
-                        (Piece.PCHARS[piece], index_to_alg(newfrom)))
+                    "Tried to finish push with weak piece %s%s" %
+                    (Piece.PCHARS[piece], index_to_alg(newfrom)))
         else:
             if self.in_push:
                 raise IllegalStepException(
-                        "Tried to move opponent piece while in push %s%s to %s" %
-                        (Piece.PCHARS[piece], index_to_alg(newfrom),
-                            index_to_alg(step[1])))
-            if (self.last_piece != Piece.EMPTY
-                    and step[1] == self.last_from
-                    and pstrength < (self.last_piece & Piece.DECOLOR)):
+                    "Tried to move opponent piece while in push %s%s to %s" %
+                    (Piece.PCHARS[piece], index_to_alg(newfrom),
+                     index_to_alg(step[1])))
+            if (self.last_piece != Piece.EMPTY and step[1] == self.last_from
+                and pstrength < (self.last_piece & Piece.DECOLOR)):
                 ispull = True
             else:
                 if self.steps > 2:
@@ -379,21 +398,22 @@ class Position(object):
                 stronger = False
                 for noffset in [-1, 1, -16, 16]:
                     nix = newfrom + noffset
-                    if (not (nix & 0x88) and board[nix] != Piece.EMPTY
-                            and ((board[nix] ^ piece) & Piece.SCOLOR)
-                            and pstrength < board[nix] & Piece.DECOLOR):
+                    if (not (nix & 0x88) and board[nix] != Piece.EMPTY and
+                        ((board[nix] ^ piece) & Piece.SCOLOR) and
+                        pstrength < board[nix] & Piece.DECOLOR):
                         nstrength = board[nix] & Piece.DECOLOR
-                        isfrozen = bool(self.frozen & (1L << index_to_packed(nix)))
+                        isfrozen = bool(self.frozen &
+                                        (1L << index_to_packed(nix)))
                         if not isfrozen:
                             stronger = True
                             break
                 if not stronger:
                     raise IllegalStepException(
-                            "Tried to push without pusher %s%s" %
-                            (Piece.PCHARS[piece], index_to_alg(newfrom)))
+                        "Tried to push without pusher %s%s" %
+                        (Piece.PCHARS[piece], index_to_alg(newfrom)))
                 ispush = True
-        zobrist = (self._zhash ^ ZOBRIST_KEYS[2][piece][newfrom]
-            ^ ZOBRIST_KEYS[1][self.steps])
+        zobrist = (self._zhash ^ ZOBRIST_KEYS[2][piece][newfrom] ^
+                   ZOBRIST_KEYS[1][self.steps])
         newboard = [s for s in board]
         newfrozen = self.frozen
         istrapped = False
@@ -402,9 +422,9 @@ class Position(object):
             tix = step[1]
             for noff in [-1, 1, -16, 16]:
                 nix = tix + noff
-                if (not ((nix & 0x88) or nix == newfrom)
-                        and board[nix] != Piece.EMPTY
-                        and (not (board[nix] ^ piece) & Piece.SCOLOR)):
+                if (not ((nix & 0x88) or nix == newfrom) and
+                    board[nix] != Piece.EMPTY and
+                    (not (board[nix] ^ piece) & Piece.SCOLOR)):
                     istrapped = False
                     break
         else:
@@ -461,13 +481,13 @@ class Position(object):
                 nbit = 1L << index_to_packed(nix)
                 if not ((piece ^ newboard[nix]) & Piece.SCOLOR):
                     newfrozen &= ~nbit
-                elif (not (newfrozen & nbit)
-                        and (newboard[nix] & Piece.DECOLOR) < pstrength):
+                elif (not (newfrozen & nbit) and
+                      (newboard[nix] & Piece.DECOLOR) < pstrength):
                     isfrozen = True
                     for noff in offsets:
                         nnix = nix + noff
-                        if (nnix & 0x88 or nnix == nix
-                                or newboard[nnix] == Piece.EMPTY):
+                        if (nnix & 0x88 or nnix == nix or
+                            newboard[nnix] == Piece.EMPTY):
                             continue
                         if (newboard[nnix] ^ piece) & Piece.SCOLOR:
                             isfrozen = False
@@ -485,8 +505,8 @@ class Position(object):
                     isfrozen = False
                     for noff in offsets:
                         nnix = nix + noff
-                        if (nnix & 0x88 or nnix == newfrom
-                                or newboard[nnix] == Piece.EMPTY):
+                        if (nnix & 0x88 or nnix == newfrom or
+                            newboard[nnix] == Piece.EMPTY):
                             continue
                         if newboard[nnix] & Piece.DECOLOR > nstrength:
                             isfrozen = True
@@ -497,8 +517,8 @@ class Position(object):
                 isfrozen = False
                 for noff in offsets:
                     nnix = nix + noff
-                    if (nnix & 0x88 or nnix == newfrom
-                            or newboard[nnix] == Piece.EMPTY):
+                    if (nnix & 0x88 or nnix == newfrom or
+                        newboard[nnix] == Piece.EMPTY):
                         continue
                     if not ((newboard[nnix] ^ piece) & Piece.SCOLOR):
                         isfrozen = False
@@ -522,8 +542,8 @@ class Position(object):
         if self.in_push or ispull:
             piece = Piece.EMPTY
             newfrom = 0x08
-        return Position(newcolor, newsteps, newboard,
-                piece, newfrom, ispush, zobrist, newfrozen)
+        return Position(newcolor, newsteps, newboard, piece, newfrom, ispush,
+                        zobrist, newfrozen)
 
     def do_move(self, steps):
         """Generate a new position from the given move"""
@@ -542,8 +562,8 @@ class Position(object):
             lstrength = self.last_piece & Piece.DECOLOR
             for noffset in (-1, 1, -16, 16):
                 pix = lastfrom + noffset
-                if (pix & 0x88
-                        or ((board[pix] & Piece.SCOLOR) >> 3) != self.color):
+                if (pix & 0x88 or
+                    ((board[pix] & Piece.SCOLOR) >> 3) != self.color):
                     continue
                 pstrength = board[pix] & Piece.DECOLOR
                 if pstrength > lstrength:
@@ -553,8 +573,8 @@ class Position(object):
                         steps.append((step, self.do_step(step)))
         else:
             lastcolor = (self.last_piece & Piece.SCOLOR) >> 3
-            if (lastcolor == self.color
-                    and (self.last_piece & Piece.DECOLOR) > Piece.GRABBIT):
+            if (lastcolor == self.color and
+                (self.last_piece & Piece.DECOLOR) > Piece.GRABBIT):
                 # finish any possible pulls
                 lastfrom = self.last_from
                 lstrength = self.last_piece & Piece.DECOLOR
@@ -562,8 +582,8 @@ class Position(object):
                     pix = lastfrom + noff
                     if (pix & 0x88) or board[pix] == Piece.EMPTY:
                         continue
-                    if ((board[pix] ^ self.last_piece) & Piece.SCOLOR
-                        and (board[pix] & Piece.DECOLOR) < lstrength):
+                    if ((board[pix] ^ self.last_piece) & Piece.SCOLOR and
+                        (board[pix] & Piece.DECOLOR) < lstrength):
                         step = (pix, lastfrom)
                         steps.append((step, self.do_step(step)))
             for rank in range(8):
@@ -573,7 +593,8 @@ class Position(object):
                         continue
                     pstrength = board[ix] & Piece.DECOLOR
                     if (board[ix] & Piece.SCOLOR) >> 3 == self.color:
-                        isfrozen = bool(self.frozen & (1L << index_to_packed(ix)))
+                        isfrozen = bool(self.frozen &
+                                        (1L << index_to_packed(ix)))
                         if not isfrozen:
                             to_offs = (-1, 1, -16, 16)
                             if pstrength == Piece.GRABBIT:
@@ -583,8 +604,8 @@ class Position(object):
                                     to_offs = (-1, 1, -16)
                             for toff in to_offs:
                                 tix = ix + toff
-                                if (not (tix & 0x88)
-                                        and board[tix] == Piece.EMPTY):
+                                if (not (tix & 0x88) and
+                                    board[tix] == Piece.EMPTY):
                                     step = (ix, tix)
                                     steps.append((step, self.do_step(step)))
                     elif self.steps < 3:
@@ -595,17 +616,18 @@ class Position(object):
                             if nix & 0x88:
                                 continue
                             nstrength = board[nix] & Piece.DECOLOR
-                            if (((board[ix] ^ board[nix]) & Piece.SCOLOR)
-                                    and nstrength > pstrength):
-                                isfrozen = bool(self.frozen & (1L << index_to_packed(nix)))
+                            if (((board[ix] ^ board[nix]) & Piece.SCOLOR) and
+                                nstrength > pstrength):
+                                isfrozen = bool(self.frozen &
+                                                (1L << index_to_packed(nix)))
                                 if not isfrozen:
                                     haspusher = True
                                     break
                         if haspusher:
                             for poff in (-1, 1, -16, 16):
                                 tix = ix + poff
-                                if (not (tix & 0x88)
-                                        and board[tix] == Piece.EMPTY):
+                                if (not (tix & 0x88) and
+                                    board[tix] == Piece.EMPTY):
                                     step = (ix, tix)
                                     steps.append((step, self.do_step(step)))
         return steps
@@ -614,13 +636,14 @@ class Position(object):
         """Get position with opposite side to move"""
         zobrist = self._zhash ^ ZOBRIST_KEYS[0]
         zobrist ^= ZOBRIST_KEYS[1][self.steps] ^ ZOBRIST_KEYS[1][0]
-        return Position(self.color^1, 0, self.board,
-                zobrist = zobrist, frozen = self.frozen)
+        return Position(self.color ^ 1, 0, self.board,
+                        zobrist=zobrist,
+                        frozen=self.frozen)
 
     def get_moves(self):
         """Generate all possible moves from this position"""
         color = self.color
-        partial = {self:()}
+        partial = {self: ()}
         finished = {}
         while partial:
             nextpart = {}
@@ -680,6 +703,7 @@ def parse_move(line):
         steps.append((index, tix))
     return steps
 
+
 def parse_long_pos(text):
     """Parse a position from a long format string"""
     text = [l.strip() for l in text]
@@ -697,8 +721,9 @@ def parse_long_pos(text):
         color = Color.SILVER
     else:
         raise ValueError("Could not find side to move")
-    if text[0][colorix+1:]:
-        raise NotImplementedError("Can not parse position with steps already taken")
+    if text[0][colorix + 1:]:
+        raise NotImplementedError(
+            "Can not parse position with steps already taken")
     else:
         steps = 0
 
@@ -707,8 +732,8 @@ def parse_long_pos(text):
     rank = 7
     board = [Piece.EMPTY for x in xrange(0x80)]
     for line in text[2:10]:
-        if not line[0].isdigit() or int(line[0])-1 != rank:
-            raise ValueError("Unexpected rank number at rank %d" % rank+1)
+        if not line[0].isdigit() or int(line[0]) - 1 != rank:
+            raise ValueError("Unexpected rank number at rank %d" % rank + 1)
         for pc_index in xrange(3, 18, 2):
             col = (pc_index - 3) // 2
             ix = sq_to_index((rank, col))
@@ -723,6 +748,7 @@ def parse_long_pos(text):
     pos = Position(color, steps, board)
     return (movenumber, pos)
 
+
 def parse_short_pos(side, steps, text):
     """Parse a position from a short format string"""
     board = [Piece.EMPTY for x in xrange(0x80)]
@@ -731,13 +757,14 @@ def parse_short_pos(side, steps, text):
             try:
                 piece = Piece.PCHARS.index(piecetext)
             except ValueError:
-                raise ValueError("Invalid piece %s at position %d"
-                        % (piecetext,place))
+                raise ValueError("Invalid piece %s at position %d" %
+                                 (piecetext, place))
             col = place % 8
             rank = 7 - (place // 8)
             ix = sq_to_index((rank, col))
             board[ix] = piece
     return Position(side, steps, board)
+
 
 def main(filename):
     """Takes a filename and attempts to parse it as a position,
@@ -753,7 +780,7 @@ def main(filename):
         pos = parse_short_pos(side, 0, ptext[1])
     else:
         movenum, pos = parse_long_pos(ptext)
-    print "%d%s" % (movenum, "gs"[pos.color])
+    print "%d%s" % (movenum, "gs" [pos.color])
     print
     print pos.to_long_board()
     print
@@ -790,8 +817,7 @@ def main(filename):
                 print "result position with same color"
             if upos.steps != 0:
                 print "result position with steps taken"
-            if (upos.last_piece != Piece.EMPTY
-                    or upos.last_from != 0x08):
+            if (upos.last_piece != Piece.EMPTY or upos.last_from != 0x08):
                 print "result position with last"
         print
         print "Only in old results:"
@@ -799,6 +825,7 @@ def main(filename):
             if upos.to_short_str() not in new_res:
                 print board.steps_to_str(move)
                 print upos.to_short_str()
+
 
 if __name__ == "__main__":
     import os.path
@@ -812,4 +839,3 @@ if __name__ == "__main__":
         print "usage: %s <boardfile>" % os.path.basename(sys.argv[0])
         sys.exit(0)
     main(sys.argv[1])
-

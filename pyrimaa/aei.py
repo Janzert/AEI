@@ -33,6 +33,7 @@ if sys.platform == 'win32':
     import ctypes
     from collections import defaultdict
 
+
 def _get_child_pids():
     class ProcessEntry(ctypes.Structure):
         _fields_ = [("dwSize", ctypes.c_ulong),
@@ -44,8 +45,8 @@ def _get_child_pids():
                     ("th32ParentProcessID", ctypes.c_ulong),
                     ("pcPriClassBase", ctypes.c_long),
                     ("dwFlags", ctypes.c_ulong),
-                    ("szExeFile", ctypes.c_char * 260),
-                    ]
+                    ("szExeFile", ctypes.c_char * 260), ]
+
     TH32CS_SNAPPROCESS = 0x2
     kernel32 = ctypes.windll.kernel32
     psnap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
@@ -53,21 +54,22 @@ def _get_child_pids():
     entry = ProcessEntry()
     entry.dwSize = ctypes.sizeof(ProcessEntry)
     kernel32.Process32First.argtypes = [ctypes.c_ulong,
-            ctypes.POINTER(ProcessEntry)]
+                                        ctypes.POINTER(ProcessEntry)]
     if kernel32.Process32First(psnap, ctypes.byref(entry)) == 0:
         errno = kernel32.GetLastError()
-        raise OSError("Received error from Process32First, %d" % (errno,))
+        raise OSError("Received error from Process32First, %d" % (errno, ))
     else:
         childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
     while kernel32.Process32Next(psnap, ctypes.pointer(entry)):
         childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
     errno = kernel32.GetLastError()
     if errno != 18:
-        raise OSError("Received error from Process32Next, %d" % (errno,))
+        raise OSError("Received error from Process32Next, %d" % (errno, ))
     kernel32.CloseHandle(psnap)
     return childIDs
 
-def _kill_proc_tree(pid, cid_map = None):
+
+def _kill_proc_tree(pid, cid_map=None):
     if cid_map is None:
         cid_map = _get_child_pids()
     if len(cid_map[pid]) > 0:
@@ -79,18 +81,22 @@ def _kill_proc_tree(pid, cid_map = None):
         ctypes.windll.kernel32.TerminateProcess(handle, -1)
         ctypes.windll.kernel32.CloseHandle(handle)
     else:
-        raise OSError("Could not kill process, %d" % (pid,))
+        raise OSError("Could not kill process, %d" % (pid, ))
+
 
 START_TIME = 5.0
 INIT_TIME = 15.0
 
+
 class EngineException(Exception):
     pass
+
 
 def find_line_end(posline):
     nloc = posline.find("\n")
     rloc = posline.find("\r")
     return max(nloc, rloc)
+
 
 class _ProcCom(Thread):
     def __init__(self, proc, log):
@@ -108,11 +114,14 @@ class _ProcCom(Thread):
                 self.log.debug("Received from bot: %s" % (repr(msg)))
             self.outq.put(msg.strip())
 
+
 class StdioEngine:
     def __init__(self, cmdline, log=None):
-        proc = Popen(cmdline, shell = True,
-                stdin = PIPE, stdout = PIPE,
-                universal_newlines = True)
+        proc = Popen(cmdline,
+                     shell=True,
+                     stdin=PIPE,
+                     stdout=PIPE,
+                     universal_newlines=True)
         self.proc = proc
         self.log = log
         self.proc_com = _ProcCom(proc, log)
@@ -144,13 +153,12 @@ class StdioEngine:
         response = []
         while time.time() <= endtime:
             wait = endtime - time.time()
-            line = self.readline(timeout = wait)
+            line = self.readline(timeout=wait)
             response.append(line)
             if line.lstrip().lower().startswith(expect):
                 break
         else:
-            raise EngineException(
-                    "Engine did not respond in alloted time.")
+            raise EngineException("Engine did not respond in alloted time.")
         return response
 
     def cleanup(self):
@@ -162,10 +170,10 @@ class StdioEngine:
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
 
+
 class SocketEngine:
     def __init__(self, con, proc=None, legacy_mode=False, log=None):
-        if (len(con) != 2
-                or not hasattr(con[0], "settimeout")):
+        if len(con) != 2 or not hasattr(con[0], "settimeout"):
             address = ("127.0.0.1", 40015)
             listensock = socket.socket()
             while True:
@@ -175,10 +183,9 @@ class SocketEngine:
                     listensock.settimeout(30)
                     break
                 except socket.error, exc:
-                    if (hasattr(exc, 'args')
-                            and (exc.args[0] == 10048
-                                or exc.args[0] == 98)):
-                        address = (address[0], address[1]+1)
+                    if (hasattr(exc, 'args') and
+                        (exc.args[0] == 10048 or exc.args[0] == 98)):
+                        address = (address[0], address[1] + 1)
                     else:
                         raise
             if legacy_mode:
@@ -189,7 +196,7 @@ class SocketEngine:
                 print "Listening on %s:%s" % address
                 proc = None
             else:
-                proc = Popen(botargs, shell = True)
+                proc = Popen(botargs, shell=True)
             con = listensock.accept()
             listensock.close()
 
@@ -219,8 +226,8 @@ class SocketEngine:
         if buf:
             lineend = find_line_end(buf)
             if lineend != -1:
-                self.buf = buf[lineend+1:]
-                return buf[:lineend+1]
+                self.buf = buf[lineend + 1:]
+                return buf[:lineend + 1]
 
         if timeout is None:
             endtime = None
@@ -247,16 +254,15 @@ class SocketEngine:
             except socket.timeout:
                 pass
             except socket.error, exc:
-                if (hasattr(exc, 'args')
-                    and (exc.args[0] == 10035
-                        or exc.args[0] == 11)):
+                if (hasattr(exc, 'args') and
+                    (exc.args[0] == 10035 or exc.args[0] == 11)):
                     pass
                 else:
                     raise
             first = False
         else:
             raise socket.timeout()
-        line = response[:find_line_end(response)+1]
+        line = response[:find_line_end(response) + 1]
         self.buf = response[len(line):]
         return line.strip()
 
@@ -265,13 +271,12 @@ class SocketEngine:
         response = []
         while time.time() <= endtime:
             wait = endtime - time.time()
-            line = self.readline(timeout = wait)
+            line = self.readline(timeout=wait)
             response.append(line)
             if line.lstrip().lower().startswith(expect):
                 break
         else:
-            raise EngineException(
-                    "Engine did not respond in alloted time.")
+            raise EngineException("Engine did not respond in alloted time.")
         return response
 
     def cleanup(self):
@@ -282,6 +287,7 @@ class SocketEngine:
                 _kill_proc_tree(self.proc.pid)
             else:
                 os.kill(self.proc.pid, signal.SIGTERM)
+
 
 def get_engine(channel, cmd, logname=None):
     """Get the appropriate Engine for a given communication channel.
@@ -298,13 +304,15 @@ def get_engine(channel, cmd, logname=None):
     elif channel == "2008cc":
         engine = SocketEngine(cmd, legacy_mode=True, log=log)
     else:
-        raise ValueError("Unrecognized channel given to get_engine (%s)"
-                % channel)
+        raise ValueError("Unrecognized channel given to get_engine (%s)" %
+                         channel)
     return engine
+
 
 class EngineResponse:
     def __init__(self, msg_type):
         self.type = msg_type
+
 
 class EngineController:
     def __init__(self, engine):
@@ -323,8 +331,8 @@ class EngineController:
             if engine.log:
                 if version != "1":
                     engine.log.warn(
-                        "Unrecognized protocol version from engine, %s."
-                        % (version,))
+                        "Unrecognized protocol version from engine, %s." %
+                        (version, ))
                 engine.log.info("Setting aei protocol to version 1")
 
         self.ident = dict()
@@ -379,9 +387,8 @@ class EngineController:
         side_colors = "wb"
         if self.protocol_version != 0:
             side_colors = "gs"
-        self.engine.send("setposition %s %s\n" % (
-                side_colors[pos.color],
-                pos.board_to_str("short")))
+        self.engine.send("setposition %s %s\n" % (side_colors[pos.color],
+                                                  pos.board_to_str("short")))
 
     def go(self, searchtype=None):
         gocmd = ["go"]
@@ -395,11 +402,10 @@ class EngineController:
         self.engine.send("stop\n")
 
     def setoption(self, name, value=None):
-        setoptcmd = "setoption name %s" % (name,)
+        setoptcmd = "setoption name %s" % (name, )
         if value is not None:
-            setoptcmd += " value %s" % (value,)
-        self.engine.send(setoptcmd+"\n")
+            setoptcmd += " value %s" % (value, )
+        self.engine.send(setoptcmd + "\n")
 
     def quit(self):
         self.engine.send("quit\n")
-

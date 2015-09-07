@@ -5,9 +5,9 @@ import sys
 from threading import Thread, Event
 from Queue import Queue, Empty
 
-from pyrimaa.board import (
-        BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos, Position,
-        )
+from pyrimaa.board import (BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos,
+                           Position, )
+
 
 class _ComThread(Thread):
     def __init__(self):
@@ -29,6 +29,7 @@ class _ComThread(Thread):
 class AEIException(Exception):
     pass
 
+
 class AEIEngine(object):
     def __init__(self, controller):
         self.controller = controller
@@ -37,8 +38,8 @@ class AEIEngine(object):
         except Empty:
             raise AEIException("Timed out waiting for aei header")
         if header != "aei":
-            raise AEIException("Did not receive aei header, instead (%s)" % (
-                header))
+            raise AEIException("Did not receive aei header, instead (%s)" %
+                               (header))
         controller.send("protocol-version 1")
         controller.send("id name Sample Engine")
         controller.send("id author Janzert")
@@ -56,9 +57,9 @@ class AEIEngine(object):
 
     def setoption(self, name, value):
         std_opts = set(["tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
-                "tcturns", "tcturntime", "greserve", "sreserve", "gused",
-                "sused", "lastmoveused", "moveused", "opponent",
-                "opponent_rating"])
+                        "tcturns", "tcturntime", "greserve", "sreserve",
+                        "gused", "sused", "lastmoveused", "moveused",
+                        "opponent", "opponent_rating"])
         if name not in std_opts:
             self.log("Warning: Received unrecognized option, %s" % (name))
 
@@ -116,6 +117,7 @@ class AEIEngine(object):
             elif msg == "quit":
                 return
 
+
 def main():
     ctl = _ComThread()
     ctl.start()
@@ -124,6 +126,7 @@ def main():
         eng.main()
     finally:
         ctl.stop.set()
+
 
 if __name__ == "__main__":
     main()
