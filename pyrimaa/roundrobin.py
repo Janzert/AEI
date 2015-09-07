@@ -33,7 +33,6 @@ from pyrimaa import aei
 from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
 
-logging.basicConfig(level=logging.WARN)
 log = logging.getLogger("roundrobin")
 
 
@@ -112,7 +111,7 @@ def get_config(args=None):
     args.bot_sections.remove('global')
 
     try:
-        loglevel = config.get("global", "log_level")
+        loglevel = config.get("global", "loglevel")
     except NoOptionError:
         loglevel = None
     loglevel = loglevel if args.log is None else args.log

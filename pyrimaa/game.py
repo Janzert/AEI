@@ -27,6 +27,7 @@ from pyrimaa.board import BLANK_BOARD, Color, IllegalMove, Position
 
 log = logging.getLogger("game")
 
+
 class Game(object):
     def __init__(self, gold, silver, timecontrol=None, start_position=None,
             strict_setup=True, min_timeleft=None):
@@ -54,7 +55,17 @@ class Game(object):
             eng.newgame()
             if start_position:
                 eng.setposition(start_position)
-            eng.isready()
+            resps = eng.isready()
+            side = "gs"[self.engines.index(eng)]
+            for response in resps:
+                if response.type == "info":
+                    log.info("%s info: %s" % (side, response.message))
+                elif response.type == "log":
+                    log.info("%s log: %s" % (side, response.message))
+                else:
+                    log.warn("Unexpected response while initializing %s (%s).",
+                             side, response.type)
+
         self.insetup = False
         self.position = start_position
         if not start_position:
@@ -171,7 +182,7 @@ class Game(object):
             self.position = position
             if position.color == Color.GOLD:
                 self.movenumber += 1
-            log.info("position:\n%s", position.board_to_str())
+            log.debug("position:\n%s", position.board_to_str())
             for eng in self.engines:
                 eng.makemove(move)
             if self.insetup and side == Color.SILVER:
