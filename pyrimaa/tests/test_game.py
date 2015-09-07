@@ -315,6 +315,7 @@ class MockEngine(object):
         self.stopCount = 0
         self.stopMove = None
         self.curtime = 10
+        self.ident = {"name": "Mock Engine", "author": "Mocker"}
 
     def _time(self):
         return self.curtime
@@ -335,7 +336,7 @@ class MockEngine(object):
         self.move = -3
 
     def isready(self):
-        pass
+        return []
 
     def go(self):
         pass
