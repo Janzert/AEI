@@ -57,14 +57,18 @@ class Game(object):
                 eng.setposition(start_position)
             resps = eng.isready()
             side = "gs"[self.engines.index(eng)]
+            eng_name = eng.ident["name"]
             for response in resps:
                 if response.type == "info":
-                    log.info("%s info: %s" % (side, response.message))
+                    log.info("%s (%s) info: %s", eng_name, side,
+                             response.message)
                 elif response.type == "log":
-                    log.info("%s log: %s" % (side, response.message))
+                    log.info("%s (%s) log: %s", eng_name, side,
+                             response.message)
                 else:
-                    log.warn("Unexpected response while initializing %s (%s).",
-                             side, response.type)
+                    log.warn(
+                        "Unexpected response while initializing %s (%s) (%s).",
+                        eng_name, side, response.type)
 
         self.insetup = False
         self.position = start_position
@@ -138,9 +142,11 @@ class Game(object):
                     if resp.type == "bestmove":
                         break
                     if resp.type == "info":
-                        log.info("%s info: %s" % ("gs"[side], resp.message))
+                        log.info("%s (%s) info: %s", engine.ident["name"],
+                                 "gs"[side], resp.message)
                     elif resp.type == "log":
-                        log.info("%s log: %s" % ("gs"[side], resp.message))
+                        log.info("%s (%s) log: %s", engine.ident["name"],
+                                 "gs"[side], resp.message)
                 except socket.timeout:
                     pass
             moveend = time.time()
