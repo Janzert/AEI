@@ -44,8 +44,9 @@ def get_config(args=None):
 
     notset = NotSet()
     parser = ArgumentParser(description="Analyze a given position.")
-    parser.add_argument("--bot", help="Which engine to use in config file")
-    parser.add_argument("--config",
+    parser.add_argument("-b", "--bot",
+                        help="Which engine to use in config file")
+    parser.add_argument("-c", "--config",
                         default="analyze.cfg",
                         help="Configuration file to use.")
     parser.add_argument("--log", help="Set log output level.")
