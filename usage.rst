@@ -147,3 +147,20 @@ The second usage joins a game and either plays a full game or just one move.
 move at most then exit, if it is the opponent's move the interface will exit
 immediately. This is handy for postal games. As in the first usage, <side>
 optionally indicates which side to play.
+
+postal_controller
+_________________
+
+Monitors and directs a bot to play in all of its postal games.
+
+Regular usage just involves setting up a ``gameroom.cfg`` file with the
+desired bot settings and simply running::
+
+    postal_controller
+
+If needed you can create a [postal] section in ``gameroom.cfg`` with log
+settings or specific bot sections to use in certain games, see the
+``gameroom_example.cfg`` file for details.
+
+To cleanly exit the controller after the current move is played create a file
+called ``stop_postal`` in the directory ``postal_controller`` was run from.
