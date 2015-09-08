@@ -29,12 +29,3 @@ the AEI protocol (``aei.py``), the Arimaa position representation (as bitboards
 in ``board.py`` and x88 in ``x88board.py``), and a few utility functions for
 handling Arimaa timecontrols (``util.py``).
 
-The link used for communication is not specified by the AEI protocol. This
-implementation uses either stdio or a socket for the communication. Stdio is
-the preferred method for general operation, but in certain programming
-languages or environments it may be easier to use socket communication.
-
-When using a socket the controller will listen on an ip and port given to the
-engine by adding "--server <dotted quad ip>" and "--port <port number>" options
-to its command line. The engine should connect to the specified address and
-expect the AEI protocol identifier from the controller.
