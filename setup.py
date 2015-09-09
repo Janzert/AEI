@@ -5,7 +5,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'readme.rst')).read()
 
 setup(name='AEI',
-      version='1.2.dev1',
+      version='1.2.dev3',
       description='Arimaa Engine Interface tools',
       long_description=README,
       classifiers=["Programming Language :: Python",
@@ -15,8 +15,8 @@ setup(name='AEI',
       author='Janzert',
       author_email='janzert@janzert.com',
       url='http://arimaa.janzert.com/aei',
-      keywords='arimaa',
-      packages=find_packages(exclude=["tests"]),
+      keywords='Arimaa',
+      packages=find_packages(),
       entry_points="""\
       [console_scripts]
       analyze = pyrimaa.analyze:main
