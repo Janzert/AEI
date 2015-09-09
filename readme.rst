@@ -29,3 +29,14 @@ the AEI protocol (``aei.py``), the Arimaa position representation (as bitboards
 in ``board.py`` and x88 in ``x88board.py``), and a few utility functions for
 handling Arimaa timecontrols (``util.py``).
 
+If you have python2 and pip on your machine you can install the latest
+release with::
+
+    pip install aei
+
+On an operating system with a system supplied python you probably want to keep
+the aei install separate from your system installed packages. To accomplish
+that you can use either a virtualenv or user install.  A user install is done
+simply by adding the ``--user`` option::
+
+    pip install --user aei
