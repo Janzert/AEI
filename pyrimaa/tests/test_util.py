@@ -22,6 +22,7 @@ from unittest import TestCase
 
 from pyrimaa.util import TimeControl
 
+
 class TestTimeControl(TestCase):
     def test_movetime(self):
         self.assertRaises(ValueError, TimeControl, "none")
@@ -30,9 +31,9 @@ class TestTimeControl(TestCase):
         tc = TimeControl("5m/1s")
         self.assertEqual(tc.move, 300)
         tc = TimeControl("1h/1s")
-        self.assertEqual(tc.move, 60*60)
+        self.assertEqual(tc.move, 60 * 60)
         tc = TimeControl("1d/1s")
-        self.assertEqual(tc.move, 60*60*24)
+        self.assertEqual(tc.move, 60 * 60 * 24)
         tc = TimeControl("1:30/1s")
         self.assertEqual(tc.move, 90)
 
@@ -77,9 +78,9 @@ class TestTimeControl(TestCase):
         tc = TimeControl("30s/10s/100/0/0")
         self.assertEqual(tc.time_limit, 0)
         tc = TimeControl("30s/10s/100/0/1h")
-        self.assertEqual(tc.time_limit, 60*60)
+        self.assertEqual(tc.time_limit, 60 * 60)
         tc = TimeControl("30s/10s/100/0/1:30")
-        self.assertEqual(tc.time_limit, 60*90)
+        self.assertEqual(tc.time_limit, 60 * 90)
 
     def test_max_turntime(self):
         tc = TimeControl("30s/10s")
@@ -102,4 +103,3 @@ class TestTimeControl(TestCase):
         self.assertEqual(str(tc), "1m/1m/100/10m/5h/5m")
         tc = TimeControl("1/1/100/0/50t/5")
         self.assertEqual(str(tc), "1m/1m/100/0/50t/5m")
-

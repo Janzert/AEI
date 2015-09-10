@@ -302,13 +302,14 @@ repetition_moves = """1g Ra1 Rb1 Rc1 Cd1 Re1 Rf1 Dg1 Rh1 Ra2 Db2 Mc2 Cd2 Ee2 Hf2
 8g Ra6n Ra7n"""
 repetition_moves = repetition_moves.splitlines()
 
+
 class MockResponse(object):
     def __init__(self, msg_type="bestmove"):
         self.type = msg_type
 
 
 class MockEngine(object):
-    def __init__(self, delay = None, moves = goal_moves):
+    def __init__(self, delay=None, moves=goal_moves):
         self.moves = moves
         self.delay = delay
         self.protocol_version = 1
@@ -531,4 +532,3 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game.play(), (0, 't'))
         self.assertEqual(p.stopCount, 1)
         pyrimaa.game.time = rt
-

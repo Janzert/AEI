@@ -94,7 +94,7 @@ protocol0 = [
     ("s", "newgame"),
     ("s",
      "setposition w [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]"
-        ),
+    ),
 ]
 
 protocol1 = [
