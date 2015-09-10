@@ -5,7 +5,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'readme.rst')).read()
 
 setup(name='AEI',
-      version='1.2.dev3',
+      version='1.2',
       description='Arimaa Engine Interface tools',
       long_description=README,
       classifiers=["Programming Language :: Python",
