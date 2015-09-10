@@ -1,5 +1,5 @@
 #! /usr/bin/python
-# Copyright 2008-2014 Brian Haskin Jr.
+# Copyright 2008-2015 Brian Haskin Jr.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
