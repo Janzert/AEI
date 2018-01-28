@@ -21,7 +21,6 @@
 import sys
 import random
 import time
-import re
 
 
 class Color:
@@ -1030,31 +1029,38 @@ def parse_move(line):
 
     return steps
 
+
 def parse_long_pos(text):
     """ Parse a position from a long format string """
-    lines = [line.strip() for line in text.strip().split("\n")]
-    if len(lines) < 8:
-        raise ValueError('Text is too short to contain a long format position')
-    movenumber = 0
-    movenumber_match = re.search('\d+', lines[0])
-    if movenumber_match:
-        movenumber = int(movenumber_match.group(0))
-    color_match = re.search('[a-zA-Z]', lines[0])
-    if color_match:
-        color_letter = color_match.group(0).lower()
-    if color_letter in "bs":
+    text = [x.strip() for x in text]
+    for emptynum, line in enumerate(text):
+        if line:
+            break
+    text = text[emptynum:]
+    while text[0] and not text[0][0].isdigit():
+        del text[0]
+    movecolorix = 0
+    while text[0][:movecolorix + 1].isdigit():
+        movecolorix += 1
+    movenumber = int(text[0][:movecolorix])
+    if text[0][movecolorix].lower() in "bs":
         color = Color.SILVER
-    elif color_letter in "wg":
+    elif text[0][movecolorix].lower() in "wg":
         color = Color.GOLD
     else:
         raise ValueError("Could not find side to move")
-    # TODO Support parsing positions with steps already taken.
-    steps = 4
-    if lines[1][0] != '+':
+
+    if len(text[0][movecolorix + 1:]) > 0:
+        raise NotImplementedError(
+            "Can not parse positions with steps already taken")
+    else:
+        steps = 4
+
+    if text[1][0] != '+':
         raise ValueError("Board does not start after move line")
     ranknum = 7
     bitboards = [b for b in BLANK_BOARD]
-    for line in lines[2:10]:
+    for line in text[2:10]:
         if not line[0].isdigit() or int(line[0]) - 1 != ranknum:
             raise ValueError("Unexpected rank number at rank %d" % ranknum + 1)
         for piece_index in xrange(3, 18, 2):
@@ -1072,9 +1078,9 @@ def parse_long_pos(text):
                                  ("abcdefgh" [colnum], ranknum + 1))
         ranknum -= 1
     pos = Position(color, steps, bitboards)
-    
-    if len(lines) > 12:
-        for line in lines[12:]:
+
+    if len(text) > 12:
+        for line in text[12:]:
             line = line.strip()
             if not line or line[0] == '#':
                 break
@@ -1084,7 +1090,7 @@ def parse_long_pos(text):
             pos = pos.do_step(move)
             if pos.color == Color.GOLD:
                 movenumber += 1
-    
+
     return (movenumber, pos)
 
 
