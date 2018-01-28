@@ -982,7 +982,7 @@ class Position(object):
         taken = []
         while pos.color == self.color:
             steps = pos.get_steps()
-            if pos != self and not pos.inpush:
+            if pos.bitBoards != self.bitBoards and not pos.inpush:
                 nullmove = pos.get_null_move()
                 steps.append(((), nullmove))
 
@@ -991,13 +991,15 @@ class Position(object):
                 if taken:
                     pos = self
                 else:
-                    return None
+                    return (None, pos)
 
             randstep = random.choice(steps)
             taken.append(randstep[0])
             pos = randstep[1]
         if not taken[-1]:
             taken = taken[:-1]
+        if pos.bitBoards == self.bitBoards:
+            return self.get_rnd_step_move()
         return (taken, pos)
 
 
