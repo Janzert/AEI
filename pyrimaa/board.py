@@ -989,7 +989,13 @@ class Position(object):
             # If no steps were generated then we are immobilized.
             if len(steps) == 0:
                 if taken:
-                    pos = self
+                    # I believe the only way to reach this point is if steps
+                    # have already been taken and, the board layout is the same
+                    # as the start of the move or we are in the midst of a
+                    # push, and there were no steps generated. Otherwise a
+                    # minimum of a nullmove step should have been generated.
+                    # This situation should never be possible.
+                    raise RuntimeError("Unable to find a valid step.")
                 else:
                     return (None, pos)
 
