@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import math
 import sys
 import random
 import time
@@ -1161,15 +1162,15 @@ def test_random_play():
 
 def rnd_step_game(pos):
     while (not pos.is_goal()) and (not pos.is_rabbit_loss()):
-        move = pos.get_rnd_step_move()
-        if move is None:  # immobilization
-            assert len(pos.get_moves()) == 1
+        steps, result = pos.get_rnd_step_move()
+        if steps is None:  # immobilization or elimination
+            assert len(pos.get_moves()) == 0
             if pos.color == Color.GOLD:
                 return -1
             else:
                 return 1
 
-        pos = move[1]
+        pos = result
 
     if pos.is_goal():
         return pos.is_goal()
@@ -1202,33 +1203,35 @@ def test_rnd_steps():
     immo_wins = 0
     for i in xrange(100):
         pos = Position(Color.GOLD, 4, BASIC_SETUP)
-        print pos.board_to_str()
-        print
 
         turn = 3
         while not pos.is_goal():
-            move = pos.get_rnd_step_move()
-            if move is None:  # immobilization
-                print "Win by immobilization."
+            print "%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2]),
+            steps, result = pos.get_rnd_step_move()
+            if steps is None:
+                print
+                print pos.board_to_str()
+                print "Win by elimination/immobilization."
+                print
                 moves = pos.get_moves()
-                # len(moves) will include illegal null move (no position change)
-                if len(moves) != 1:
+                if len(moves) != 0:
                     print "Uh, oh. immo not immo."
                     print immo_wins
                     return
                 immo_wins += 1
                 break
 
-            pos = move[1]
-            print pos.steps_to_str(move[0])
-            print pos.board_to_str()
-            print turn
-            print
+            print pos.steps_to_str(steps)
+
+            pos = result
             turn += 1
 
         total_turns += turn
-        if move is not None:
+        if steps is not None:
+            print "%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2])
+            print pos.board_to_str()
             print "Win by goal."
+            print
             goal_wins += 1
 
     print total_turns / 100.0, goal_wins, immo_wins
@@ -1268,7 +1271,10 @@ def main(filename):
     print
 
     steps, result = pos.get_rnd_step_move()
-    print "Random step move:", pos.steps_to_str(steps)
+    if steps is None:
+        print "No move found by random steps."
+    else:
+        print "Random step move:", pos.steps_to_str(steps)
     print
 
     starttime = time.time()
