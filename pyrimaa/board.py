@@ -981,23 +981,33 @@ class Position(object):
         """ Generate a move from this position by taking random steps. """
         pos = self
         taken = []
+        deadends = set()
         while pos.color == self.color:
             steps = pos.get_steps()
+            steps = [s for s in steps if s[1] not in deadends]
             if pos.bitBoards != self.bitBoards and not pos.inpush:
                 nullmove = pos.get_null_move()
                 steps.append(((), nullmove))
 
-            # If no steps were generated then we are immobilized.
+            if pos.stepsLeft == 1:
+                # This is the last step, if it returns the board to the
+                # starting state it is illegal
+                steps = [s for s in steps if s[1].bitBoards != self.bitBoards]
+
             if len(steps) == 0:
                 if taken:
-                    # I believe the only way to reach this point is if steps
-                    # have already been taken and, the board layout is the same
-                    # as the start of the move or we are in the midst of a
-                    # push, and there were no steps generated. Otherwise a
-                    # minimum of a nullmove step should have been generated.
-                    # This situation should never be possible.
-                    raise RuntimeError("Unable to find a valid step.")
+                    # This is a deadend with no legal steps.
+                    # Can occur when a push returns the position to the start
+                    # and has no steps left to change the position after that.
+                    # This method almost certainly introduces some bias in the
+                    # results that could be avoided with proper backtracking.
+                    deadends.add(pos)
+                    pos = self
+                    taken = []
+                    continue
                 else:
+                    # nothing can move we must be either eliminated or
+                    # immobilized
                     return (None, pos)
 
             randstep = random.choice(steps)
@@ -1006,7 +1016,7 @@ class Position(object):
         if not taken[-1]:
             taken = taken[:-1]
         if pos.bitBoards == self.bitBoards:
-            return self.get_rnd_step_move()
+            raise RuntimeError("Produced illegal null move.")
         return (taken, pos)
 
 
