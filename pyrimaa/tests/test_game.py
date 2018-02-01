@@ -418,17 +418,17 @@ class GameTest(unittest.TestCase):
         # check illegality of taking opponent steps
         p = MockEngine(moves=extra_step_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (1, 'i'))
         self.assertEqual(p.move, 4)
         # check illegality of 3 time repetition
         p = MockEngine(moves=repetition_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (0, 'i'))
         self.assertEqual(p.move, 7)
         # check loose setup enforcement
         p = MockEngine(moves=handicap_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (1, 'i'))
         game = Game(p, p, strict_setup=False)
         self.assertEqual(game.play(), (1, 'e'))
 
