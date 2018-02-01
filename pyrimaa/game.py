@@ -96,7 +96,7 @@ class Game(object):
                 if result:
                     break
             except IllegalMove as e:
-                print "Illegal move played: %s" % e
+                log.info("Illegal move played: %s" % e)
                 result = (self.position.color ^ 1, "i")
                 break
         if not result:
@@ -205,7 +205,7 @@ class Game(object):
         else:
             position = position.do_move_str(move)
         if position.bitBoards == self.position.bitBoards:
-            raise IllegalMove("Tried move that did not change the position: %s" % move)
+            raise IllegalMove("Tried move that did not change the position, %s" % move)
         self.repetition_count[position] += 1
         if self.repetition_count[position] > 2:
             raise IllegalMove("Tried move resulting in a 3rd time repetition")
