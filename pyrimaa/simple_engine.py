@@ -96,7 +96,12 @@ class AEIEngine(object):
             move_str = setup_moves[pos.color][2:]
         else:
             steps, result = pos.get_rnd_step_move()
-            move_str = pos.steps_to_str(steps)
+            if steps is None:
+                # we are immobilized, return an empty move
+                move_str = ""
+                self.log("Warning: move requested when immobilized.")
+            else:
+                move_str = pos.steps_to_str(steps)
         self.bestmove(move_str)
 
     def log(self, msg):

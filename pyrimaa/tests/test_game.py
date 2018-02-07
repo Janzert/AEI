@@ -302,6 +302,14 @@ repetition_moves = """1g Ra1 Rb1 Rc1 Cd1 Re1 Rf1 Dg1 Rh1 Ra2 Db2 Mc2 Cd2 Ee2 Hf2
 8g Ra6n Ra7n"""
 repetition_moves = repetition_moves.splitlines()
 
+null_moves = """1g Ra1 Rb1 Rc1 Cd1 Re1 Rf1 Dg1 Rh1 Ra2 Db2 Mc2 Cd2 Ee2 Hf2 Hg2 Rh2
+1s ed7 mg7 he7 df7 ce8 hb7 dc7 cd8 ra7 rh7 ra8 rb8 rc8 rf8 rg8 rh8
+2g Ee2n Ee3n Ee4n
+2s ra7s ra6e rb6s
+3g Ee5n Ee6w Ed6s Ed5e
+3s rb5w"""
+null_moves = null_moves.splitlines()
+
 
 class MockResponse(object):
     def __init__(self, msg_type="bestmove"):
@@ -418,17 +426,22 @@ class GameTest(unittest.TestCase):
         # check illegality of taking opponent steps
         p = MockEngine(moves=extra_step_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (1, 'i'))
         self.assertEqual(p.move, 4)
         # check illegality of 3 time repetition
         p = MockEngine(moves=repetition_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (0, 'i'))
         self.assertEqual(p.move, 7)
+        # check illegality of not changing the board state
+        p = MockEngine(moves=null_moves)
+        game = Game(p, p)
+        self.assertEqual(game.play(), (1, 'i'))
+        self.assertEqual(p.move, 4)
         # check loose setup enforcement
         p = MockEngine(moves=handicap_moves)
         game = Game(p, p)
-        self.assertRaises(IllegalMove, game.play)
+        self.assertEqual(game.play(), (1, 'i'))
         game = Game(p, p, strict_setup=False)
         self.assertEqual(game.play(), (1, 'e'))
 

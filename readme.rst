@@ -40,3 +40,7 @@ that you can use either a virtualenv or user install.  A user install is done
 simply by adding the ``--user`` option::
 
     pip install --user aei
+
+AEI may also be built and installed with
+
+    python setup.py install
