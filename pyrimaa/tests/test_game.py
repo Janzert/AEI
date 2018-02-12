@@ -22,6 +22,8 @@ import socket
 import time
 import unittest
 
+from collections import defaultdict
+
 import pyrimaa.game
 from pyrimaa.board import Color, Position, BASIC_SETUP, IllegalMove
 from pyrimaa.game import Game
@@ -317,20 +319,22 @@ class MockResponse(object):
 
 
 class MockEngine(object):
-    def __init__(self, delay=None, moves=goal_moves):
+    def __init__(self, delay=None, moves=goal_moves, isready=[]):
         self.moves = moves
         self.delay = delay
         self.protocol_version = 1
+        self.isready_resp = isready
         self.stopCount = 0
         self.stopMove = None
         self.curtime = 10
         self.ident = {"name": "Mock Engine", "author": "Mocker"}
+        self.options_set = defaultdict(list)
 
     def _time(self):
         return self.curtime
 
     def setoption(self, opt, val):
-        pass
+        self.options_set[opt].append(val)
 
     def setposition(self, pos):
         pass
@@ -345,7 +349,7 @@ class MockEngine(object):
         self.move = -3
 
     def isready(self):
-        return []
+        return self.isready_resp
 
     def go(self):
         pass
@@ -390,6 +394,21 @@ class MockTime:
         return self.eng._time()
 
 
+class MockLog:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.info_logs = []
+        self.warn_logs = []
+
+    def info(self, format_str, *args):
+        self.info_logs.append(format_str % args)
+
+    def warn(self, format_str, *args):
+        self.warn_logs.append(format_str % args)
+
+
 class GameTest(unittest.TestCase):
     def test_contruction(self):
         p = MockEngine()
@@ -403,6 +422,41 @@ class GameTest(unittest.TestCase):
         game = Game(p, p, tc, pos)
         self.assertEqual(game.position, pos)
         self.assertEqual(game.insetup, False)
+        real_log = pyrimaa.game.log
+        mock_log = MockLog()
+        pyrimaa.game.log = mock_log
+        try:
+            info = MockResponse("info")
+            info.message = "Test info message."
+            pl = MockEngine(isready=[info])
+            game = Game(pl, p)
+            self.assertEqual(game.movenumber, 1)
+            self.assertEqual(game.insetup, True)
+            self.assertEqual(len(mock_log.info_logs), 1)
+            self.assertEqual(len(mock_log.warn_logs), 0)
+            self.assertIn(info.message, mock_log.info_logs[0])
+            mock_log.reset()
+            log = MockResponse("log")
+            log.message = "Test log message."
+            pl = MockEngine(isready=[log])
+            game = Game(pl, p)
+            self.assertEqual(game.movenumber, 1)
+            self.assertEqual(game.insetup, True)
+            self.assertEqual(len(mock_log.info_logs), 1)
+            self.assertEqual(len(mock_log.warn_logs), 0)
+            self.assertIn(log.message, mock_log.info_logs[0])
+            mock_log.reset()
+            invalid = MockResponse("bestmove")
+            invalid.move = " "
+            pl = MockEngine(isready=[invalid])
+            game = Game(pl, p)
+            self.assertEqual(game.movenumber, 1)
+            self.assertEqual(game.insetup, True)
+            self.assertEqual(len(mock_log.info_logs), 0)
+            self.assertEqual(len(mock_log.warn_logs), 1)
+            mock_log.reset()
+        finally:
+            pyrimaa.game.log = real_log
 
     def test_play(self):
         # check basic endings, goal, immobilization and elimination
@@ -475,16 +529,74 @@ class GameTest(unittest.TestCase):
         self.assertEqual(p.stopCount, 1)
         # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
-        p = MockEngine(delay=[0, 0, 0, 0, 1.2])
-        pyrimaa.game.time = MockTime(p)
-        game = Game(p, p, tc)
-        self.assertEqual(game.play(), (0, 'g'))
-        self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, 't'))
         self.assertEqual(p.stopCount, 1)
+        p = MockEngine(delay=[0, 0, 0, 0, 1.2])
+        pyrimaa.game.time = MockTime(p)
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 0)
+        # additionally check that the correct options were sent to the bot
+        expected_options_set = {'tctotal': [0, 0], 'tcmove': [1, 1],
+                'tcturns': [0, 0], 'tcreserve': [0, 0], 'tcmax': [0, 0],
+                'tcpercent': [50, 50], 'tcturntime': [0, 0],
+                'moveused': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0],
+                'sreserve': [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3,
+                    3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8,
+                    8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
+                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
+                    19, 20, 20, 20],
+                'greserve': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
+                    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7,
+                    8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
+                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
+                    19],
+                }
+        for option, value in expected_options_set.items():
+            self.assertIn(option, p.options_set)
+            self.assertEqual(p.options_set[option], value)
+        # check protocol version 0 also gets the correct options
+        tc = TimeControl("1s/0s/50")
+        p = MockEngine(delay=[0, 0, 0, 0, 1.2])
+        p.protocol_version = 0
+        pyrimaa.game.time = MockTime(p)
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(p.stopCount, 0)
+        # additionally check that the correct options were sent to the bot
+        expected_options_set = {'tctotal': [0, 0], 'tcmove': [1, 1],
+                'tcturns': [0, 0], 'tcreserve': [0, 0], 'tcmax': [0, 0],
+                'tcpercent': [50, 50], 'tcturntime': [0, 0],
+                'moveused': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0],
+                'breserve': [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3,
+                    3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8,
+                    8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
+                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
+                    19, 20, 20, 20],
+                'wreserve': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
+                    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7,
+                    8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
+                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
+                    19],
+                }
+        for option, value in expected_options_set.items():
+            self.assertIn(option, p.options_set)
+            self.assertEqual(p.options_set[option], value)
         # check reserve is correctly deducted when reserve addition is not 100%
         tc = TimeControl("1s/1s/50")
         p = MockEngine(delay=[0, 0, 1.5, 0, 1.6])

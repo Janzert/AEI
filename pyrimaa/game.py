@@ -179,7 +179,7 @@ class Game(object):
                 return (self.limit_winner, "s")
             else:
                 return (side ^ 1, "t")
-        if not resp or resp.type != "bestmove":
+        if not resp or resp.type != "bestmove": # pragma: no cover
             raise RuntimeError(
                 "Stopped waiting without a timeout or a move")
         if tc:
