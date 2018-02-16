@@ -129,8 +129,11 @@ class StdioEngine:
         self.active = True
 
     def __del__(self):
-        if self.active:
-            self.cleanup()
+        try:
+            if self.active:
+                self.cleanup()
+        except AttributeError:
+            pass
 
     def is_running(self):
         return self.proc.poll() is None
@@ -317,7 +320,10 @@ class EngineResponse:
 class EngineController:
     def __init__(self, engine):
         self.engine = engine
-        engine.send("aei\n")
+        try:
+            engine.send("aei\n")
+        except IOError:
+            raise EngineException("Could not send initial message to engine.")
         try:
             response = engine.waitfor("aeiok", START_TIME)
         except socket.timeout:

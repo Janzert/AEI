@@ -19,14 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 import sys
+import time
 
 from threading import Thread, Event
 from Queue import Queue, Empty
 
 from pyrimaa.board import (BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos,
-                           Position, )
+                           Position, IllegalMove)
 
 
 class _ComThread(Thread):
@@ -42,7 +42,11 @@ class _ComThread(Thread):
 
     def run(self):
         while not self.stop.isSet():
-            msg = sys.stdin.readline()
+            try:
+                msg = sys.stdin.readline()
+            except AttributeError:
+                # during shutdown sys will change to None
+                return
             self.messages.put(msg.strip())
 
 
@@ -52,6 +56,9 @@ class AEIException(Exception):
 
 class AEIEngine(object):
     def __init__(self, controller):
+        self.strict_checks = True
+        self.move_delay = None
+        self.total_move_time = 0.0
         self.controller = controller
         try:
             header = controller.messages.get(30)
@@ -80,16 +87,27 @@ class AEIEngine(object):
                         "tcturns", "tcturntime", "greserve", "sreserve",
                         "gused", "sused", "lastmoveused", "moveused",
                         "opponent", "opponent_rating"])
-        if name not in std_opts:
+        if name == "checkmoves":
+            self.strict_checks = value.lower() in ["false", "no", "0"]
+        elif name == "delaymove":
+            self.move_delay = float(value)
+        elif name not in std_opts:
             self.log("Warning: Received unrecognized option, %s" % (name))
 
     def makemove(self, move_str):
-        self.position = self.position.do_move_str(move_str)
+        try:
+            self.position = self.position.do_move_str(move_str,
+                                                      self.strict_checks)
+        except IllegalMove as exc:
+            self.log("Error: received illegal move %s" % (move_str,))
+            return False
         if self.insetup and self.position.color == Color.GOLD:
             self.insetup = False
+        return True
 
     def go(self):
         pos = self.position
+        start_time = time.time()
         if self.insetup:
             setup = Position(Color.GOLD, 4, BASIC_SETUP)
             setup_moves = setup.to_placing_move()
@@ -102,7 +120,15 @@ class AEIEngine(object):
                 self.log("Warning: move requested when immobilized.")
             else:
                 move_str = pos.steps_to_str(steps)
+        if self.move_delay:
+            time.sleep(self.move_delay)
+        move_time = time.time() - start_time
+        self.total_move_time += move_time
+        self.info("time %d" % (int(round(move_time),)))
         self.bestmove(move_str)
+
+    def info(self, msg):
+        self.controller.send("info " + msg)
 
     def log(self, msg):
         self.controller.send("log " + msg)
@@ -133,13 +159,17 @@ class AEIEngine(object):
                 self.setoption(name, value)
             elif msg.startswith("makemove"):
                 move_str = msg.split(None, 1)[1]
-                self.makemove(move_str)
+                if not self.makemove(move_str):
+                    return
             elif msg.startswith("go"):
                 if len(msg.split()) == 1:
                     self.go()
             elif msg == "stop":
                 pass
             elif msg == "quit":
+                self.log("Debug: Exiting after receiving quit message.")
+                if self.total_move_time > 0:
+                    self.info("move gen time %f" % (self.total_move_time,))
                 return
 
 

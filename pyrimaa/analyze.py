@@ -104,9 +104,10 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print "Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (
+            print "Bad log level \"%s\", use ERROR, WARNING, INFO or DEBUG." % (
                 loglevel,
             )
+            sys.exit(1)
         logging.basicConfig(level=loglevel)
 
     if args.strict_checks is notset:
@@ -203,13 +204,17 @@ def main(args=None):
             eng.setposition(pos)
         else:
             pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
-            for mnum, move in enumerate(start):
-                move = move[3:]
+            for mnum, full_move in enumerate(start):
+                move = full_move[3:]
                 if mnum < 2 and cfg.strict_setup is not None:
                     do_checks = cfg.strict_setup
                 else:
                     do_checks = cfg.strict_checks
-                pos = pos.do_move_str(move, do_checks)
+                try:
+                    pos = pos.do_move_str(move, do_checks)
+                except board.IllegalMove as exc:
+                    print "Illegal move found \"%s\", %s" % (full_move, exc)
+                    return 1
                 eng.makemove(move)
         print pos.board_to_str()
 
