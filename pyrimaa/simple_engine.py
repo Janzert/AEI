@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import exceptions
 import sys
 import time
 
@@ -41,6 +42,8 @@ class _ComThread(Thread):
         sys.stdout.flush()
 
     def run(self):
+        # Hang onto AttributeError reference to survive into shutdown
+        AttributeError = exceptions.AttributeError
         while not self.stop.isSet():
             try:
                 msg = sys.stdin.readline()
