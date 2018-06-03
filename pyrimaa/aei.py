@@ -156,10 +156,13 @@ class StdioEngine:
         response = []
         while time.time() <= endtime:
             wait = endtime - time.time()
-            line = self.readline(timeout=wait)
-            response.append(line)
-            if line.lstrip().lower().startswith(expect):
-                break
+            try:
+                line = self.readline(timeout=wait)
+                response.append(line)
+                if line.lstrip().lower().startswith(expect):
+                    break
+            except socket.timeout:
+                pass
         else:
             raise EngineException("Engine did not respond in alloted time.")
         return response
@@ -230,7 +233,7 @@ class SocketEngine:
             lineend = find_line_end(buf)
             if lineend != -1:
                 self.buf = buf[lineend + 1:]
-                return buf[:lineend + 1]
+                return buf[:lineend + 1].strip()
 
         if timeout is None:
             endtime = None
@@ -274,10 +277,13 @@ class SocketEngine:
         response = []
         while time.time() <= endtime:
             wait = endtime - time.time()
-            line = self.readline(timeout=wait)
-            response.append(line)
-            if line.lstrip().lower().startswith(expect):
-                break
+            try:
+                line = self.readline(timeout=wait)
+                response.append(line)
+                if line.lstrip().lower().startswith(expect):
+                    break
+            except socket.timeout:
+                pass
         else:
             raise EngineException("Engine did not respond in alloted time.")
         return response
