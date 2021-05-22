@@ -190,7 +190,7 @@ class Position(object):
                  zobrist=None):
         self.color = side
         self.stepsLeft = steps_left
-        self.bitBoards = bitboards
+        self.bitBoards = tuple(bitboards)
         self.inpush = inpush
         self.last_piece = last_piece
         self.last_from = last_from
@@ -199,7 +199,7 @@ class Position(object):
             for piece in range(Piece.GRABBIT, Piece.GELEPHANT + 1):
                 placement[Color.GOLD] |= bitboards[piece]
                 placement[Color.SILVER] |= bitboards[piece | Piece.COLOR]
-        self.placement = placement
+        self.placement = list(placement)
 
         if zobrist is None:
             #zobrist = ZOBRIST_KEYS[0][sideMoving] ^ ZOBRIST_KEYS[1][stepsLeft]
@@ -553,10 +553,10 @@ class Position(object):
                     (pcolor == Color.SILVER and direction == 8)):
                     return BadStep("Tried to move a rabbit back")
             if self.inpush:
-                if pstrength <= self.last_piece & Piece.DECOLOR:
-                    return BadStep("Tried to push with too weak of a piece")
                 if self.last_from != step[1]:
                     return BadStep("Tried to neglect finishing a push")
+                if pstrength <= self.last_piece & Piece.DECOLOR:
+                    return BadStep("Tried to push with too weak of a piece")
         else:
             if self.inpush:
                 return BadStep(
@@ -1015,7 +1015,7 @@ class Position(object):
             pos = randstep[1]
         if not taken[-1]:
             taken = taken[:-1]
-        if pos.bitBoards == self.bitBoards:
+        if pos.bitBoards == self.bitBoards: # pragma: no cover
             raise RuntimeError("Produced illegal null move.")
         return (taken, pos)
 
@@ -1075,13 +1075,13 @@ def parse_long_pos(text):
     else:
         steps = 4
 
-    if text[1][0] != '+':
+    if text[1] != "+-----------------+":
         raise ValueError("Board does not start after move line")
     ranknum = 7
     bitboards = [b for b in BLANK_BOARD]
     for line in text[2:10]:
         if not line[0].isdigit() or int(line[0]) - 1 != ranknum:
-            raise ValueError("Unexpected rank number at rank %d" % ranknum + 1)
+            raise ValueError("Unexpected rank number at rank %d" % (ranknum + 1,))
         for piece_index in xrange(3, 18, 2):
             colnum = (piece_index - 3) // 2
             bit = 1 << ((ranknum * 8) + colnum)
@@ -1103,10 +1103,9 @@ def parse_long_pos(text):
             line = line.strip()
             if not line or line[0] == '#':
                 break
-            print "l", line
             line = " ".join(line.split()[1:])
             move = parse_move(line)
-            pos = pos.do_step(move)
+            pos = pos.do_move(move)
             if pos.color == Color.GOLD:
                 movenumber += 1
 
