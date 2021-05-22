@@ -6,6 +6,9 @@ analyze.cfg
 gameroom.cfg
 roundrobin.cfg
 
+.coverage
+/htmlcov
+
 /AEI.egg-info
 /dist
 /build
