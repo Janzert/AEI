@@ -205,8 +205,8 @@ class BoardTest(unittest.TestCase):
         self.assertNotEqual(gb, 1)
         b1 = board.Position(board.Color.GOLD, 4, board.BASIC_SETUP)
         modified_setup = list(board.BASIC_SETUP)
-        modified_setup[0] ^= 0x0000000000000400L
-        modified_setup[2] ^= 0x0000000000000400L
+        modified_setup[0] ^= 0x0000000000000400
+        modified_setup[2] ^= 0x0000000000000400
         b2 = board.Position(board.Color.GOLD, 4, modified_setup)
         self.assertNotEqual(b1, b2)
         b2 = b2.do_move([])
@@ -218,24 +218,24 @@ class BoardTest(unittest.TestCase):
         pos.check_hash()
         pos.check_boards()
         bb = list(pos.bitBoards)
-        bb[3] ^= 0x400L
+        bb[3] ^= 0x400
         pos.bitBoards = tuple(bb)
         self.assertRaises(RuntimeError, pos.check_boards)
-        bb[3] ^= 0x400L
-        bb[2] ^= 0x400L
+        bb[3] ^= 0x400
+        bb[2] ^= 0x400
         pos.bitBoards = tuple(bb)
         self.assertRaises(RuntimeError, pos.check_boards)
         self.assertRaises(RuntimeError, pos.check_hash)
         placement = list(pos.placement)
-        placement[0] ^= 0x400L
+        placement[0] ^= 0x400
         pos.placement = placement
         self.assertRaises(RuntimeError, pos.check_boards)
-        placement[1] ^= 0x400L
+        placement[1] ^= 0x400
         pos.placement = placement
         self.assertRaises(RuntimeError, pos.check_boards)
-        placement[1] ^= 0x400L
+        placement[1] ^= 0x400
         pos.placement = placement
-        bb[0] ^= 0x400L
+        bb[0] ^= 0x400
         pos.bitBoards = tuple(bb)
         pos.check_boards()
         self.assertRaises(RuntimeError, pos.check_hash)
@@ -393,16 +393,16 @@ class BoardTest(unittest.TestCase):
         gpos = pos.place_piece(board.Piece.GDOG, 10)
         self.assertRaises(ValueError, gpos.place_piece, board.Piece.GDOG, 10)
         self.assertRaises(ValueError, gpos.remove_piece, 5)
-        self.assertEqual(gpos.piece_at(1L << 10), board.Piece.GDOG)
+        self.assertEqual(gpos.piece_at(1 << 10), board.Piece.GDOG)
         npos = gpos.remove_piece(10)
         self.assertEqual(pos, npos)
-        self.assertEqual(npos.piece_at(1L << 10), board.Piece.EMPTY)
+        self.assertEqual(npos.piece_at(1 << 10), board.Piece.EMPTY)
         pos = board.Position(board.Color.SILVER, 4, board.BLANK_BOARD)
         spos = pos.place_piece(board.Piece.SCAMEL, 56)
         self.assertRaises(ValueError, spos.place_piece, board.Piece.GDOG, 56)
         npos = spos.remove_piece(56)
         self.assertEqual(pos, npos)
-        self.assertEqual(npos.piece_at(1L << 56), board.Piece.EMPTY)
+        self.assertEqual(npos.piece_at(1 << 56), board.Piece.EMPTY)
 
     def test_check_step(self):
         move, pos = board.parse_long_pos(CHECK_STEP_POS)

@@ -18,6 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
+try:
+    xrange(1)
+except NameError:
+    xrange = range
+
 import math
 import sys
 import random
@@ -49,30 +55,29 @@ class Piece:
     DECOLOR = ~COLOR
 
 
-ALL_BITS = 0xFFFFFFFFFFFFFFFFL
-NOT_A_FILE = 0xFEFEFEFEFEFEFEFEL
-NOT_H_FILE = 0x7F7F7F7F7F7F7F7FL
-NOT_1_RANK = 0xFFFFFFFFFFFFFF00L
-NOT_8_RANK = 0x00FFFFFFFFFFFFFFL
+ALL_BITS = 0xFFFFFFFFFFFFFFFF
+NOT_A_FILE = 0xFEFEFEFEFEFEFEFE
+NOT_H_FILE = 0x7F7F7F7F7F7F7F7F
+NOT_1_RANK = 0xFFFFFFFFFFFFFF00
+NOT_8_RANK = 0x00FFFFFFFFFFFFFF
 
 TRAP_C3_IX = 18
 TRAP_F3_IX = 21
 TRAP_C6_IX = 42
 TRAP_F6_IX = 45
-TRAP_C3_BIT = 1L << 18
-TRAP_F3_BIT = 1L << 21
-TRAP_C6_BIT = 1L << 42
-TRAP_F6_BIT = 1L << 45
-TRAPS = 0x0000240000240000L
+TRAP_C3_BIT = 1 << 18
+TRAP_F3_BIT = 1 << 21
+TRAP_C6_BIT = 1 << 42
+TRAP_F6_BIT = 1 << 45
+TRAPS = 0x0000240000240000
 
-BASIC_SETUP = (0x0000FFFFFFFF0000L, 0x00000000000000FFL, 0x0000000000002400L,
-               0x0000000000008100L, 0x0000000000004200L, 0x0000000000000800L,
-               0x0000000000001000L, None, None, 0xFF00000000000000L,
-               0x0024000000000000L, 0x0081000000000000L, 0x0042000000000000L,
-               0x0010000000000000L, 0x0008000000000000L)
+BASIC_SETUP = (0x0000FFFFFFFF0000, 0x00000000000000FF, 0x0000000000002400,
+               0x0000000000008100, 0x0000000000004200, 0x0000000000000800,
+               0x0000000000001000, None, None, 0xFF00000000000000,
+               0x0024000000000000, 0x0081000000000000, 0x0042000000000000,
+               0x0010000000000000, 0x0008000000000000)
 
-BLANK_BOARD = (ALL_BITS, 0L, 0L, 0L, 0L, 0L, 0L, None, None, 0L, 0L, 0L, 0L,
-               0L, 0L)
+BLANK_BOARD = (ALL_BITS, 0, 0, 0, 0, 0, 0, None, None, 0, 0, 0, 0, 0, 0)
 
 
 def neighbors_of(bits):
@@ -86,12 +91,12 @@ def neighbors_of(bits):
 
 def bit_to_index(bit):
     """ get the index of a bit """
-    cnt = (bit & 0xAAAAAAAAAAAAAAAAL) != 0L
-    cnt |= ((bit & 0xCCCCCCCCCCCCCCCCL) != 0L) << 1
-    cnt |= ((bit & 0xF0F0F0F0F0F0F0F0L) != 0L) << 2
-    cnt |= ((bit & 0xFF00FF00FF00FF00L) != 0L) << 3
-    cnt |= ((bit & 0xFFFF0000FFFF0000L) != 0L) << 4
-    cnt |= ((bit & 0xFFFFFFFF00000000L) != 0L) << 5
+    cnt = (bit & 0xAAAAAAAAAAAAAAAA) != 0
+    cnt |= ((bit & 0xCCCCCCCCCCCCCCCC) != 0) << 1
+    cnt |= ((bit & 0xF0F0F0F0F0F0F0F0) != 0) << 2
+    cnt |= ((bit & 0xFF00FF00FF00FF00) != 0) << 3
+    cnt |= ((bit & 0xFFFF0000FFFF0000) != 0) << 4
+    cnt |= ((bit & 0xFFFFFFFF00000000) != 0) << 5
     return cnt
 
 
@@ -124,7 +129,7 @@ MOVE_OFFSETS = [[[], []], [[], []]]
 
 def _generate_move_offsets():
     for i in xrange(64):
-        bit = 1L << i
+        bit = 1 << i
         moves = neighbors_of(bit)
         grmoves = moves
         if bit & NOT_1_RANK:
@@ -149,7 +154,7 @@ ZOBRIST_KEYS = [[], [], []]
 def _zobrist_newkey(used_keys, rnd):
     candidate = 0
     while candidate in used_keys:
-        candidate = rnd.randint(-sys.maxint, sys.maxint)
+        candidate = rnd.randint(-(2**63 - 1), 2**63 - 1)
     used_keys.append(candidate)
     return candidate
 
@@ -195,7 +200,7 @@ class Position(object):
         self.last_piece = last_piece
         self.last_from = last_from
         if placement is None:
-            placement = [0L, 0L]
+            placement = [0, 0]
             for piece in range(Piece.GRABBIT, Piece.GELEPHANT + 1):
                 placement[Color.GOLD] |= bitboards[piece]
                 placement[Color.SILVER] |= bitboards[piece | Piece.COLOR]
@@ -256,7 +261,7 @@ class Position(object):
     def check_boards(self):
         """ Check the internal consistency of the bitboards """
         bitboards = self.bitBoards
-        cplacement = [0L, 0L]
+        cplacement = [0, 0]
         empty = ALL_BITS
         for pnum, pboard in enumerate(bitboards):
             if pnum == 0 or pboard is None:
@@ -266,8 +271,8 @@ class Position(object):
                     continue
                 double = pboard & cboard
                 if pboard & cboard:
-                    print "%X %X %X %d %d" % (pboard, cboard, double, pnum,
-                                              cnum)
+                    print("%X %X %X %d %d" % (pboard, cboard, double, pnum,
+                                              cnum))
                     raise RuntimeError(
                         "Two pieces occupy one square: %s %s" %
                         (Piece.PCHARS[pnum], Piece.PCHARS[cnum]))
@@ -279,9 +284,9 @@ class Position(object):
             empty &= ~pboard
         if cplacement != self.placement:
             if cplacement[0] != self.placement[0]:
-                print "gplacement %X %X" % (cplacement[0], self.placement[0])
+                print("gplacement %X %X" % (cplacement[0], self.placement[0]))
             if cplacement[1] != self.placement[1]:
-                print "splacement %X %X" % (cplacement[1], self.placement[1])
+                print("splacement %X %X" % (cplacement[1], self.placement[1]))
             raise RuntimeError("Placement boards are incorrect")
         if empty != bitboards[0]:
             raise RuntimeError("Empty board is incorrect %X %X" %
@@ -437,7 +442,7 @@ class Position(object):
         move_rep = []
         for step in steps:
             step_rep = []
-            from_bit = 1L << step[0]
+            from_bit = 1 << step[0]
             for piece in xrange(Piece.GRABBIT, Piece.COUNT):
                 if (pos.bitBoards[piece] is not None and
                     pos.bitBoards[piece] & from_bit):
@@ -456,7 +461,7 @@ class Position(object):
             trap = neighbors_of(from_bit) & TRAPS
             pcolor = (piece & Piece.COLOR) >> 3
             if ((pos.placement[pcolor] & trap or trap &
-                 (1L << step[1])) and npos.bitBoards[Piece.EMPTY] & trap):
+                 (1 << step[1])) and npos.bitBoards[Piece.EMPTY] & trap):
                 tix = bit_to_index(trap)
                 if tix == step[1]:
                     tpiece = piece
@@ -475,7 +480,7 @@ class Position(object):
         return " ".join(move_rep)
 
     def place_piece(self, piece, index):
-        bit = 1L << index
+        bit = 1 << index
         if not self.bitBoards[Piece.EMPTY] & bit:
             raise ValueError("Tried to place a piece on another piece")
         newBoards = [b for b in self.bitBoards]
@@ -489,7 +494,7 @@ class Position(object):
                         zobrist=zobrist)
 
     def remove_piece(self, index):
-        bit = 1L << index
+        bit = 1 << index
         if self.placement[Color.GOLD] & bit:
             side = Color.GOLD
         elif self.placement[Color.SILVER] & bit:
@@ -526,13 +531,14 @@ class Position(object):
             def __str__(self):
                 return self.message
 
-            def __nonzero__(self):
+            def __bool__(self):
                 return False
+            __nonzero__ = __bool__
 
         bitboards = self.bitBoards
         placement = self.placement
-        from_bit = 1L << step[0]
-        to_bit = 1L << step[1]
+        from_bit = 1 << step[0]
+        to_bit = 1 << step[1]
         if from_bit & bitboards[Piece.EMPTY]:
             return BadStep("Tried to move from an empty square")
         if not (to_bit & bitboards[Piece.EMPTY]):
@@ -614,7 +620,7 @@ class Position(object):
     def frozen_neighbors(self, bits):
         """ returns a bitboard with the frozen neighbors of the given bitboard
         """
-        frozen_neighbors = 0L
+        frozen_neighbors = 0
         neighbor_bits = ((bits & NOT_A_FILE) >> 1, (bits & NOT_H_FILE) << 1, \
                          (bits & NOT_1_RANK) >> 8, (bits & NOT_8_RANK) << 8)
         for nbit in neighbor_bits:
@@ -632,9 +638,9 @@ class Position(object):
         newBoards = [b for b in bitBoards]
         newPlacement = [placement[0], placement[1]]
         from_ix = step[0]
-        from_bit = 1L << from_ix
+        from_bit = 1 << from_ix
         to_ix = step[1]
-        to_bit = 1L << to_ix
+        to_bit = 1 << to_ix
         pcolor = bool(placement[1] & from_bit)
         pcbit = pcolor << 3
         for piece in xrange(Piece.GRABBIT | pcbit,
@@ -715,7 +721,7 @@ class Position(object):
         try:
             steps = parse_move(move_str)
             result = self.do_move(steps, strict_checks)
-        except ValueError, exc:
+        except ValueError as exc:
             if str(exc) == "Can't represent placing step":
                 bitboards = [b for b in self.bitBoards]
                 available = {
@@ -731,7 +737,7 @@ class Position(object):
                         raise IllegalMove("Found mixture of step types")
                     piece = Piece.PCHARS.index(step_str[0])
                     ix = alg_to_index(step_str[1:])
-                    bit = 1L << ix
+                    bit = 1 << ix
                     if strict_checks:
                         self._check_setup_step(piece, ix, bitboards, available)
                         available[piece & ~Piece.COLOR] -= 1
@@ -859,10 +865,10 @@ class Position(object):
 
         step_list = []
         if self.inpush:
-            lastbit = 1L << last_from
+            lastbit = 1 << last_from
             lf_neighbors = neighbors_of(lastbit)
-            stronger = 0L
-            attackers = 0L
+            stronger = 0
+            attackers = 0
             pcbit = color << 3
             lstrength = self.last_piece & Piece.DECOLOR
             for piece in xrange(Piece.GELEPHANT | pcbit, lstrength | pcbit, -1):
@@ -879,7 +885,7 @@ class Position(object):
             stronger = (placement[opponent] ^ bitboards[Piece.GRABBIT |
                                                         (opponent << 3)])
             pcbit = color << 3
-            attackers = 0L
+            attackers = 0
             if self.stepsLeft > 1:
                 for piece in xrange(Piece.GCAT | pcbit,
                                     (Piece.GELEPHANT | pcbit) + 1):
@@ -893,7 +899,7 @@ class Position(object):
                 pullsdone = 0
                 if self.last_piece & Piece.DECOLOR > vpiece & Piece.DECOLOR:
                     last_from = self.last_from
-                    lastbit = 1L << last_from
+                    lastbit = 1 << last_from
                     pulls = bitboards[vpiece] & neighbors_of(lastbit)
                     pullsdone |= lastbit | pulls
                     while pulls:
@@ -936,7 +942,7 @@ class Position(object):
         finished = {}
         while partial:
             nextpart = {}
-            for npos, nsteps in partial.iteritems():
+            for npos, nsteps in partial.items():
                 for step, move in npos.get_steps():
                     if move.color == color:
                         if move not in nextpart:
@@ -960,7 +966,7 @@ class Position(object):
         nodes = 0
         while partial:
             nextpart = {}
-            for npos, nsteps in partial.iteritems():
+            for npos, nsteps in partial.items():
                 steps = npos.get_steps()
                 nodes += len(steps)
                 for step, move in steps:
@@ -1130,7 +1136,7 @@ def parse_short_pos(side, stepsleft, text):
                 raise ValueError("Invalid piece at position %d, %s" %
                                  (place, piecetext))
             index = sq_to_index(place % 8, 7 - (place // 8))
-            bit = 1L << index
+            bit = 1 << index
             bitboards[piece] |= bit
             bitboards[Piece.EMPTY] &= ~bit
     pos = Position(side, stepsleft, bitboards)
@@ -1148,14 +1154,14 @@ def test_random_play():
         while not pos.is_goal():
             moves = pos.get_moves()
             del moves[pos.get_null_move()]
-            print turn
-            print pos.board_to_str()
-            print len(moves)
+            print(turn)
+            print(pos.board_to_str())
+            print(len(moves))
             print(time.time() - start_time)
-            print
+            print()
             if len(moves) == 0:
                 immo_wins += 1
-                print "%d, %d win by immobilization. " % (i + 1, immo_wins)
+                print("%d, %d win by immobilization. " % (i + 1, immo_wins))
                 break
 
             turn += 1
@@ -1164,9 +1170,9 @@ def test_random_play():
         total_turns += turn
         if len(moves) != 0:
             goal_wins += 1
-            print "%d, %d win by goal." % (i + 1, goal_wins)
+            print("%d, %d win by goal." % (i + 1, goal_wins))
 
-    print total_turns / 100.0, goal_wins, immo_wins, time.time() - start_time
+    print(total_turns / 100.0, goal_wins, immo_wins, time.time() - start_time)
 
 
 def rnd_step_game(pos):
@@ -1215,35 +1221,35 @@ def test_rnd_steps():
 
         turn = 3
         while not pos.is_goal():
-            print "%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2]),
+            print("%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2]), end=' ')
             steps, result = pos.get_rnd_step_move()
             if steps is None:
-                print
-                print pos.board_to_str()
-                print "Win by elimination/immobilization."
-                print
+                print()
+                print(pos.board_to_str())
+                print("Win by elimination/immobilization.")
+                print()
                 moves = pos.get_moves()
                 if len(moves) != 0:
-                    print "Uh, oh. immo not immo."
-                    print immo_wins
+                    print("Uh, oh. immo not immo.")
+                    print(immo_wins)
                     return
                 immo_wins += 1
                 break
 
-            print pos.steps_to_str(steps)
+            print(pos.steps_to_str(steps))
 
             pos = result
             turn += 1
 
         total_turns += turn
         if steps is not None:
-            print "%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2])
-            print pos.board_to_str()
-            print "Win by goal."
-            print
+            print("%d%s" % (math.ceil(turn / 2.0), ['b', 'w'][turn % 2]))
+            print(pos.board_to_str())
+            print("Win by goal.")
+            print()
             goal_wins += 1
 
-    print total_turns / 100.0, goal_wins, immo_wins
+    print(total_turns / 100.0, goal_wins, immo_wins)
 
 
 def main(filename):
@@ -1260,36 +1266,36 @@ def main(filename):
                               positiontext[1])
     else:
         movenum, pos = parse_long_pos(positiontext)
-    print "%d%s" % (movenum, "gs" [pos.color])
-    print
-    print pos.board_to_str()
-    print
+    print("%d%s" % (movenum, "gs" [pos.color]))
+    print()
+    print(pos.board_to_str())
+    print()
 
     short_str = pos.board_to_str("short")
-    print short_str
-    print
+    print(short_str)
+    print()
     if parse_short_pos(pos.color, 4, short_str) != pos:
-        print "Short string board round trip failed"
+        print("Short string board round trip failed")
         rpos = parse_short_pos(pos.color, 4, short_str)
-        print rpos.board_to_str()
+        print(rpos.board_to_str())
         return
 
     placing = pos.to_placing_move()
-    print placing[0]
-    print placing[1]
-    print
+    print(placing[0])
+    print(placing[1])
+    print()
 
     steps, result = pos.get_rnd_step_move()
     if steps is None:
-        print "No move found by random steps."
+        print("No move found by random steps.")
     else:
-        print "Random step move:", pos.steps_to_str(steps)
-    print
+        print("Random step move: %s" % (pos.steps_to_str(steps), ))
+    print()
 
     starttime = time.time()
     moves, nodes = pos.get_moves_nodes()
     gentime = time.time() - starttime
-    print "%d unique moves generated in %.2f seconds" % (len(moves), gentime)
+    print("%d unique moves generated in %.2f seconds" % (len(moves), gentime))
 
     real_steps = [s for s, m in pos.get_steps()]
     for i in xrange(64):
@@ -1297,14 +1303,14 @@ def main(filename):
             tstep = (i, j)
             check_resp = pos.check_step(tstep)
             if check_resp and not tstep in real_steps:
-                print "check_step thought %s to %s was valid step %d,%d" % (
+                print("check_step thought %s to %s was valid step %d,%d" % (
                     index_to_alg(tstep[0]), index_to_alg(tstep[1]), tstep[0],
-                    tstep[1])
+                    tstep[1]))
                 return
             if not check_resp and tstep in real_steps:
-                print "check_step thought %s to %s was invalid step" % (
+                print("check_step thought %s to %s was invalid step" % (
                     index_to_alg(tstep[0]), index_to_alg(tstep[1])
-                )
+                ))
                 return
 
     import x88board
@@ -1312,59 +1318,59 @@ def main(filename):
     omoves = opos.get_moves()
     new_res = set([p.board_to_str("short") for p in moves.keys()])
     if len(new_res) != len(moves):
-        print "duplicate boards in results %d!=%d" % (len(new_res), len(moves))
+        print("duplicate boards in results %d!=%d" % (len(new_res), len(moves)))
         checked = {}
-        for upos, move in moves.iteritems():
+        for upos, move in moves.items():
             bstr = upos.board_to_str("short")
             if checked.has_key(bstr):
                 cpos = checked[bstr][0]
-                print "found duplicate board"
-                print pos.steps_to_str(move)
-                print upos.board_to_str()
-                print
-                print pos.steps_to_str(checked[bstr][1])
-                print cpos.board_to_str()
-                print "upos inpush %s lf %s lp %s" % (
+                print("found duplicate board")
+                print(pos.steps_to_str(move))
+                print(upos.board_to_str())
+                print()
+                print(pos.steps_to_str(checked[bstr][1]))
+                print(cpos.board_to_str())
+                print("upos inpush %s lf %s lp %s" % (
                     upos.inpush, upos.last_from, Piece.PCHARS[upos.last_piece]
-                )
-                print "cpos inpush %s lf %s lp %s" % (
+                ))
+                print("cpos inpush %s lf %s lp %s" % (
                     cpos.inpush, cpos.last_from, Piece.PCHARS[cpos.last_piece]
-                )
+                ))
                 if upos._zhash != cpos._zhash:
-                    print "zobrist %X, %X" % (upos._zhash, cpos._zhash)
+                    print("zobrist %X, %X" % (upos._zhash, cpos._zhash))
                 if upos.placement != cpos.placement:
-                    print "placement %s, %s" % (upos.placement, cpos.placement)
+                    print("placement %s, %s" % (upos.placement, cpos.placement))
             else:
                 checked[bstr] = (upos, move)
     old_res = set([p.board_to_str("short") for p in omoves.keys()])
     if new_res != old_res or len(omoves) != len(moves):
         discount = 0
-        print "Only in new results:"
-        for upos, move in moves.iteritems():
+        print("Only in new results:")
+        for upos, move in moves.items():
             if upos.board_to_str("short") not in old_res:
                 discount += 1
-                print pos.steps_to_str(move)
-                print upos.board_to_str("short")
+                print(pos.steps_to_str(move))
+                print(upos.board_to_str("short"))
             if upos.color == pos.color:
-                print "result position with same color"
+                print("result position with same color")
             if upos.stepsLeft != 4:
-                print "result position with steps taken"
+                print("result position with steps taken")
             if upos.inpush:
-                print "result position in push"
+                print("result position in push")
             if upos.last_from is not None or upos.last_piece != Piece.EMPTY:
-                print "result position with last piece information"
+                print("result position with last piece information")
             if discount > 40:
-                print "Stopping results"
+                print("Stopping results")
                 break
-        print
-        print "Only in old results:"
-        for upos, move in omoves.iteritems():
+        print()
+        print("Only in old results:")
+        for upos, move in omoves.items():
             if upos.board_to_str("short") not in new_res:
-                print upos.steps_to_str(move)
-                print upos.board_to_str("short")
+                print(upos.steps_to_str(move))
+                print(upos.board_to_str("short"))
                 discount += 1
             if discount > 40:
-                print "Stopping results"
+                print("Stopping results")
                 break
 
 
