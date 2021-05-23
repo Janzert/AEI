@@ -20,8 +20,12 @@
 
 import re
 import unittest
-from Queue import Queue, Empty
 from subprocess import Popen, PIPE, STDOUT
+try:
+    from Queue import Queue, Empty
+except:
+    from queue import Queue, Empty
+
 
 from pyrimaa import simple_engine
 
@@ -154,9 +158,9 @@ class EngineTest(unittest.TestCase):
     def test_script(self):
         cmdline = "python -m pyrimaa.simple_engine"
         proc = Popen(cmdline.split(), stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-        proc.stdin.write("aei\n")
-        proc.stdin.write("isready\n")
-        proc.stdin.write("quit\n")
+        proc.stdin.write(b"aei\n")
+        proc.stdin.write(b"isready\n")
+        proc.stdin.write(b"quit\n")
         expected = [
             (r"protocol-version 1$", "protocol version"),
             (r"id name .+", "bot name"),
@@ -165,7 +169,8 @@ class EngineTest(unittest.TestCase):
             (r"readyok$", "readyok"),
             (r"log Debug:", "log Debug")
         ]
-        response_lines = proc.stdout.readlines()
+        response, _ = proc.communicate()
+        response_lines = response.decode("utf-8").splitlines()
         for line, (pattern, exp_msg) in zip(response_lines, expected):
             self.assertTrue(
                 re.match(pattern, line),

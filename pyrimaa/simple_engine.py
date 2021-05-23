@@ -19,12 +19,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import exceptions
 import sys
 import time
+try:
+    import exceptions
+    AttributeError = exceptions.AttributeError
+    from Queue import Queue, Empty
+except ModuleNotFoundError:
+    from queue import Queue, Empty
 
 from threading import Thread, Event
-from Queue import Queue, Empty
 
 from pyrimaa.board import (BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos,
                            Position, IllegalMove)
@@ -42,8 +46,6 @@ class _ComThread(Thread):
         sys.stdout.flush()
 
     def run(self):
-        # Hang onto AttributeError reference to survive into shutdown
-        AttributeError = exceptions.AttributeError
         while not self.stop.isSet():
             try:
                 msg = sys.stdin.readline()
