@@ -91,7 +91,7 @@ class AEIEngine(object):
                         "gused", "sused", "lastmoveused", "moveused",
                         "opponent", "opponent_rating"])
         if name == "checkmoves":
-            self.strict_checks = value.lower() in ["false", "no", "0"]
+            self.strict_checks = value.lower().strip() not in ["false", "no", "0"]
         elif name == "delaymove":
             self.move_delay = float(value)
         elif name not in std_opts:
