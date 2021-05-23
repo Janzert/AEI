@@ -1172,7 +1172,9 @@ def test_random_play():
             goal_wins += 1
             print("%d, %d win by goal." % (i + 1, goal_wins))
 
-    print(total_turns / 100.0, goal_wins, immo_wins, time.time() - start_time)
+    print("%.2f %d %d %.2f" % (
+        total_turns / 100.0, goal_wins, immo_wins, time.time() - start_time
+    ))
 
 
 def rnd_step_game(pos):
@@ -1249,7 +1251,7 @@ def test_rnd_steps():
             print()
             goal_wins += 1
 
-    print(total_turns / 100.0, goal_wins, immo_wins)
+    print("%.2f %d %d" % (total_turns / 100.0, goal_wins, immo_wins))
 
 
 def main(filename):
