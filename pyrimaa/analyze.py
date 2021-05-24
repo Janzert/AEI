@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
 
 import logging
 import socket
@@ -26,7 +27,11 @@ import sys
 import time
 
 from argparse import ArgumentParser
-from ConfigParser import SafeConfigParser, NoOptionError
+try:
+    from ConfigParser import SafeConfigParser, NoOptionError
+    ConfigParser = SafeConfigParser
+except ModuleNotFoundError:
+    from configparser import ConfigParser, NoOptionError
 
 from pyrimaa import aei, board
 
@@ -92,9 +97,9 @@ def get_config(args=None):
     parser.add_argument("move_number", help="Move to analyze", nargs="?")
     args = parser.parse_args(args)
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        print "Could not open '%s'" % (args.config, )
+        print("Could not open '%s'" % (args.config, ))
         sys.exit(1)
     try:
         loglevel = config.get("global", "log_level")
@@ -104,9 +109,9 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print "Bad log level \"%s\", use ERROR, WARNING, INFO or DEBUG." % (
+            print("Bad log level \"%s\", use ERROR, WARNING, INFO or DEBUG." % (
                 loglevel,
-            )
+            ))
             sys.exit(1)
         logging.basicConfig(level=loglevel)
 
@@ -128,12 +133,12 @@ def get_config(args=None):
         args.bot = config.get("global", "default_engine")
     cfg_sections = config.sections()
     if args.bot not in cfg_sections:
-        print "Engine configuration for %s not found in config." % (args.bot, )
-        print "Available configs are:",
+        print("Engine configuration for %s not found in config." % (args.bot, ))
+        print("Available configs are:", end=' ')
         for section in cfg_sections:
             if section != "global":
-                print section,
-        print
+                print(section, end=' ')
+        print()
         sys.exit(1)
 
     try:
@@ -143,8 +148,8 @@ def get_config(args=None):
     try:
         args.enginecmd = config.get(args.bot, "cmdline")
     except NoOptionError:
-        print "No engine command line found in config file."
-        print "Add cmdline option for engine %s" % (args.bot, )
+        print("No engine command line found in config file.")
+        print("Add cmdline option for engine %s" % (args.bot, ))
         sys.exit(1)
 
     args.bot_options = list()
@@ -172,26 +177,26 @@ def main(args=None):
     try:
         have_board, start = parse_start(plines, cfg.move_number)
     except ParseError:
-        print "File %s does not appear to be a board or move list." % (
+        print("File %s does not appear to be a board or move list." % (
             cfg.position_file,
-        )
+        ))
         return 0
 
     if cfg.strict_checks:
-        print "Enabling full legality checking on moves"
+        print("Enabling full legality checking on moves")
 
     if cfg.strict_setup is not None:
         if cfg.strict_setup:
-            print "Enabling full legality checking on setup"
+            print("Enabling full legality checking on setup")
         else:
-            print "Disabling full legality checking on setup"
+            print("Disabling full legality checking on setup")
 
     eng_com = aei.get_engine(cfg.com_method, cfg.enginecmd, "analyze.aei")
     try:
         eng = aei.EngineController(eng_com)
     except aei.EngineException as exc:
-        print exc.message
-        print "Bot probably did not start. Is the command line correct?"
+        print(exc.message)
+        print("Bot probably did not start. Is the command line correct?")
         eng_com.cleanup()
         return 1
     try:
@@ -213,10 +218,10 @@ def main(args=None):
                 try:
                     pos = pos.do_move_str(move, do_checks)
                 except board.IllegalMove as exc:
-                    print "Illegal move found \"%s\", %s" % (full_move, exc)
+                    print("Illegal move found \"%s\", %s" % (full_move, exc))
                     return 1
                 eng.makemove(move)
-        print pos.board_to_str()
+        print(pos.board_to_str())
 
         for option, value in cfg.post_options:
             eng.setoption(option, value)
@@ -228,11 +233,11 @@ def main(args=None):
             try:
                 resp = eng.get_response(10)
                 if resp.type == "info":
-                    print resp.message
+                    print(resp.message)
                 elif resp.type == "log":
-                    print "log: %s" % resp.message
+                    print("log: %s" % (resp.message, ))
                 elif resp.type == "bestmove":
-                    print "bestmove: %s" % resp.move
+                    print("bestmove: %s" % (resp.move, ))
                     break
             except socket.timeout:
                 if not cfg.search_position:
@@ -245,9 +250,9 @@ def main(args=None):
             try:
                 resp = eng.get_response(1)
                 if resp.type == "info":
-                    print resp.message
+                    print(resp.message)
                 elif resp.type == "log":
-                    print "log: %s" % (resp.message)
+                    print("log: %s" % (resp.message, ))
             except socket.timeout:
                 try:
                     eng.quit()

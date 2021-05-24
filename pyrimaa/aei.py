@@ -26,8 +26,11 @@ import sys
 import os
 
 from threading import Thread, Event
-from Queue import Queue, Empty
 from subprocess import Popen, PIPE
+try:
+    from Queue import Queue, Empty
+except ModuleNotFoundError:
+    from queue import Queue, Empty
 
 if sys.platform == 'win32':
     import ctypes
@@ -86,10 +89,12 @@ def _kill_proc_tree(pid, cid_map=None):
 
 START_TIME = 5.0
 INIT_TIME = 15.0
+STOP_TIME = 5.0
 
 
 class EngineException(Exception):
-    pass
+    def __init__(self, message=None):
+        self.message = message
 
 
 def find_line_end(posline):
@@ -174,7 +179,17 @@ class StdioEngine:
             if sys.platform == 'win32':
                 _kill_proc_tree(self.proc.pid)
             else:
-                os.kill(self.proc.pid, signal.SIGTERM)
+                self.proc.terminate()
+                stop_time = time.time() + STOP_TIME
+                while time.time() < stop_time and self.proc.poll() is None:
+                    pass
+                if self.proc.poll() is None:
+                    self.proc.kill()
+        for stream in [self.proc.stdin, self.proc.stdout]:
+            try:
+                stream.close()
+            except Exception:
+                pass
 
 
 class SocketEngine:
@@ -188,7 +203,7 @@ class SocketEngine:
                     listensock.listen(1)
                     listensock.settimeout(30)
                     break
-                except socket.error, exc:
+                except socket.error as exc:
                     if (hasattr(exc, 'args') and
                         (exc.args[0] == 10048 or exc.args[0] == 98)):
                         address = (address[0], address[1] + 1)
@@ -199,7 +214,7 @@ class SocketEngine:
             else:
                 botargs = con + " --server 127.0.0.1 --port " + str(address[1])
             if con == "listen":
-                print "Listening on %s:%s" % address
+                print("Listening on %s:%s" % address)
                 proc = None
             else:
                 proc = Popen(botargs, shell=True)
@@ -223,7 +238,7 @@ class SocketEngine:
     def send(self, msg):
         if self.log is not None:
             self.log.debug("Sending to bot: %s" % repr(msg))
-        self.sock.sendall(msg)
+        self.sock.sendall(msg.encode("utf-8"))
 
     def readline(self, timeout=None):
         sock = self.sock
@@ -251,7 +266,7 @@ class SocketEngine:
                     if wait < 0:
                         wait = 0
                     sock.settimeout(wait)
-                packet = sock.recv(4096)
+                packet = sock.recv(4096).decode("utf-8")
                 if self.log:
                     self.log.debug("Received from bot: %s" % (repr(packet)))
                 response += packet
@@ -259,7 +274,7 @@ class SocketEngine:
                     break
             except socket.timeout:
                 pass
-            except socket.error, exc:
+            except socket.error as exc:
                 if (hasattr(exc, 'args') and
                     (exc.args[0] == 10035 or exc.args[0] == 11)):
                     pass
@@ -295,7 +310,12 @@ class SocketEngine:
             if sys.platform == 'win32':
                 _kill_proc_tree(self.proc.pid)
             else:
-                os.kill(self.proc.pid, signal.SIGTERM)
+                self.proc.terminate()
+                stop_time = time.time() + STOP_TIME
+                while time.time() < stop_time and self.proc.poll() is None:
+                    pass
+                if self.proc.poll() is None:
+                    self.proc.kill()
 
 
 def get_engine(channel, cmd, logname=None):

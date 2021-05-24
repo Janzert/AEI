@@ -37,7 +37,7 @@ class _ProcCom(Thread):
     def run(self):
         while not self.stop.isSet() and self.proc.poll() is None:
             msg = self.proc.stdout.readline()
-            self.socket.sendall(msg)
+            self.socket.sendall(msg.encode("utf-8"))
 
 
 def main(args=sys.argv[1:]):
@@ -63,7 +63,7 @@ def main(args=sys.argv[1:]):
         msg = sock.recv(4096)
         if len(msg) == 0:
             break
-        proc.stdin.write(msg)
+        proc.stdin.write(msg.decode("utf-8"))
         proc.stdin.flush()
     if proc.poll() is None:
         proc.stdin.write("quit\n")

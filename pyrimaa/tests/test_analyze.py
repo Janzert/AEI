@@ -18,10 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE
 
+import logging
 import os
-import StringIO
 import sys
 import unittest
+try:
+    from StringIO import StringIO
+except ModuleNotFoundError:
+    from io import StringIO
+    from importlib import reload
 
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
@@ -47,17 +52,23 @@ def save_stdio():
     org_stdout = sys.stdout
     org_stderr = sys.stderr
     try:
-        out = StringIO.StringIO()
-        err = StringIO.StringIO()
+        out = StringIO()
+        err = StringIO()
         sys.stdout, sys.stderr = out, err
+        logging.shutdown()
+        reload(logging)
+        analyze.logging = logging
+        analyze.log = logging.getLogger("analyze")
         yield (out, err)
     finally:
         sys.stdin = org_stdin
         sys.stdout = org_stdout
         sys.stderr = org_stderr
+        out.close()
+        err.close()
 
 
-test_config = """
+test_config = b"""
 [global]
 default_engine = bot_simple
 
@@ -66,7 +77,7 @@ cmdline = simple_engine
 bot_checkmoves = false
 """
 
-badlog_cfg = """\
+badlog_cfg = b"""\
 [global]
 default_engine = bot_simple
 log_level = UNKNOWN_LEVEL
@@ -75,7 +86,7 @@ log_level = UNKNOWN_LEVEL
 cmdline = simple_engine
 """
 
-goodlog_cfg = """\
+goodlog_cfg = b"""\
 [global]
 default_engine = bot_simple
 log_level = DEBUG
@@ -84,7 +95,7 @@ log_level = DEBUG
 cmdline = simple_engine
 """
 
-badbot_cfg = """\
+badbot_cfg = b"""\
 [global]
 default_engine = bot_simplydone
 
@@ -92,14 +103,14 @@ default_engine = bot_simplydone
 cmdline = simple_engine
 """
 
-nocmd_cfg = """\
+nocmd_cfg = b"""\
 [global]
 default_engine = bot_simple
 
 [bot_simple]
 """
 
-badcmd_cfg = """\
+badcmd_cfg = b"""\
 [global]
 default_engine = bot_simple
 
@@ -107,7 +118,7 @@ default_engine = bot_simple
 cmdline = nonexistantbotcommand
 """
 
-botoptions_cfg = """\
+botoptions_cfg = b"""\
 [global]
 default_engine = bot_simple
 log_level = DEBUG
@@ -120,7 +131,7 @@ post_pos_afteroption = afterpos
 post_pos_aftertwo = 42
 """
 
-delaymove_cfg = """\
+delaymove_cfg = b"""\
 [global]
 default_engine = bot_simple
 
@@ -129,7 +140,7 @@ cmdline = simple_engine
 bot_delaymove = 1
 """
 
-nosearch_cfg = """\
+nosearch_cfg = b"""\
 [global]
 default_engine = bot_simple
 search_position = no
@@ -263,13 +274,14 @@ class AnalyzeTest(unittest.TestCase):
         self.assertGreater(ret, 0)
         with get_temps(2) as (cfg, pos):
             # bad log level
-            pos.write(basic_pos)
+            pos.write(basic_pos.encode("utf-8"))
             pos.close()
             cfg.write(badlog_cfg)
             cfg.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
-            self.assertIn("Bad log level \"Level UNKNOWN_LEVEL\", use ", out.getvalue())
+                stdout = out.getvalue()
+            self.assertIn("Bad log level \"Level UNKNOWN_LEVEL\", use ", stdout)
             self.assertGreater(ret, 0)
             # good log level
             cfg.seek(0)
@@ -278,8 +290,9 @@ class AnalyzeTest(unittest.TestCase):
             cfg.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
+                stderr = err.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("DEBUG:analyze.aei:", err.getvalue())
+            self.assertIn("DEBUG:analyze.aei:", stderr)
             # bad bot name
             cfg.seek(0)
             cfg.truncate(0)
@@ -287,8 +300,9 @@ class AnalyzeTest(unittest.TestCase):
             cfg.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
+                stdout = out.getvalue()
             self.assertGreater(ret, 0)
-            self.assertIn("configuration for bot_simplydone", out.getvalue())
+            self.assertIn("configuration for bot_simplydone", stdout)
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--bot", "bot_simple"])
@@ -300,8 +314,9 @@ class AnalyzeTest(unittest.TestCase):
             cfg.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
+                stdout = out.getvalue()
             self.assertGreater(ret, 0)
-            self.assertIn("No engine command line found", out.getvalue())
+            self.assertIn("No engine command line found", stdout)
             # bad bot command
             cfg.seek(0)
             cfg.truncate(0)
@@ -312,10 +327,11 @@ class AnalyzeTest(unittest.TestCase):
             try:
                 with save_stdio() as (out, err):
                     ret = analyze.main(["--config", cfg.name, pos.name])
+                    stdout = out.getvalue()
             finally:
                 aei.START_TIME = default_start_time
             self.assertGreater(ret, 0)
-            self.assertIn("Bot probably did not start", out.getvalue())
+            self.assertIn("Bot probably did not start", stdout)
             # bot options
             cfg.seek(0)
             cfg.truncate(0)
@@ -323,15 +339,16 @@ class AnalyzeTest(unittest.TestCase):
             cfg.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
+                stdout = out.getvalue()
             self.assertEqual(ret, 0)
             self.assertIn("Warning: Received unrecognized option, nonoption",
-                          out.getvalue())
+                          stdout)
             self.assertIn("Warning: Received unrecognized option, another",
-                          out.getvalue())
+                          stdout)
             self.assertIn("Warning: Received unrecognized option, afteroption",
-                          out.getvalue())
+                          stdout)
             self.assertIn("Warning: Received unrecognized option, aftertwo",
-                          out.getvalue())
+                          stdout)
             # monkey patch aei._ProcCom to force fast communication timeouts
             real_ProcCom = aei._ProcCom
             try:
@@ -343,8 +360,9 @@ class AnalyzeTest(unittest.TestCase):
                 cfg.flush()
                 with save_stdio() as (out, err):
                     ret = analyze.main(["--config", cfg.name, pos.name])
+                    stdout = out.getvalue()
                 self.assertEqual(ret, 0)
-                self.assertIn("bestmove:", out.getvalue())
+                self.assertIn("bestmove:", stdout)
                 # disable search position
                 cfg.seek(0)
                 cfg.truncate(0)
@@ -352,8 +370,9 @@ class AnalyzeTest(unittest.TestCase):
                 cfg.flush()
                 with save_stdio() as (out, err):
                     ret = analyze.main(["--config", cfg.name, pos.name])
+                    stdout = out.getvalue()
                 self.assertEqual(ret, 0)
-                self.assertNotIn("bestmove:", out.getvalue())
+                self.assertNotIn("bestmove:", stdout)
             finally:
                 aei._ProcCom = real_ProcCom
 
@@ -362,80 +381,84 @@ class AnalyzeTest(unittest.TestCase):
             # basic board
             cfg.write(test_config)
             cfg.close()
-            pos.write(basic_pos)
+            pos.write(basic_pos.encode("utf-8"))
             pos.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
+                stdout, stderr = out.getvalue(), err.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("bestmove: ", out.getvalue())
-            self.assertEqual(len(err.getvalue()), 0)
+            self.assertIn("bestmove: ", stdout)
+            print(stderr)
+            self.assertEqual(len(stderr), 0)
             # not a board or move list
             pos.seek(0)
             pos.truncate(0)
-            pos.write("no board or moves")
+            pos.write(b"no board or moves")
             pos.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
-            self.assertIn("does not appear to be a board", out.getvalue())
+                stdout = out.getvalue()
+            self.assertIn("does not appear to be a board", stdout)
 
     def test_movelist(self):
         with get_temps(2) as (cfg, movelist):
             cfg.write(test_config)
             cfg.close()
-            movelist.write(basic_movelist)
+            movelist.write(basic_movelist.encode("utf-8"))
             movelist.close()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, movelist.name])
+                stdout, stderr = out.getvalue(), err.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("bestmove: ", out.getvalue())
-            self.assertIn(movelist_4g, out.getvalue())
-            self.assertEqual(len(err.getvalue()), 0)
+            self.assertIn("bestmove: ", stdout)
+            self.assertIn(movelist_4g, stdout)
+            print(stderr)
+            self.assertEqual(len(stderr), 0)
             with save_stdio() as (out, err):
-                out = StringIO.StringIO()
-                err = StringIO.StringIO()
-                sys.stdout, sys.stderr = out, err
                 ret = analyze.main(["--config", cfg.name, movelist.name, "2s"])
+                stdout, stderr = out.getvalue(), err.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("bestmove: ", out.getvalue())
-            self.assertIn(movelist_2s, out.getvalue())
-            self.assertEqual(len(err.getvalue()), 0)
+            self.assertIn("bestmove: ", stdout)
+            self.assertIn(movelist_2s, stdout)
+            self.assertEqual(len(stderr), 0)
 
     def test_movechecks(self):
         with get_temps(2) as (cfg, pos):
             cfg.write(test_config)
             cfg.close()
-            pos.write(illegal_moves)
+            pos.write(illegal_moves.encode("utf-8"))
             pos.flush()
             # with strict checks
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--strict-checks"])
+                stdout = out.getvalue()
             self.assertGreater(ret, 0)
-            self.assertIn("Enabling full legality checking on moves",
-                          out.getvalue())
-            self.assertIn("Illegal move found", out.getvalue())
+            self.assertIn("Enabling full legality checking on moves", stdout)
+            self.assertIn("Illegal move found", stdout)
             # without strict checks
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--skip-checks"])
+                stdout = out.getvalue()
             self.assertEqual(ret, 0)
-            self.assertNotIn("Illegal move found", out.getvalue())
+            self.assertNotIn("Illegal move found", stdout)
             # illegal setup
             pos.seek(0)
             pos.truncate(0)
-            pos.write(illegal_setup)
+            pos.write(illegal_setup.encode("utf-8"))
             pos.flush()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--strict-setup"])
+                stdout = out.getvalue()
             self.assertGreater(ret, 0)
-            self.assertIn("Enabling full legality checking on setup",
-                          out.getvalue())
-            self.assertIn("Tried to place a piece outside", out.getvalue())
+            self.assertIn("Enabling full legality checking on setup", stdout)
+            self.assertIn("Tried to place a piece outside", stdout)
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--allow-setup"])
+                stdout = out.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("Disabling full legality checking on setup",
-                          out.getvalue())
+            self.assertIn("Disabling full legality checking on setup", stdout)
 
