@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
+
 import logging
 import re
 import socket
@@ -27,7 +29,12 @@ import sys
 import time
 
 from argparse import ArgumentParser
-from ConfigParser import SafeConfigParser, NoOptionError
+try:
+    from ConfigParser import SafeConfigParser, NoOptionError
+    ConfigParser = SafeConfigParser
+except ModuleNotFoundError:
+    from configparser import ConfigParser, NoOptionError
+    xrange = range
 
 from pyrimaa import aei
 from pyrimaa.game import Game
@@ -99,14 +106,14 @@ def get_config(args=None):
     parser.add_argument("bots", nargs="*", help="Bots to use in tournament")
     args = parser.parse_args(args)
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        print "Could not open '%s'" % (args.config, )
-        sys.exit(1)
+        print("Could not open '%s'" % (args.config, ))
+        return 1
     args.ini = config
     args.bot_sections = set(config.sections())
     if "global" not in args.bot_sections:
-        print "Did not find expected 'global' section in configuration file."
+        print("Did not find expected 'global' section in configuration file.")
         return 1
     args.bot_sections.remove('global')
 
@@ -118,9 +125,9 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print "Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (
+            print("Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (
                 loglevel,
-            )
+            ))
         logging.basicConfig(level=loglevel)
 
     if args.pgn is None:
@@ -167,15 +174,11 @@ def get_config(args=None):
 
 
 def main(args=None):
-    try:
-        cfg = get_config(args)
-    except SystemExit as exc:
-        return exc.code
-
+    cfg = get_config(args)
     if cfg.rounds:
-        print "Number of rounds: ", cfg.rounds
+        print("Number of rounds: %d" % (cfg.rounds, ))
     else:
-        print "Number of rounds not specified, running 1 round."
+        print("Number of rounds not specified, running 1 round.")
         cfg.rounds = 1
 
     try:
@@ -184,19 +187,19 @@ def main(args=None):
             timecontrol = None
         else:
             timecontrol = TimeControl(tctl_str)
-            print "At timecontrol %s" % (tctl_str, )
+            print("At timecontrol %s" % (tctl_str, ))
     except NoOptionError:
         timecontrol = None
 
     if cfg.global_options:
-        print "Giving these settings to all bots:"
+        print("Giving these settings to all bots:")
         for name, value in cfg.global_options:
-            print "%s: %s" % (name, value)
+            print("  %s: %s" % (name, value))
 
-    print "Playing bots:",
+    print("Playing bots: ", end='')
     for bot in cfg.bots:
-        print bot,
-    print
+        print(bot, end=' ')
+    print()
 
     # setup to write a bayeselo compatible pgn file
     write_pgn = False
@@ -204,9 +207,9 @@ def main(args=None):
         try:
             pgn_file = open(cfg.pgn, "a+")
         except IOError:
-            print "Could not open pgn file %s" % (cfg.pgn, )
+            print("Could not open pgn file %s" % (cfg.pgn, ))
             return 1
-        print "Writing results to pgn file:", cfg.pgn
+        print("Writing results to pgn file: %s" % (cfg.pgn, ))
         write_pgn = True
 
     bots = []
@@ -231,12 +234,12 @@ def main(args=None):
                         tc = None
                     else:
                         tc = TimeControl(tctl_str)
-                        print "bot %s at timecontrol %s" % (bsection, tctl_str)
+                        print("bot %s at timecontrol %s" % (bsection, tctl_str))
                     bot['timecontrol'] = tc
                 bots.append(bot)
                 break
         else:
-            print "Did not find a bot section for %s" % (bname)
+            print("Did not find a bot section for %s" % (bname))
             return 1
 
     start_time = time.time()
@@ -253,9 +256,9 @@ def main(args=None):
                 gengine = run_bot(gbot, cfg.ini, cfg.global_options)
                 sengine = run_bot(sbot, cfg.ini, cfg.global_options)
                 tc = [timecontrol, timecontrol]
-                if gbot.has_key('timecontrol'):
+                if 'timecontrol' in gbot:
                     tc[0] = gbot['timecontrol']
-                if sbot.has_key('timecontrol'):
+                if 'timecontrol' in sbot:
                     tc[1] = sbot['timecontrol']
                 game = Game(gengine, sengine, tc,
                             strict_setup=cfg.strict_setup,
@@ -267,11 +270,11 @@ def main(args=None):
                 loser = [gbot, sbot][wside ^ 1]
 
                 # Display result of game
-                print "%d%s" % (game.movenumber, "gs" [game.position.color])
-                print game.position.board_to_str()
-                print "%s beat %s because of %s playing side %s" % (
+                print("%d%s" % (game.movenumber, "gs" [game.position.color]))
+                print(game.position.board_to_str())
+                print("%s beat %s because of %s playing side %s" % (
                     winner['name'], loser['name'], reason, "gs" [wside]
-                )
+                ))
 
                 # Record game result stats
                 winner['wins'] += 1
@@ -309,12 +312,15 @@ def main(args=None):
                 sengine.cleanup()
         round_end = time.time()
         total_time = round_end - start_time
-        print "After round %d and %s:" % (round_num + 1,
-                                          format_time(total_time))
+        print("After round %d and %s:" % (round_num + 1,
+                                          format_time(total_time)))
         for bot in bots:
-            print "%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
-                                                      bot['timeouts'])
+            print("%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
+                                                      bot['timeouts']))
             for name, value in bot['reasons'].items():
-                print "    %d by %s" % (value, name)
+                print("    %d by %s" % (value, name))
 
     return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
