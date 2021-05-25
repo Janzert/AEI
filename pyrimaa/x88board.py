@@ -18,8 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+try:
+    xrange(1)
+except NameError:
+    xrange = range
+
 import random
 import sys
+import time
+from argparse import ArgumentParser
 
 
 class Color(object):
@@ -86,16 +93,16 @@ def bit_neighbors(bit):
 
 
 def bit_to_packed(bit):
-    cnt = (bit & 0xAAAAAAAAAAAAAAAAL) != 0L
-    cnt |= ((bit & 0xCCCCCCCCCCCCCCCCL) != 0L) << 1
-    cnt |= ((bit & 0xF0F0F0F0F0F0F0F0L) != 0L) << 2
-    cnt |= ((bit & 0xFF00FF00FF00FF00L) != 0L) << 3
-    cnt |= ((bit & 0xFFFF0000FFFF0000L) != 0L) << 4
-    cnt |= ((bit & 0xFFFFFFFF00000000L) != 0L) << 5
+    cnt = (bit & 0xAAAAAAAAAAAAAAAA) != 0
+    cnt |= ((bit & 0xCCCCCCCCCCCCCCCC) != 0) << 1
+    cnt |= ((bit & 0xF0F0F0F0F0F0F0F0) != 0) << 2
+    cnt |= ((bit & 0xFF00FF00FF00FF00) != 0) << 3
+    cnt |= ((bit & 0xFFFF0000FFFF0000) != 0) << 4
+    cnt |= ((bit & 0xFFFFFFFF00000000) != 0) << 5
     return cnt
 
 
-ALL_BITS = 0xFFFFFFFFFFFFFFFFL
+ALL_BITS = 0xFFFFFFFFFFFFFFFF
 
 ZOBRIST_KEYS = [0, [], []]
 
@@ -104,7 +111,7 @@ ZOBRIST_KEYS = [0, [], []]
 def _zobrist_newkey(used_keys, rnd):
     candidate = 0
     while candidate in used_keys:
-        candidate = rnd.randint(-sys.maxint, sys.maxint)
+        candidate = rnd.randint(-(2**63 - 1), 2**63 - 1)
     used_keys.append(candidate)
     return candidate
 
@@ -150,7 +157,7 @@ class Position(object):
 
         if frozen is None:
             offsets = (-1, 1, -16, 16)
-            frozen = 0L
+            frozen = 0
             for px in xrange(64):
                 ix = packed_to_index(px)
                 if board_array[ix] != Piece.EMPTY:
@@ -167,7 +174,7 @@ class Position(object):
                         elif strength < board_array[nix] & Piece.DECOLOR:
                             isfrozen = True
                     if isfrozen:
-                        frozen |= 1L << px
+                        frozen |= 1 << px
         self.frozen = frozen
 
         if zobrist is None:
@@ -367,10 +374,10 @@ class Position(object):
             pcolor = Color.SILVER
         pstrength = piece & Piece.DECOLOR
         if pcolor == self.color:
-            isfrozen = bool(self.frozen & (1L << index_to_packed(newfrom)))
+            isfrozen = bool(self.frozen & (1 << index_to_packed(newfrom)))
             if isfrozen:
-                print self.to_long_board()
-                print hex(self.frozen)
+                print(self.to_long_board())
+                print(hex(self.frozen))
                 raise IllegalStepException(
                     "Tried to move frozen piece %s%s" %
                     (Piece.PCHARS[piece], index_to_alg(newfrom)))
@@ -403,7 +410,7 @@ class Position(object):
                         pstrength < board[nix] & Piece.DECOLOR):
                         nstrength = board[nix] & Piece.DECOLOR
                         isfrozen = bool(self.frozen &
-                                        (1L << index_to_packed(nix)))
+                                        (1 << index_to_packed(nix)))
                         if not isfrozen:
                             stronger = True
                             break
@@ -450,7 +457,7 @@ class Position(object):
                     zobrist ^= ZOBRIST_KEYS[2][board[tix]][tix]
                     cstrength = newboard[tix] & Piece.DECOLOR
                     px = index_to_packed(tix)
-                    fn_bits = newfrozen & bit_neighbors(1L << px)
+                    fn_bits = newfrozen & bit_neighbors(1 << px)
                     while fn_bits:
                         fnb = fn_bits & -fn_bits
                         fn_bits ^= fnb
@@ -464,7 +471,7 @@ class Position(object):
                             if newboard[nnix] & Piece.DECOLOR > nstrength:
                                 isfrozen = True
                                 break
-                        nbit = 1L << index_to_packed(nix)
+                        nbit = 1 << index_to_packed(nix)
                         if isfrozen:
                             newfrozen |= nbit
                         else:
@@ -478,7 +485,7 @@ class Position(object):
                 nix = step[1] + off
                 if nix & 0x88 or newboard[nix] == Piece.EMPTY:
                     continue
-                nbit = 1L << index_to_packed(nix)
+                nbit = 1 << index_to_packed(nix)
                 if not ((piece ^ newboard[nix]) & Piece.SCOLOR):
                     newfrozen &= ~nbit
                 elif (not (newfrozen & nbit) and
@@ -498,7 +505,7 @@ class Position(object):
             nix = newfrom + off
             if (nix & 0x88 or newboard[nix] == Piece.EMPTY):
                 continue
-            nbit = 1L << index_to_packed(nix)
+            nbit = 1 << index_to_packed(nix)
             nstrength = newboard[nix] & Piece.DECOLOR
             if (newboard[nix] ^ piece) & Piece.SCOLOR:
                 if newfrozen & nbit:
@@ -528,7 +535,7 @@ class Position(object):
                 if isfrozen:
                     newfrozen |= nbit
         newboard[newfrom] = Piece.EMPTY
-        fbit = 1L << index_to_packed(newfrom)
+        fbit = 1 << index_to_packed(newfrom)
         newfrozen &= ~fbit
         newcolor = self.color
         newsteps = self.steps + 1
@@ -567,7 +574,7 @@ class Position(object):
                     continue
                 pstrength = board[pix] & Piece.DECOLOR
                 if pstrength > lstrength:
-                    isfrozen = bool(self.frozen & (1L << index_to_packed(pix)))
+                    isfrozen = bool(self.frozen & (1 << index_to_packed(pix)))
                     if not isfrozen:
                         step = (pix, lastfrom)
                         steps.append((step, self.do_step(step)))
@@ -594,7 +601,7 @@ class Position(object):
                     pstrength = board[ix] & Piece.DECOLOR
                     if (board[ix] & Piece.SCOLOR) >> 3 == self.color:
                         isfrozen = bool(self.frozen &
-                                        (1L << index_to_packed(ix)))
+                                        (1 << index_to_packed(ix)))
                         if not isfrozen:
                             to_offs = (-1, 1, -16, 16)
                             if pstrength == Piece.GRABBIT:
@@ -619,7 +626,7 @@ class Position(object):
                             if (((board[ix] ^ board[nix]) & Piece.SCOLOR) and
                                 nstrength > pstrength):
                                 isfrozen = bool(self.frozen &
-                                                (1L << index_to_packed(nix)))
+                                                (1 << index_to_packed(nix)))
                                 if not isfrozen:
                                     haspusher = True
                                     break
@@ -647,7 +654,7 @@ class Position(object):
         finished = {}
         while partial:
             nextpart = {}
-            for pos, steps in partial.iteritems():
+            for pos, steps in partial.items():
                 for step, npos in pos.get_steps():
                     if npos.color == color:
                         if npos not in nextpart:
@@ -766,12 +773,16 @@ def parse_short_pos(side, steps, text):
     return Position(side, steps, board)
 
 
-def main(filename):
+def main(args=None):
     """Takes a filename and attempts to parse it as a position,
        then outputs a few statistics about the possible moves.
     """
-    import time
-    positionfile = open(filename, 'r')
+    parser = ArgumentParser(
+        description="Give a few statistics and possible moves for a position"
+    )
+    parser.add_argument("filename", help="Position file to look at")
+    config = parser.parse_args(args)
+    positionfile = open(config.filename, 'r')
     ptext = positionfile.readlines()
     if ptext[1][0] == '[':
         ptext = [l.strip() for l in ptext]
@@ -780,62 +791,25 @@ def main(filename):
         pos = parse_short_pos(side, 0, ptext[1])
     else:
         movenum, pos = parse_long_pos(ptext)
-    print "%d%s" % (movenum, "gs" [pos.color])
-    print
-    print pos.to_long_board()
-    print
+    print("%d%s" % (movenum, "gs" [pos.color]))
+    print()
+    print(pos.to_long_board())
+    print()
     moves = pos.to_placing_moves()
-    print moves[0]
-    print moves[1]
-    print
+    print(moves[0])
+    print(moves[1])
+    print()
     steps = pos.get_steps()
-    print len(steps), "initial steps"
+    print("%d initial steps" % (len(steps), ))
     starttime = time.time()
     moves = pos.get_moves()
-    print len(moves), "unique moves"
+    print("%d unique moves" % (len(moves), ))
     gentime = time.time()
 
-    print "%.2f seconds to generate moves" % (gentime - starttime)
+    print("%.2f seconds to generate moves" % (gentime - starttime, ))
 
-    return
-
-    import board
-    mn, opos = board.parse_long_pos(ptext)
-    omoves = opos.get_moves()
-    del omoves[opos.get_null_move()]
-    new_res = set([p.to_short_board() for p in moves.keys()])
-    if len(new_res) != len(moves):
-        print "duplicate boards in results %d!=%d" % (len(new_res), len(moves))
-    old_res = set([p.to_short_str() for p in omoves.keys()])
-    if new_res != old_res:
-        print "Only in new results:"
-        for upos, move in moves.iteritems():
-            if upos.to_short_board() not in old_res:
-                print pos.steps_to_str(move)
-                print upos.to_short_board()
-            if upos.color == pos.color:
-                print "result position with same color"
-            if upos.steps != 0:
-                print "result position with steps taken"
-            if (upos.last_piece != Piece.EMPTY or upos.last_from != 0x08):
-                print "result position with last"
-        print
-        print "Only in old results:"
-        for upos, move in omoves.iteritems():
-            if upos.to_short_str() not in new_res:
-                print board.steps_to_str(move)
-                print upos.to_short_str()
+    return 0
 
 
 if __name__ == "__main__":
-    import os.path
-    try:
-        import psyco
-        psyco.full()
-    except ImportError:
-        pass
-
-    if len(sys.argv) < 2:
-        print "usage: %s <boardfile>" % os.path.basename(sys.argv[0])
-        sys.exit(0)
-    main(sys.argv[1])
+    sys.exit(main())
