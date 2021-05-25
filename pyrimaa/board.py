@@ -1330,7 +1330,7 @@ def main(args=None):
         checked = {}
         for upos, move in moves.items():
             bstr = upos.board_to_str("short")
-            if checked.has_key(bstr):
+            if bstr in checked:
                 cpos = checked[bstr][0]
                 print("found duplicate board")
                 print(pos.steps_to_str(move))
