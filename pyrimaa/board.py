@@ -28,7 +28,7 @@ import math
 import sys
 import random
 import time
-
+from argparse import ArgumentParser
 
 class Color:
     GOLD = 0
@@ -1254,11 +1254,17 @@ def test_rnd_steps():
     print("%.2f %d %d" % (total_turns / 100.0, goal_wins, immo_wins))
 
 
-def main(filename):
+def main(args=None):
     """ Main entry point
         Takes a filename and attempts to parse it as a board position,
         then outputs a few statistics about the possible moves.
     """
+    parser = ArgumentParser(
+        description="Give a few statistics and possible moves for a position"
+    )
+    parser.add_argument("filename", help="Position file to look at")
+    config = parser.parse_args(args)
+    filename = config.filename
     positionfile = open(filename, 'r')
     positiontext = positionfile.readlines()
     if positiontext[1][0] == '[':
@@ -1315,7 +1321,7 @@ def main(filename):
                 ))
                 return
 
-    import x88board
+    from pyrimaa import x88board
     mn, opos = x88board.parse_long_pos(positiontext)
     omoves = opos.get_moves()
     new_res = set([p.board_to_str("short") for p in moves.keys()])
@@ -1377,11 +1383,4 @@ def main(filename):
 
 
 if __name__ == "__main__":
-    try:
-        import psyco
-        psyco.full()
-    except ImportError:
-        pass
-
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
+    sys.exit(main())
