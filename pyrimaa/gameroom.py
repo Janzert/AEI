@@ -38,7 +38,6 @@ removed in the future)
 
 """
 
-from ConfigParser import SafeConfigParser, NoOptionError
 import optparse
 import logging
 import os
@@ -49,8 +48,21 @@ import traceback
 import sys
 import re
 import time
-import urllib
-import urllib2
+try:
+    from ConfigParser import SafeConfigParser, NoOptionError
+    ConfigParser = SafeConfigParser
+    from urllib2 import Request, urlopen, URLError
+    from urllib import urlencode
+    class URLRequest(Request):
+        @property
+        def data(self):
+            return self.get_data()
+except ModuleNotFoundError:
+    from configparser import ConfigParser, NoOptionError
+    from urllib.parse import urlencode
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+    URLRequest = Request
 
 from pyrimaa import aei
 
@@ -69,8 +81,8 @@ class EngineCrashException(Exception):
 
 def post(url, values, logname="network"):
     """Send a post request to the specified url."""
-    data = urllib.urlencode(values)
-    req = urllib2.Request(url, data)
+    data = urlencode(values).encode("utf-8")
+    req = URLRequest(url, data)
     oldtimeout = socket.getdefaulttimeout()
     if values.get('wait', 0) != 0:
         stimeout = max(5, values['maxwait'] + 2)
@@ -86,14 +98,14 @@ def post(url, values, logname="network"):
             timedout = False
             try:
                 try:
-                    netlog.debug("%s request:\n%s", logname, req.get_data())
-                    response = urllib2.urlopen(req)
-                    body = response.read()
+                    netlog.debug("%s request:\n%s", logname, req.data)
+                    response = urlopen(req)
+                    body = response.read().decode("utf-8")
                 except socket.timeout:
                     netlog.debug("Socket timed out to server")
                     body = ""
                     timedout = True
-            except urllib2.URLError, err:
+            except URLError as err:
                 if isinstance(err.reason, socket.timeout):
                     # time out probably in urlopen
                     netlog.debug("Socket timed out with URLError: %s", err)
@@ -119,7 +131,7 @@ def post(url, values, logname="network"):
         socket.setdefaulttimeout(oldtimeout)
     netlog.debug("%s response body:\n%s", logname, body)
     info = parsebody(body)
-    if info.has_key('error'):
+    if 'error' in info:
         log.error("Error in response to %s: %s", logname, info['error'])
         if (info['error'].startswith("Gameserver: No Game Data") or
             info['error'].startswith("Gameserver: Invalid Session Id")):
@@ -154,14 +166,14 @@ def log_response(response, unexpected=None):
         if response.message.startswith("Error:"):
             enginelog.error("%s", response.message)
         elif response.message.startswith("Warning:"):
-            enginelog.warn("%s", response.message)
+            enginelog.warning("%s", response.message)
         elif response.message.startswith("Debug:"):
             enginelog.debug("%s", response.message)
         else:
             enginelog.info("%s", response.message)
     elif unexpected is not None:
         if response.type not in ["info", "log"]:
-            log.warn("Unexpected response %s (%s)." %
+            log.warning("Unexpected response %s (%s)." %
                      (unexpected, response.type))
 
 
@@ -195,7 +207,7 @@ class Table:
             return response
         except socket.timeout:
             raise
-        except socket.error, exc:
+        except socket.error as exc:
             if (hasattr(exc, "args") and len(exc.args) > 0 and
                 exc.args[0] == 32):
                 raise EngineCrashException("Socket reset")
@@ -206,7 +218,7 @@ class Table:
         tc_vars = ['tcmove', 'tcreserve', 'tcpercent', 'tcmax', 'tctotal',
                    'tcturns', 'tcturntime']
         for var in tc_vars:
-            if state.has_key(var) and self.sent_tc.get(var, None) != state[var]:
+            if var in state and self.sent_tc.get(var, None) != state[var]:
                 log.info("Sending %s of %s to engine.", var, state[var])
                 self.engine.setoption(var, state[var])
                 self.sent_tc[var] = state[var]
@@ -234,7 +246,7 @@ class Table:
         values = dict(sid=self.sid, auth=self.auth, action="leave")
         try:
             response = post(self.url, values, "Table.leave")
-        except urllib2.URLError:
+        except URLError:
             return False
         try:
             ret = bool(int(response.get('ok', 0)))
@@ -362,7 +374,7 @@ class Table:
                 # the move time. Otherwise wait till the end of the opponents
                 # regular turn time.
                 tused_key = "%sused" % ("wb" [("wb".index(self.side) + 1) % 2], )
-                if state.has_key(tused_key):
+                if tused_key in state:
                     moveused = int(state[tused_key])
                 else:
                     moveused = 0
@@ -425,7 +437,7 @@ class Table:
                 except socket.timeout:
                     pass
                 tused_key = "%sused" % (self.side, )
-                if state.has_key(tused_key):
+                if tused_key in state:
                     moveused = int(state[tused_key])
                 else:
                     moveused = 0
@@ -445,11 +457,11 @@ class Table:
                 else:
                     engine.setoption("greserve", state['tcwreserve2'])
                     engine.setoption("sreserve", state['tcbreserve2'])
-                if state.has_key('wused'):
+                if 'wused' in state:
                     engine.setoption(gusedname, state['wused'])
-                if state.has_key('bused'):
+                if 'bused' in state:
                     engine.setoption(susedname, state['bused'])
-                if state.has_key('lastmoveused'):
+                if 'lastmoveused' in state:
                     if engine.protocol_version == 0:
                         engine.setoption("tclastmoveused",
                                          state['lastmoveused'])
@@ -459,7 +471,7 @@ class Table:
                 myreserve = "tc%sreserve2" % (self.side, )
                 stoptime = starttime + int(state['tcmove']) + int(
                     state[myreserve])
-                if (state.has_key('turntime') and
+                if ('turntime' in state and
                     (starttime + state['turntime']) < stoptime):
                     stoptime = int(starttime + state['turntime'])
                 stoptime -= self.min_timeleft
@@ -538,7 +550,7 @@ class GameRoom:
 
     def logout(self):
         if not self.sid:
-            log.warn("GameRoom.logout called before sid set.")
+            log.warning("GameRoom.logout called before sid set.")
             return '0'
         values = dict(sid=self.sid, action="leave")
         response = post(self.url, values, "GameRoom.logout")
@@ -563,7 +575,7 @@ class GameRoom:
                       sid=self.sid,
                       action="newGame")
         tableinfo = post(self.url, values, "GameRoom.newgame")
-        tableinfo = parsebody(tableinfo.values()[0])
+        tableinfo = parsebody(list(tableinfo.values())[0])
         return Table(self, tableinfo)
 
     def mygames(self):
@@ -659,8 +671,8 @@ def how_many_bots(run_dir):
                         count += 1
                     else:
                         try:
-                            if os.kill(pid, signal.SIGCONT) > 0:
-                                count += 1
+                            os.kill(pid, 0)
+                            count += 1
                         except OSError:
                             pass
                 except ValueError:
@@ -716,7 +728,7 @@ def shutdown_engine(engine_ctl):
             break
         time.sleep(1)
     else:
-        log.warn("Engine did not exit in 30 seconds, killing process")
+        log.warning("Engine did not exit in 30 seconds, killing process")
         try:
             if sys.platform == 'win32':
                 import ctypes
@@ -736,9 +748,9 @@ def init_logging(config):
     if config.has_section("Logging"):
         logdir = config.get("Logging", "directory")
         if not os.path.exists(logdir):
-            print "Log directory '%s' not found, attempting to create it." % (
+            print("Log directory '%s' not found, attempting to create it." % (
                 logdir
-            )
+            ))
             os.makedirs(logdir)
         logfilename = "%s-%s" % (time.strftime("%Y%m%d-%H%M"),
                                  str(os.getpid()), )
@@ -799,7 +811,7 @@ def init_logging(config):
 def run_game(options, config):
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
-        log.warn("Run file directory '%s' not found, attempting to create it."
+        log.warning("Run file directory '%s' not found, attempting to create it."
                  % (run_dir))
         os.makedirs(run_dir)
     bot_count = how_many_bots(run_dir)
@@ -827,7 +839,7 @@ def run_game(options, config):
             engine_com = aei.get_engine(com_method, enginecmd,
                                         logname="gameroom.aei")
             engine_ctl = aei.EngineController(engine_com)
-        except OSError, exc:
+        except OSError as exc:
             log.error("Could not start the engine; exception thrown: %s", exc)
             return 1
 
@@ -911,7 +923,7 @@ def run_game(options, config):
                         % (table.gid, table.side)
             log.info(joinmsg)
             if console is None:
-                print joinmsg
+                print(joinmsg)
             # force the std streams to flush so the bot starter script used
             # on the arimaa.com server can pick up the join message
             sys.stdout.flush()
@@ -962,7 +974,7 @@ def run_game(options, config):
                 break
             finally:
                 shutdown_engine(engine_ctl)
-        except EngineCrashException, exc:
+        except EngineCrashException as exc:
             bot_crashes += 1
             if bot_crashes >= 1000:
                 log.error("Bot engine crashed 1000 times, giving up.")
@@ -992,18 +1004,20 @@ def main(args=sys.argv):
     try:
         options = parseargs(args)
     except ValueError:
-        print "Command not understood '%s'" % (" ".join(args[1:]))
+        print("Command not understood '%s'" % (" ".join(args[1:])))
         return 2
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     config_filename = options['config']
-    try:
-        config.readfp(open(config_filename, 'rU'))
-    except IOError:
-        print "Could not open '%s'" % (config_filename, )
-        print "this file must be readable and contain the configuration"
-        print "for connecting to the gameroom."
+    files_read = config.read(config_filename)
+    if len(files_read) == 0:
+        print("Could not open '%s'" % (config_filename, ))
+        print("this file must be readable and contain the configuration")
+        print("for connecting to the gameroom.")
         return 1
 
     init_logging(config)
     return run_game(options, config)
+
+if __name__ == "__main__":
+    sys.exit(main())
