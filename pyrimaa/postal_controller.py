@@ -19,16 +19,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import ConfigParser
 import logging
 import optparse
 import os.path
 import sys
 import time
 
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import Error as ConfigError
+    from ConfigParser import SafeConfigParser as ConfigParser
+except ModuleNotFoundError:
+    from configparser import Error as ConfigError
+    from configparser import ConfigParser
 
-import gameroom
+from pyrimaa import gameroom
 
 log = logging.getLogger("postal")
 
@@ -44,31 +48,30 @@ def main(args=sys.argv):
                           help="Bot section to use as the default.")
     options, args = opt_parser.parse_args(args)
     if len(args) > 1:
-        print "Unrecognized command line arguments", args[1:]
+        print("Unrecognized command line arguments: %s" % (args[1:], ))
         return 1
-    config = SafeConfigParser()
-    try:
-        config.readfp(open(options.config, 'rU'))
-    except IOError:
-        print "Could not open '%s'." % (options.config, )
+    config = ConfigParser()
+    read_files = config.read(options.config)
+    if len(read_files) == 0:
+        print("Could not open '%s'." % (options.config, ))
         return 1
 
     try:
         log_dir = config.get("postal", "log_dir")
-    except ConfigParser.Error:
+    except ConfigError:
         try:
             log_dir = config.get("Logging", "directory")
-        except ConfigParser.Error:
+        except ConfigError:
             log_dir = "."
     if not os.path.exists(log_dir):
-        print "Log directory '%s' not found, attempting to create it." % (
+        print("Log directory '%s' not found, attempting to create it." % (
             log_dir
-        )
+        ))
         os.makedirs(log_dir)
 
     try:
         log_filename = config.get("postal", "log_file")
-    except ConfigParser.Error:
+    except ConfigError:
         log_filename = "postal-" + time.strftime("%Y-%m") + ".log"
     log_path = os.path.join(log_dir, log_filename)
     logfmt = logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s",
@@ -90,7 +93,7 @@ def main(args=sys.argv):
     try:
         bot_username = config.get(bot_section, "username")
         bot_password = config.get(bot_section, "password")
-    except ConfigParser.Error:
+    except ConfigError:
         try:
             bot_username = config.get("global", "username")
             bot_password = config.get("global", "password")
@@ -102,7 +105,7 @@ def main(args=sys.argv):
         try:
             open("stop_postal", 'r')
             log.info("Exiting after finding stop file")
-            sys.exit()
+            return 0
         except IOError:
             pass
         gr_con = gameroom.GameRoom(gameroom_url)
@@ -122,7 +125,7 @@ def main(args=sys.argv):
                 try:
                     open("stop_postal", 'r')
                     log.info("Exiting after finding stop file")
-                    sys.exit()
+                    return 0
                 except IOError:
                     pass
                 log.info("%d/%d: Playing move against %s game #%s" %
@@ -146,3 +149,8 @@ def main(args=sys.argv):
         else:
             log.info("No postal games with a turn found, sleeping.")
             time.sleep(300)
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
