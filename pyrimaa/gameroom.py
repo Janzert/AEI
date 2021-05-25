@@ -587,7 +587,7 @@ class GameRoom:
         values = dict(sid=self.sid, what="myGames")
         gamedata = post(self.url, values, "GameRoom.mygames")
         games = list()
-        for gameid, gameinfo in gamedata.items():
+        for gameid, gameinfo in list(gamedata.items()):
             if re.match(r"\d+:[wb]", gameid):
                 games.append(parsebody(gameinfo))
         return games
@@ -596,7 +596,7 @@ class GameRoom:
         values = dict(sid=self.sid, what="join")
         gamedata = post(self.url, values, "GameRoom.opengames")
         games = list()
-        for gameid, gameinfo in gamedata.items():
+        for gameid, gameinfo in list(gamedata.items()):
             if re.match(r"\d+:[wb]", gameid):
                 games.append(parsebody(gameinfo))
         return games

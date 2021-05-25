@@ -561,7 +561,7 @@ class GameTest(unittest.TestCase):
                     16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
                     19],
                 }
-        for option, value in expected_options_set.items():
+        for option, value in list(expected_options_set.items()):
             self.assertIn(option, p.options_set)
             self.assertEqual(p.options_set[option], value)
         # check protocol version 0 also gets the correct options
@@ -594,7 +594,7 @@ class GameTest(unittest.TestCase):
                     16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
                     19],
                 }
-        for option, value in expected_options_set.items():
+        for option, value in list(expected_options_set.items()):
             self.assertIn(option, p.options_set)
             self.assertEqual(p.options_set[option], value)
         # check reserve is correctly deducted when reserve addition is not 100%

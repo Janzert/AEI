@@ -317,7 +317,7 @@ def main(args=None):
         for bot in bots:
             print("%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
                                                       bot['timeouts']))
-            for name, value in bot['reasons'].items():
+            for name, value in list(bot['reasons'].items()):
                 print("    %d by %s" % (value, name))
 
     return 0

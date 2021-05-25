@@ -746,7 +746,7 @@ class Position(object):
                     bitboards[piece] |= bit
                     bitboards[Piece.EMPTY] &= ~bit
                 if strict_checks:
-                    not_placed = [p[0] for p in available.items() if p[1] > 0]
+                    not_placed = [p[0] for p in list(available.items()) if p[1] > 0]
                     if not_placed:
                         raise IllegalMove("Did not place all pieces in setup")
 
@@ -942,7 +942,7 @@ class Position(object):
         finished = {}
         while partial:
             nextpart = {}
-            for npos, nsteps in partial.items():
+            for npos, nsteps in list(partial.items()):
                 for step, move in npos.get_steps():
                     if move.color == color:
                         if move not in nextpart:
@@ -966,7 +966,7 @@ class Position(object):
         nodes = 0
         while partial:
             nextpart = {}
-            for npos, nsteps in partial.items():
+            for npos, nsteps in list(partial.items()):
                 steps = npos.get_steps()
                 nodes += len(steps)
                 for step, move in steps:
@@ -1165,7 +1165,7 @@ def test_random_play():
                 break
 
             turn += 1
-            pos = random.choice(moves.keys())
+            pos = random.choice(list(moves.keys()))
 
         total_turns += turn
         if len(moves) != 0:
@@ -1205,7 +1205,7 @@ def rnd_game(pos):
             else:
                 return 1
 
-        pos = random.choice(moves.keys())
+        pos = random.choice(list(moves.keys()))
 
     if pos.is_goal():
         return pos.is_goal()
@@ -1315,16 +1315,16 @@ def main(filename):
                 ))
                 return
 
-    import x88board
+    from . import x88board
     mn, opos = x88board.parse_long_pos(positiontext)
     omoves = opos.get_moves()
-    new_res = set([p.board_to_str("short") for p in moves.keys()])
+    new_res = set([p.board_to_str("short") for p in list(moves.keys())])
     if len(new_res) != len(moves):
         print("duplicate boards in results %d!=%d" % (len(new_res), len(moves)))
         checked = {}
-        for upos, move in moves.items():
+        for upos, move in list(moves.items()):
             bstr = upos.board_to_str("short")
-            if checked.has_key(bstr):
+            if bstr in checked:
                 cpos = checked[bstr][0]
                 print("found duplicate board")
                 print(pos.steps_to_str(move))
@@ -1344,11 +1344,11 @@ def main(filename):
                     print("placement %s, %s" % (upos.placement, cpos.placement))
             else:
                 checked[bstr] = (upos, move)
-    old_res = set([p.board_to_str("short") for p in omoves.keys()])
+    old_res = set([p.board_to_str("short") for p in list(omoves.keys())])
     if new_res != old_res or len(omoves) != len(moves):
         discount = 0
         print("Only in new results:")
-        for upos, move in moves.items():
+        for upos, move in list(moves.items()):
             if upos.board_to_str("short") not in old_res:
                 discount += 1
                 print(pos.steps_to_str(move))
@@ -1366,7 +1366,7 @@ def main(filename):
                 break
         print()
         print("Only in old results:")
-        for upos, move in omoves.items():
+        for upos, move in list(omoves.items()):
             if upos.board_to_str("short") not in new_res:
                 print(upos.steps_to_str(move))
                 print(upos.board_to_str("short"))
