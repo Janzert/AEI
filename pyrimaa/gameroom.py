@@ -118,6 +118,11 @@ def post(url, values, logname="network"):
                     body = ""
                 else:
                     raise
+            except OSError as err:
+                netlog.debug(
+                    "OSError from connection: %s %s" % (str(err), repr(err))
+                )
+                body = ""
             if body != "" or try_num == 5:
                 break
             if timedout:
