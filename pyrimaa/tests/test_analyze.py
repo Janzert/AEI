@@ -374,6 +374,7 @@ class AnalyzeTest(unittest.TestCase):
                 self.assertEqual(ret, 0)
                 self.assertNotIn("bestmove:", stdout)
             finally:
+                cfg.close()
                 aei._ProcCom = real_ProcCom
 
     def test_board(self):
@@ -394,7 +395,7 @@ class AnalyzeTest(unittest.TestCase):
             pos.seek(0)
             pos.truncate(0)
             pos.write(b"no board or moves")
-            pos.flush()
+            pos.close()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
                 stdout = out.getvalue()
@@ -447,7 +448,7 @@ class AnalyzeTest(unittest.TestCase):
             pos.seek(0)
             pos.truncate(0)
             pos.write(illegal_setup.encode("utf-8"))
-            pos.flush()
+            pos.close()
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name,
                                     "--strict-setup"])

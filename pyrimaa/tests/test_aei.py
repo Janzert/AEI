@@ -20,6 +20,7 @@
 
 import os.path
 import socket
+import sys
 import unittest
 
 from pyrimaa import aei, board
@@ -279,12 +280,13 @@ class EngineControllerTest(unittest.TestCase):
 
     def test_socketengine(self):
         path = os.path.dirname(__file__)
-        adapter = os.path.join(path, "socketadapter.py")
-        eng = aei.get_engine("socket", adapter)
+        adapter_path = os.path.join(path, "socketadapter.py")
+        adapter_cmd = "%s %s" % (sys.executable, adapter_path)
+        eng = aei.get_engine("socket", adapter_cmd)
         self.assertIsInstance(eng, aei.SocketEngine)
         self._check_engine(eng)
-        eng = aei.get_engine("socket", adapter, "aei")
+        eng = aei.get_engine("socket", adapter_cmd, "aei")
         self.assertIsInstance(eng, aei.SocketEngine)
         self._check_engine(eng)
-        eng = aei.get_engine("2008cc", adapter + " --legacy")
+        eng = aei.get_engine("2008cc", adapter_cmd + " --legacy")
         self._check_engine(eng)
