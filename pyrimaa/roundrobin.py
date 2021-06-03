@@ -42,6 +42,9 @@ from pyrimaa.util import TimeControl
 
 log = logging.getLogger("roundrobin")
 
+class ConfigError(Exception):
+    pass
+
 
 def run_bot(bot, config, global_options):
     cmdline = config.get(bot['name'], "cmdline")
@@ -108,13 +111,11 @@ def get_config(args=None):
 
     config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        print("Could not open '%s'" % (args.config, ))
-        return 1
+        raise ConfigError("Could not open '%s'" % (args.config, ))
     args.ini = config
     args.bot_sections = set(config.sections())
     if "global" not in args.bot_sections:
-        print("Did not find expected 'global' section in configuration file.")
-        return 1
+        raise ConfigError("Did not find expected 'global' section in configuration file.")
     args.bot_sections.remove('global')
 
     try:
@@ -174,7 +175,12 @@ def get_config(args=None):
 
 
 def main(args=None):
-    cfg = get_config(args)
+    try:
+        cfg = get_config(args)
+    except ConfigError as exc:
+        print(exc)
+        return 1
+
     if cfg.rounds:
         print("Number of rounds: %d" % (cfg.rounds, ))
     else:
