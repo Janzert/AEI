@@ -5,17 +5,23 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'readme.rst')).read()
 
 setup(name='AEI',
-      version='1.2',
+      version='1.3.0',
       description='Arimaa Engine Interface tools',
       long_description=README,
+      long_description_content_type='text/x-rst',
       classifiers=["Programming Language :: Python",
                    "Programming Language :: Python :: 2",
+                   "Programming Language :: Python :: 3",
                    "Intended Audience :: Developers",
                    "Topic :: Games/Entertainment :: Board Games", ],
       author='Janzert',
       author_email='janzert@janzert.com',
-      url='http://arimaa.janzert.com/aei',
+      url='https://arimaa.janzert.com/aei',
+      project_urls={
+          'Source Code': 'https://github.com/janzert/aei',
+      },
       keywords='Arimaa',
+      python_requires='>=2.7',
       packages=find_packages(),
       entry_points="""\
       [console_scripts]
