@@ -37,7 +37,7 @@ class MockController:
         class MockEvent:
             def __init__(self):
                 self.stopped = False
-            def isSet(self):
+            def is_set(self):
                 return self.stopped
         self.stop = MockEvent()
 

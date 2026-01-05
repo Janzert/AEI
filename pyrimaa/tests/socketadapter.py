@@ -32,10 +32,10 @@ class _ProcCom(Thread):
         self.proc = proc
         self.stop = Event()
         self.socket = socket
-        self.setDaemon(True)
+        self.daemon = True
 
     def run(self):
-        while not self.stop.isSet() and self.proc.poll() is None:
+        while not self.stop.is_set() and self.proc.poll() is None:
             msg = self.proc.stdout.readline()
             self.socket.sendall(msg.encode("utf-8"))
 

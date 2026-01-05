@@ -39,14 +39,14 @@ class _ComThread(Thread):
         Thread.__init__(self)
         self.stop = Event()
         self.messages = Queue()
-        self.setDaemon(True)
+        self.daemon = True
 
     def send(self, msg):
         sys.stdout.write(msg + "\n")
         sys.stdout.flush()
 
     def run(self):
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 msg = sys.stdin.readline()
             except AttributeError:
@@ -143,7 +143,7 @@ class AEIEngine(object):
 
     def main(self):
         ctl = self.controller
-        while not ctl.stop.isSet():
+        while not ctl.stop.is_set():
             msg = ctl.messages.get()
             if msg == "isready":
                 ctl.send("readyok")

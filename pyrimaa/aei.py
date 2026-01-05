@@ -110,10 +110,10 @@ class _ProcCom(Thread):
         self.log = log
         self.outq = Queue()
         self.stop = Event()
-        self.setDaemon(True)
+        self.daemon = True
 
     def run(self):
-        while not self.stop.isSet() and self.proc.poll() is None:
+        while not self.stop.is_set() and self.proc.poll() is None:
             msg = self.proc.stdout.readline()
             if self.log:
                 self.log.debug("Received from bot: %s" % (repr(msg)))
