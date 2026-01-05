@@ -1,14 +1,35 @@
+# Editor backup files
 *.*~
-*.pyc
 *.swp
 
+# Python bytecode
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Config files
 analyze.cfg
 gameroom.cfg
 roundrobin.cfg
 
+# Testing
 .coverage
 /htmlcov
+.pytest_cache/
+.tox/
 
-/AEI.egg-info
+# Build artifacts
+*.egg-info/
 /dist
 /build
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.iml
