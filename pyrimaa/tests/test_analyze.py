@@ -22,11 +22,8 @@ import logging
 import os
 import sys
 import unittest
-try:
-    from StringIO import StringIO
-except ModuleNotFoundError:
-    from io import StringIO
-    from importlib import reload
+from io import StringIO
+from importlib import reload
 
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile

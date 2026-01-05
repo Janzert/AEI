@@ -19,19 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import print_function
-
 import logging
 import socket
 import sys
 import time
 
 from argparse import ArgumentParser
-try:
-    from ConfigParser import SafeConfigParser, NoOptionError
-    ConfigParser = SafeConfigParser
-except ModuleNotFoundError:
-    from configparser import ConfigParser, NoOptionError
+from configparser import ConfigParser, NoOptionError
 
 from pyrimaa import aei, board
 

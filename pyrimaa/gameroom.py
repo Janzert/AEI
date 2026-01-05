@@ -48,21 +48,10 @@ import traceback
 import sys
 import re
 import time
-try:
-    from ConfigParser import SafeConfigParser, NoOptionError
-    ConfigParser = SafeConfigParser
-    from urllib2 import Request, urlopen, URLError
-    from urllib import urlencode
-    class URLRequest(Request):
-        @property
-        def data(self):
-            return self.get_data()
-except ModuleNotFoundError:
-    from configparser import ConfigParser, NoOptionError
-    from urllib.parse import urlencode
-    from urllib.request import Request, urlopen
-    from urllib.error import URLError
-    URLRequest = Request
+from configparser import ConfigParser, NoOptionError
+from urllib.parse import urlencode
+from urllib.request import Request as URLRequest, urlopen
+from urllib.error import URLError
 
 from pyrimaa import aei
 

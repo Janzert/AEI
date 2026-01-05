@@ -21,12 +21,7 @@
 
 import sys
 import time
-try:
-    import exceptions
-    AttributeError = exceptions.AttributeError
-    from Queue import Queue, Empty
-except ModuleNotFoundError:
-    from queue import Queue, Empty
+from queue import Queue, Empty
 
 from threading import Thread, Event
 

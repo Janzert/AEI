@@ -27,10 +27,7 @@ import os
 
 from threading import Thread, Event
 from subprocess import Popen, PIPE
-try:
-    from Queue import Queue, Empty
-except ModuleNotFoundError:
-    from queue import Queue, Empty
+from queue import Queue, Empty
 
 if sys.platform == 'win32':
     import ctypes

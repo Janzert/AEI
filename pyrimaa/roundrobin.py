@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import print_function
-
 import logging
 import re
 import socket
@@ -29,12 +27,7 @@ import sys
 import time
 
 from argparse import ArgumentParser
-try:
-    from ConfigParser import SafeConfigParser, NoOptionError
-    ConfigParser = SafeConfigParser
-except ModuleNotFoundError:
-    from configparser import ConfigParser, NoOptionError
-    xrange = range
+from configparser import ConfigParser, NoOptionError
 
 from pyrimaa import aei
 from pyrimaa.game import Game
@@ -249,7 +242,7 @@ def main(args=None):
             return 1
 
     start_time = time.time()
-    for round_num in xrange(cfg.rounds):
+    for round_num in range(cfg.rounds):
         for bot_ix, bot in enumerate(bots[:-1]):
             for opp in bots[bot_ix + 1:]:
                 if bot['gold'] <= opp['gold']:

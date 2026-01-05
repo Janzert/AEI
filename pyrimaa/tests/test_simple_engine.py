@@ -21,10 +21,7 @@
 import re
 import unittest
 from subprocess import Popen, PIPE, STDOUT
-try:
-    from Queue import Queue, Empty
-except:
-    from queue import Queue, Empty
+from queue import Queue, Empty
 
 
 from pyrimaa import simple_engine

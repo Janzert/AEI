@@ -25,12 +25,8 @@ import os.path
 import sys
 import time
 
-try:
-    from ConfigParser import Error as ConfigError
-    from ConfigParser import SafeConfigParser as ConfigParser
-except ModuleNotFoundError:
-    from configparser import Error as ConfigError
-    from configparser import ConfigParser
+from configparser import Error as ConfigError
+from configparser import ConfigParser
 
 from pyrimaa import gameroom
 

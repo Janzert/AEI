@@ -26,8 +26,8 @@ Basic examples of using the scripts can be found in the file ``usage.rst``.
 
 The pyrimaa package also includes modules implementing the controller side of
 the AEI protocol (``aei.py``), the Arimaa position representation (as bitboards
-in ``board.py`` and x88 in ``x88board.py``), and a few utility functions for
-handling Arimaa timecontrols (``util.py``).
+in ``board.py``), and a few utility functions for handling Arimaa timecontrols
+(``util.py``).
 
 Installation
 ------------
