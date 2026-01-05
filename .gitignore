@@ -16,6 +16,7 @@ roundrobin.cfg
 # Testing
 .coverage
 /htmlcov
+coverage.xml
 .pytest_cache/
 .tox/
 

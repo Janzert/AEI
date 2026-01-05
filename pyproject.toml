@@ -38,8 +38,34 @@ pyrimaa_tests = "pyrimaa.test_runner:main"
 roundrobin = "pyrimaa.roundrobin:main"
 simple_engine = "pyrimaa.simple_engine:main"
 
+[project.optional-dependencies]
+dev = [
+    "coverage[toml]>=7.0",
+]
+
 [tool.setuptools]
 packages = ["pyrimaa", "pyrimaa.tests"]
 
 [tool.setuptools.package-data]
 "*" = ["*.txt", "*.rst", "*example.cfg"]
+
+[tool.coverage.run]
+source = ["pyrimaa"]
+omit = [
+    "pyrimaa/tests/*",
+    "pyrimaa/test_runner.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
