@@ -29,18 +29,30 @@ the AEI protocol (``aei.py``), the Arimaa position representation (as bitboards
 in ``board.py`` and x88 in ``x88board.py``), and a few utility functions for
 handling Arimaa timecontrols (``util.py``).
 
-If you have python2 and pip on your machine you can install the latest
-release with::
+Installation
+------------
+
+Using uv (recommended)
+~~~~~~~~~~~~~~~~~~~~~~
+
+If you have `uv <https://docs.astral.sh/uv/>`_ installed, you can install
+the latest release with::
+
+    uv pip install aei
+
+Or install from the source directory::
+
+    uv pip install .
+
+Using pip
+~~~~~~~~~
+
+You can also install with pip::
 
     pip install aei
 
-On an operating system with a system supplied python you probably want to keep
-the aei install separate from your system installed packages. To accomplish
-that you can use either a virtualenv or user install.  A user install is done
-simply by adding the ``--user`` option::
+For development, you can install in editable mode::
 
-    pip install --user aei
-
-AEI may also be built and installed with
-
-    python setup.py install
+    uv pip install -e .
+    # or with pip:
+    pip install -e .

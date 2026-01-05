@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "AEI"
+version = "1.4.0"
+description = "Arimaa Engine Interface tools"
+readme = "readme.rst"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Janzert", email = "janzert@janzert.com"}
+]
+keywords = ["Arimaa"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Developers",
+    "Topic :: Games/Entertainment :: Board Games",
+]
+
+[project.urls]
+Homepage = "https://arimaa.janzert.com/aei"
+"Source Code" = "https://github.com/janzert/aei"
+
+[project.scripts]
+analyze = "pyrimaa.analyze:main"
+gameroom = "pyrimaa.gameroom:main"
+postal_controller = "pyrimaa.postal_controller:main"
+pyrimaa_tests = "pyrimaa.test_runner:main"
+roundrobin = "pyrimaa.roundrobin:main"
+simple_engine = "pyrimaa.simple_engine:main"
+
+[tool.setuptools]
+packages = ["pyrimaa", "pyrimaa.tests"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.rst", "*example.cfg"]
