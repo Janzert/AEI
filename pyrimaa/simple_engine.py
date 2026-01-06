@@ -21,12 +21,17 @@
 
 import sys
 import time
-from queue import Queue, Empty
+from queue import Empty, Queue
+from threading import Event, Thread
 
-from threading import Thread, Event
-
-from pyrimaa.board import (BASIC_SETUP, BLANK_BOARD, Color, parse_short_pos,
-                           Position, IllegalMove)
+from pyrimaa.board import (
+    BASIC_SETUP,
+    BLANK_BOARD,
+    Color,
+    IllegalMove,
+    Position,
+    parse_short_pos,
+)
 
 
 class _ComThread(Thread):
@@ -63,7 +68,7 @@ class AEIEngine(object):
         try:
             header = controller.messages.get(30)
         except Empty:
-            raise AEIException("Timed out waiting for aei header")
+            raise AEIException("Timed out waiting for aei header") from None
         if header != "aei":
             raise AEIException("Did not receive aei header, instead (%s)" %
                                (header))
@@ -83,10 +88,10 @@ class AEIEngine(object):
         self.insetup = False
 
     def setoption(self, name, value):
-        std_opts = set(["tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
-                        "tcturns", "tcturntime", "greserve", "sreserve",
-                        "gused", "sused", "lastmoveused", "moveused",
-                        "opponent", "opponent_rating"])
+        std_opts = {"tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
+                    "tcturns", "tcturntime", "greserve", "sreserve",
+                    "gused", "sused", "lastmoveused", "moveused",
+                    "opponent", "opponent_rating"}
         if name == "checkmoves":
             self.strict_checks = value.lower().strip() not in ["false", "no", "0"]
         elif name == "delaymove":
@@ -98,7 +103,7 @@ class AEIEngine(object):
         try:
             self.position = self.position.do_move_str(move_str,
                                                       self.strict_checks)
-        except IllegalMove as exc:
+        except IllegalMove:
             self.log("Error: received illegal move %s" % (move_str,))
             return False
         if self.insetup and self.position.color == Color.GOLD:

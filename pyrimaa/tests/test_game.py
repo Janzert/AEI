@@ -19,13 +19,11 @@
 # THE SOFTWARE
 
 import socket
-import time
 import unittest
-
 from collections import defaultdict
 
 import pyrimaa.game
-from pyrimaa.board import Color, Position, BASIC_SETUP, IllegalMove
+from pyrimaa.board import BASIC_SETUP, Color, Position
 from pyrimaa.game import Game
 from pyrimaa.util import TimeControl
 
@@ -319,11 +317,11 @@ class MockResponse(object):
 
 
 class MockEngine(object):
-    def __init__(self, delay=None, moves=goal_moves, isready=[]):
+    def __init__(self, delay=None, moves=goal_moves, isready=None):
         self.moves = moves
         self.delay = delay
         self.protocol_version = 1
-        self.isready_resp = isready
+        self.isready_resp = isready if isready is not None else []
         self.stopCount = 0
         self.stopMove = None
         self.curtime = 10

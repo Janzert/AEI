@@ -19,10 +19,11 @@
 # THE SOFTWARE.
 
 import math
-import sys
 import random
+import sys
 import time
 from argparse import ArgumentParser
+
 
 class Color:
     GOLD = 0
@@ -160,12 +161,12 @@ def _generate_zobrist_keys():
     ZOBRIST_KEYS[0] = _zobrist_newkey(used_keys, rnd)
     for piece in range(Piece.COUNT):
         ZOBRIST_KEYS[2].append([])
-        for index in range(64):
+        for _ in range(64):
             if piece == Piece.EMPTY:
                 ZOBRIST_KEYS[2][piece].append(0)
             else:
                 ZOBRIST_KEYS[2][piece].append(_zobrist_newkey(used_keys, rnd))
-    for step in range(5):
+    for _ in range(5):
         ZOBRIST_KEYS[1].append(_zobrist_newkey(used_keys, rnd))
 
 
@@ -477,7 +478,7 @@ class Position(object):
         bit = 1 << index
         if not self.bitBoards[Piece.EMPTY] & bit:
             raise ValueError("Tried to place a piece on another piece")
-        newBoards = [b for b in self.bitBoards]
+        newBoards = list(self.bitBoards)
         newPlacement = [self.placement[0], self.placement[1]]
         newBoards[piece] |= bit
         newBoards[Piece.EMPTY] &= ~bit
@@ -499,7 +500,7 @@ class Position(object):
         while (self.bitBoards[piece] is None or
                not (self.bitBoards[piece] & bit)):
             piece += 1
-        newBoards = [b for b in self.bitBoards]
+        newBoards = list(self.bitBoards)
         newPlacement = [self.placement[0], self.placement[1]]
         newBoards[piece] &= ~bit
         newBoards[Piece.EMPTY] |= bit
@@ -530,7 +531,6 @@ class Position(object):
             __nonzero__ = __bool__
 
         bitboards = self.bitBoards
-        placement = self.placement
         from_bit = 1 << step[0]
         to_bit = 1 << step[1]
         if from_bit & bitboards[Piece.EMPTY]:
@@ -629,7 +629,7 @@ class Position(object):
         stepsLeft = self.stepsLeft
         color = self.color
         zobrist = self._zhash
-        newBoards = [b for b in bitBoards]
+        newBoards = list(bitBoards)
         newPlacement = [placement[0], placement[1]]
         from_ix = step[0]
         from_bit = 1 << from_ix
@@ -717,7 +717,7 @@ class Position(object):
             result = self.do_move(steps, strict_checks)
         except ValueError as exc:
             if str(exc) == "Can't represent placing step":
-                bitboards = [b for b in self.bitBoards]
+                bitboards = list(self.bitBoards)
                 available = {
                     Piece.GRABBIT: 8,
                     Piece.GCAT: 2,
@@ -728,7 +728,7 @@ class Position(object):
                 }
                 for step_str in move_str.split():
                     if len(step_str) != 3:
-                        raise IllegalMove("Found mixture of step types")
+                        raise IllegalMove("Found mixture of step types") from None
                     piece = Piece.PCHARS.index(step_str[0])
                     ix = alg_to_index(step_str[1:])
                     bit = 1 << ix
@@ -736,13 +736,15 @@ class Position(object):
                         self._check_setup_step(piece, ix, bitboards, available)
                         available[piece & ~Piece.COLOR] -= 1
                     if not bitboards[Piece.EMPTY] & bit:
-                        raise IllegalMove("Tried to place a piece onto another")
+                        raise IllegalMove(
+                            "Tried to place a piece onto another"
+                        ) from None
                     bitboards[piece] |= bit
                     bitboards[Piece.EMPTY] &= ~bit
                 if strict_checks:
                     not_placed = [p[0] for p in available.items() if p[1] > 0]
                     if not_placed:
-                        raise IllegalMove("Did not place all pieces in setup")
+                        raise IllegalMove("Did not place all pieces in setup") from None
 
                 result = Position(self.color ^ 1, 4, bitboards)
             else:
@@ -789,7 +791,7 @@ class Position(object):
                     to_ix = bit_to_index(to_bit)
                     # create new position
                     # make copies of the current boards
-                    newBoards = [b for b in bitboards]
+                    newBoards = list(bitboards)
                     newPlacement = [placementBoards[0], placementBoards[1]]
                     # update the new bitboards
                     step_bits = from_bit | to_bit
@@ -1052,7 +1054,7 @@ def parse_move(line):
 def parse_long_pos(text):
     """ Parse a position from a long format string """
     text = [x.strip() for x in text]
-    for emptynum, line in enumerate(text):
+    for emptynum, line in enumerate(text): # noqa: B007
         if line:
             break
     text = text[emptynum:]
@@ -1078,7 +1080,7 @@ def parse_long_pos(text):
     if text[1] != "+-----------------+":
         raise ValueError("Board does not start after move line")
     ranknum = 7
-    bitboards = [b for b in BLANK_BOARD]
+    bitboards = list(BLANK_BOARD)
     for line in text[2:10]:
         if not line[0].isdigit() or int(line[0]) - 1 != ranknum:
             raise ValueError("Unexpected rank number at rank %d" % (ranknum + 1,))
@@ -1121,14 +1123,15 @@ def parse_short_pos(side, stepsleft, text):
         raise ValueError("Invalid steps left passed into parse_short_pos, %d" %
                          (stepsleft))
 
-    bitboards = [b for b in BLANK_BOARD]
+    bitboards = list(BLANK_BOARD)
     for place, piecetext in enumerate(text[1:-1]):
         if piecetext != ' ':
             try:
                 piece = Piece.PCHARS.index(piecetext)
             except ValueError:
-                raise ValueError("Invalid piece at position %d, %s" %
-                                 (place, piecetext))
+                raise ValueError(
+                    "Invalid piece at position %d, %s" % (place, piecetext)
+                ) from None
             index = sq_to_index(place % 8, 7 - (place // 8))
             bit = 1 << index
             bitboards[piece] |= bit
@@ -1212,7 +1215,7 @@ def test_rnd_steps():
     total_turns = 0
     goal_wins = 0
     immo_wins = 0
-    for i in range(100):
+    for _ in range(100):
         pos = Position(Color.GOLD, 4, BASIC_SETUP)
 
         turn = 3
@@ -1304,7 +1307,7 @@ def main(args=None):
         for j in range(64):
             tstep = (i, j)
             check_resp = pos.check_step(tstep)
-            if check_resp and not tstep in real_steps:
+            if check_resp and tstep not in real_steps:
                 print("check_step thought %s to %s was valid step %d,%d" % (
                     index_to_alg(tstep[0]), index_to_alg(tstep[1]), tstep[0],
                     tstep[1]))

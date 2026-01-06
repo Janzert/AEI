@@ -38,20 +38,21 @@ removed in the future)
 
 """
 
-import optparse
 import logging
+import optparse
 import os
 import os.path
+import re
 import signal
 import socket
-import traceback
 import sys
-import re
 import time
+import traceback
 from configparser import ConfigParser, NoOptionError
-from urllib.parse import urlencode
-from urllib.request import Request as URLRequest, urlopen
 from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import Request as URLRequest
+from urllib.request import urlopen
 
 from pyrimaa import aei
 
@@ -143,7 +144,7 @@ def unquote(qstr):
 
 def parsebody(body):
     """Parse a message from the server returning a dict."""
-    data = dict()
+    data = {}
     lines = body.splitlines()
     for line in lines:
         equal_ix = line.find('=')
@@ -204,7 +205,7 @@ class Table:
         except socket.error as exc:
             if (hasattr(exc, "args") and len(exc.args) > 0 and
                 exc.args[0] == 32):
-                raise EngineCrashException("Socket reset")
+                raise EngineCrashException("Socket reset") from exc
             else:
                 raise
 
@@ -219,17 +220,17 @@ class Table:
 
     def reserveseat(self):
         gameroom = self.gameroom
-        values = dict(gid=self.gid,
-                      side=self.side,
-                      sid=gameroom.sid,
-                      action="reserve")
+        values = {"gid": self.gid,
+                      "side": self.side,
+                      "sid": gameroom.sid,
+                      "action": "reserve"}
         self.seat = post(gameroom.url, values, "Table.reserveseat")
         self.url = self.seat['base'] + '/' + self.seat['cgi']
 
     def sitdown(self):
-        values = dict(sid=self.seat['tid'],
-                      grid=self.seat['grid'],
-                      action="sit")
+        values = {"sid": self.seat['tid'],
+                      "grid": self.seat['grid'],
+                      "action": "sit"}
         response = post(self.url, values, "Table.sitdown")
         try:
             self.sid = response['sid']
@@ -237,7 +238,7 @@ class Table:
             pass
 
     def leave(self):
-        values = dict(sid=self.sid, auth=self.auth, action="leave")
+        values = {"sid": self.sid, "auth": self.auth, "action": "leave"}
         try:
             response = post(self.url, values, "Table.leave")
         except URLError:
@@ -252,10 +253,10 @@ class Table:
         lastchange = 0
         if (self.state and (self.state.get('lastchange', "") != "")):
             lastchange = self.state['lastchange']
-        values = dict(sid=self.sid,
-                      what="gamestate",
-                      wait=0,
-                      lastchange=lastchange)
+        values = {"sid": self.sid,
+                      "what": "gamestate",
+                      "wait": 0,
+                      "lastchange": lastchange}
         if wait:
             values['wait'] = 1
             values['maxwait'] = wait
@@ -266,7 +267,7 @@ class Table:
         return gamestate
 
     def startgame(self):
-        values = dict(sid=self.sid, action="startmove", auth=self.auth)
+        values = {"sid": self.sid, "action": "startmove", "auth": self.auth}
         response = post(self.url, values, "Table.startgame")
         try:
             ret = bool(int(response.get('ok', 0)))
@@ -275,7 +276,7 @@ class Table:
         return ret
 
     def move(self, move):
-        values = dict(sid=self.sid, action="move", move=move, auth=self.auth)
+        values = {"sid": self.sid, "action": "move", "move": move, "auth": self.auth}
         if move.lower() == "resign":
             values['action'] = "resign"
             values['move'] = ""
@@ -287,10 +288,10 @@ class Table:
         return ret
 
     def chat(self, message):
-        values = dict(sid=self.sid,
-                      action="chat",
-                      chat=message,
-                      auth=self.auth)
+        values = {"sid": self.sid,
+                      "action": "chat",
+                      "chat": message,
+                      "auth": self.auth}
         response = post(self.url, values, "Table.chat")
         try:
             ret = bool(int(response.get('ok', 0)))
@@ -537,7 +538,7 @@ class GameRoom:
         self.sid = None
 
     def login(self, username, password):
-        values = dict(username=username, password=password, action="login")
+        values = {"username": username, "password": password, "action": "login"}
         response = post(self.url, values, "GameRoom.login")
         self.sid = response['sid']
         log.info("Logged into gameroom as %s", username)
@@ -546,7 +547,7 @@ class GameRoom:
         if not self.sid:
             log.warning("GameRoom.logout called before sid set.")
             return '0'
-        values = dict(sid=self.sid, action="leave")
+        values = {"sid": self.sid, "action": "leave"}
         response = post(self.url, values, "GameRoom.logout")
         try:
             ret = bool(int(response['ok']))
@@ -563,28 +564,28 @@ class GameRoom:
         if (side != 'b') and (side != 'w'):
             raise ValueError("Invalid value for side, %s" % (side))
 
-        values = dict(timecontrol=timecontrol,
-                      rated=rated,
-                      side=side,
-                      sid=self.sid,
-                      action="newGame")
+        values = {"timecontrol": timecontrol,
+                      "rated": rated,
+                      "side": side,
+                      "sid": self.sid,
+                      "action": "newGame"}
         tableinfo = post(self.url, values, "GameRoom.newgame")
         tableinfo = parsebody(list(tableinfo.values())[0])
         return Table(self, tableinfo)
 
     def mygames(self):
-        values = dict(sid=self.sid, what="myGames")
+        values = {"sid": self.sid, "what": "myGames"}
         gamedata = post(self.url, values, "GameRoom.mygames")
-        games = list()
+        games = []
         for gameid, gameinfo in gamedata.items():
             if re.match(r"\d+:[wb]", gameid):
                 games.append(parsebody(gameinfo))
         return games
 
     def opengames(self):
-        values = dict(sid=self.sid, what="join")
+        values = {"sid": self.sid, "what": "join"}
         gamedata = post(self.url, values, "GameRoom.opengames")
-        games = list()
+        games = []
         for gameid, gameinfo in gamedata.items():
             if re.match(r"\d+:[wb]", gameid):
                 games.append(parsebody(gameinfo))
@@ -609,20 +610,20 @@ def parseargs(args):
     parser.add_option('-b', '--bot',
                       help="bot section to use from configuration.")
     options, args = parser.parse_args(args)
-    ret = dict()
+    ret = {}
     ret['config'] = options.config
     ret['bot'] = options.bot
     if len(args) < 2:
-        ret.update(dict(against='', side='b', onemove=False))
+        ret.update({"against": '', "side": 'b', "onemove": False})
         return ret
     first = args[1].lower()
     if len(first) == 1 and first in "wbgs":
-        ret.update(dict(against='', side=first, onemove=False))
+        ret.update({"against": '', "side": first, "onemove": False})
         return ret
     if first == "play" or first == "move":
         if len(args) < 3:
             raise ValueError("Not enough arguments given for command")
-        ret.update(dict(against=args[2].lower()))
+        ret.update({"against": args[2].lower()})
         if len(args) > 3:
             ret['side'] = args[3].lower()
         else:
@@ -717,7 +718,7 @@ def shutdown_engine(engine_ctl):
         engine_ctl.quit()
     except (socket.error, IOError):
         pass
-    for i in range(30):
+    for _ in range(30):
         if engine_ctl.engine.proc.poll() is not None:
             break
         time.sleep(1)
@@ -888,7 +889,7 @@ def run_game(options, config):
                             table = Table(gameroom, game)
                             log.info("Found in progress game")
                             break
-                if table == None:
+                if table is None:
                     games = gameroom.opengames()
                     for game in games:
                         if (gameid_or_opponent == game['player'].lower() or
@@ -899,7 +900,7 @@ def run_game(options, config):
                                 table = Table(gameroom, game)
                                 log.info("Found game to join")
                                 break
-                if table == None:
+                if table is None:
                     log.error("Could not find game against %s with side '%s'",
                               gameid_or_opponent, side)
                     engine_ctl.quit()

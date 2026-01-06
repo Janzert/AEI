@@ -23,7 +23,6 @@ import logging
 import socket
 import sys
 import time
-
 from argparse import ArgumentParser
 from configparser import ConfigParser, NoOptionError
 
@@ -37,8 +36,8 @@ class ParseError(Exception):
 
 
 def parse_start(start_lines, stop_move=None):
-    start_lines = [l.strip() for l in start_lines]
-    start_lines = [l for l in start_lines if l]
+    start_lines = [line.strip() for line in start_lines]
+    start_lines = [line for line in start_lines if line]
     while start_lines and not start_lines[0][0].isdigit():
         del start_lines[0]
     if not start_lines:
@@ -146,12 +145,12 @@ def get_config(args=None):
         print("Add cmdline option for engine %s" % (args.bot, ))
         sys.exit(1)
 
-    args.bot_options = list()
+    args.bot_options = []
     for option in config.options(args.bot):
         if option.startswith("bot_"):
             value = config.get(args.bot, option)
             args.bot_options.append((option[4:], value))
-    args.post_options = list()
+    args.post_options = []
     for option in config.options(args.bot):
         if option.startswith("post_pos_"):
             value = config.get(args.bot, option)

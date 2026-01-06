@@ -19,8 +19,8 @@
 # THE SOFTWARE
 
 import logging
-import time
 import socket
+import time
 from collections import defaultdict
 
 from pyrimaa.board import BLANK_BOARD, Color, IllegalMove, Position

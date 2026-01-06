@@ -53,7 +53,7 @@ def _parse_timefield(full_field, start_unit="m"):
 
 def _time_str(seconds):
     units = [("d", 60 * 60 * 24), ("h", 60 * 60), ("m", 60)]
-    out = list()
+    out = []
     for tag, length in units:
         span = seconds // length
         if span != 0:

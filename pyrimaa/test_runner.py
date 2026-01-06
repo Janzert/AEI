@@ -68,7 +68,10 @@ def main():
     if coverage_requested and not HAS_COVERAGE:
         print("ERROR: coverage.py not installed.", file=sys.stderr)
         print("Install with: uv pip install coverage", file=sys.stderr)
-        print("Or install dev dependencies: uv pip install -e \".[dev]\"", file=sys.stderr)
+        print(
+            "Or install dev dependencies: uv pip install -e \".[dev]\"",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Initialize coverage if requested

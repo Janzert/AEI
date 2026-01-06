@@ -24,9 +24,8 @@ import optparse
 import os.path
 import sys
 import time
-
+from configparser import ConfigParser, NoOptionError
 from configparser import Error as ConfigError
-from configparser import ConfigParser
 
 from pyrimaa import gameroom
 

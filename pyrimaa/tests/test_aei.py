@@ -225,7 +225,7 @@ class EngineControllerTest(unittest.TestCase):
         self.assertIsInstance(resp, EngineResponse)
         self.assertEqual(resp.type, "log")
         self.assertEqual(resp.message,
-                         eng.expected[eng.event - 1][1].lstrip("log "))
+                         eng.expected[eng.event - 1][1].split("log ", 1)[1])
         ctl.setoption("depth", 4)
         ctl.newgame()
         pos = board.Position(board.Color.GOLD, 4, board.BASIC_SETUP)
@@ -235,11 +235,11 @@ class EngineControllerTest(unittest.TestCase):
         resp = ctl.get_response()
         self.assertEqual(resp.type, "info")
         self.assertEqual(resp.message,
-                         eng.expected[eng.event - 1][1].lstrip("info "))
+                         eng.expected[eng.event - 1][1].split("info ", 1)[1])
         resp = ctl.get_response()
         self.assertEqual(resp.type, "bestmove")
         self.assertEqual(resp.move,
-                         eng.expected[eng.event - 1][1].lstrip("bestmove "))
+                         eng.expected[eng.event - 1][1].split("bestmove ", 1)[1])
         ctl.makemove("Hb2n Ed2n")
         ctl.go("ponder")
         ctl.quit()

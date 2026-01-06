@@ -19,15 +19,12 @@
 # THE SOFTWARE.
 
 import logging
-import time
-import signal
 import socket
 import sys
-import os
-
-from threading import Thread, Event
-from subprocess import Popen, PIPE
-from queue import Queue, Empty
+import time
+from queue import Empty, Queue
+from subprocess import PIPE, Popen
+from threading import Event, Thread
 
 if sys.platform == 'win32':
     import ctypes
@@ -150,7 +147,7 @@ class StdioEngine:
         try:
             msg = self.proc_com.outq.get(timeout=timeout)
         except Empty:
-            raise socket.timeout()
+            raise socket.timeout() from None
         return msg
 
     def waitfor(self, expect, timeout=0.5):
@@ -345,12 +342,12 @@ class EngineController:
         self.engine = engine
         try:
             engine.send("aei\n")
-        except IOError:
-            raise EngineException("Could not send initial message to engine.")
+        except IOError as exc:
+            raise EngineException("Could not send initial message to engine.") from exc
         try:
             response = engine.waitfor("aeiok", START_TIME)
-        except socket.timeout:
-            raise EngineException("No aeiok received from engine.")
+        except socket.timeout as exc:
+            raise EngineException("No aeiok received from engine.") from exc
 
         self.protocol_version = 0
         if response[0].lstrip().startswith("protocol-version"):
@@ -364,7 +361,7 @@ class EngineController:
                         (version, ))
                 engine.log.info("Setting aei protocol to version 1")
 
-        self.ident = dict()
+        self.ident = {}
         for line in response:
             line = line.lstrip()
             if line.startswith('id'):

@@ -20,9 +20,8 @@
 
 import re
 import unittest
-from subprocess import Popen, PIPE, STDOUT
-from queue import Queue, Empty
-
+from queue import Empty, Queue
+from subprocess import PIPE, STDOUT, Popen
 
 from pyrimaa import simple_engine
 
@@ -30,7 +29,7 @@ from pyrimaa import simple_engine
 class MockController:
     def __init__(self):
         self.messages = Queue()
-        self.eng_messages = list()
+        self.eng_messages = []
         class MockEvent:
             def __init__(self):
                 self.stopped = False
@@ -68,7 +67,10 @@ class EngineTest(unittest.TestCase):
             "go",
             "stop",
             "newgame",
-            "setposition g [rrrrrrrrdhcemchd                               DDHCMECH RRRRRRRR]",
+            (
+                "setposition g "
+                "[rrrrrrrrdhcemchd                               DDHCMECH RRRRRRRR]"
+            ),
             "isready",
             "makemove Dh3n Dh4w Dg4n Dg5w",
             "go",

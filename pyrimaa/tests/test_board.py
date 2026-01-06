@@ -175,7 +175,7 @@ class BoardTest(unittest.TestCase):
     def test_get_rnd_step_move(self):
         random.seed(1003)
         move_num, position = board.parse_long_pos(INDUCE_NULL_MOVE_POS)
-        for i in range(100):
+        for _ in range(100):
             position.get_rnd_step_move()
 
     def test_utility(self):
@@ -356,9 +356,23 @@ class BoardTest(unittest.TestCase):
         extra_move_num, extra_move_pos = board.parse_long_pos(extra_move_board)
         self.assertEqual(parsed_pos, extra_move_pos)
 
-        self.assertRaises(ValueError, board.parse_short_pos, 3, 4, BASIC_SETUP_SHORT)
-        self.assertRaises(ValueError, board.parse_short_pos, board.Color.GOLD, 5, BASIC_SETUP_SHORT)
-        self.assertRaises(ValueError, board.parse_short_pos, board.Color.GOLD, -1, BASIC_SETUP_SHORT)
+        self.assertRaises(
+            ValueError, board.parse_short_pos, 3, 4, BASIC_SETUP_SHORT
+        )
+        self.assertRaises(
+            ValueError,
+            board.parse_short_pos,
+            board.Color.GOLD,
+            5,
+            BASIC_SETUP_SHORT,
+        )
+        self.assertRaises(
+            ValueError,
+            board.parse_short_pos,
+            board.Color.GOLD,
+            -1,
+            BASIC_SETUP_SHORT,
+        )
         module_pos = board.Position(board.Color.GOLD, 4, board.BASIC_SETUP)
         parsed_pos = board.parse_short_pos(board.Color.GOLD, 4, BASIC_SETUP_SHORT)
         self.assertEqual(parsed_pos, module_pos)

@@ -22,8 +22,8 @@
 import argparse
 import socket
 import sys
-from subprocess import Popen, PIPE
-from threading import Thread, Event
+from subprocess import PIPE, Popen
+from threading import Event, Thread
 
 
 class _ProcCom(Thread):

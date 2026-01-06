@@ -21,11 +21,8 @@
 # THE SOFTWARE.
 
 import logging
-import re
-import socket
 import sys
 import time
-
 from argparse import ArgumentParser
 from configparser import ConfigParser, NoOptionError
 
@@ -108,7 +105,9 @@ def get_config(args=None):
     args.ini = config
     args.bot_sections = set(config.sections())
     if "global" not in args.bot_sections:
-        raise ConfigError("Did not find expected 'global' section in configuration file.")
+        raise ConfigError(
+            "Did not find expected 'global' section in configuration file."
+        )
     args.bot_sections.remove('global')
 
     try:
@@ -159,7 +158,7 @@ def get_config(args=None):
         except NoOptionError:
             args.bots = args.bot_sections
 
-    args.global_options = list()
+    args.global_options = []
     for option, value in config.items("global"):
         if option.startswith("bot_"):
             args.global_options.append((option[4:], value))
@@ -225,7 +224,7 @@ def main(args=None):
                     'gold': 0,
                     'wins': 0,
                     'timeouts': 0,
-                    'reasons': dict()
+                    'reasons': {}
                 }
                 if cfg.ini.has_option(bsection, "timecontrol"):
                     tctl_str = cfg.ini.get(bsection, "timecontrol")
@@ -303,7 +302,7 @@ def main(args=None):
                     pgn_file.flush()
 
                 # give the engines up to 30 more seconds to exit normally
-                for i in range(30):
+                for _ in range(30):
                     if (not gengine.is_running() and not sengine.is_running()):
                         break
                     time.sleep(1)

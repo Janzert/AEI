@@ -22,10 +22,9 @@ import logging
 import os
 import sys
 import unittest
-from io import StringIO
-from importlib import reload
-
 from contextlib import contextmanager
+from importlib import reload
+from io import StringIO
 from tempfile import NamedTemporaryFile
 
 from pyrimaa import aei, analyze, board
@@ -33,8 +32,8 @@ from pyrimaa import aei, analyze, board
 
 @contextmanager
 def get_temps(num=1):
-    tmps = list()
-    for i in range(num):
+    tmps = []
+    for _ in range(num):
         tmps.append(NamedTemporaryFile(delete=False))
     try:
         yield tmps
