@@ -29,11 +29,15 @@ log = logging.getLogger("game")
 
 
 class Game(object):
-    def __init__(self, gold, silver,
-                 timecontrol=None,
-                 start_position=None,
-                 strict_setup=True,
-                 min_timeleft=None):
+    def __init__(
+        self,
+        gold,
+        silver,
+        timecontrol=None,
+        start_position=None,
+        strict_setup=True,
+        min_timeleft=None,
+    ):
         self.engines = (gold, silver)
         try:
             self.timecontrol = timecontrol[0]
@@ -59,19 +63,20 @@ class Game(object):
             if start_position:
                 eng.setposition(start_position)
             resps = eng.isready()
-            side = "gs" [self.engines.index(eng)]
+            side = "gs"[self.engines.index(eng)]
             eng_name = eng.ident["name"]
             for response in resps:
                 if response.type == "info":
-                    log.info("%s (%s) info: %s", eng_name, side,
-                             response.message)
+                    log.info("%s (%s) info: %s", eng_name, side, response.message)
                 elif response.type == "log":
-                    log.info("%s (%s) log: %s", eng_name, side,
-                             response.message)
+                    log.info("%s (%s) log: %s", eng_name, side, response.message)
                 else:
                     log.warn(
                         "Unexpected response while initializing %s (%s) (%s).",
-                        eng_name, side, response.type)
+                        eng_name,
+                        side,
+                        response.type,
+                    )
 
         self.insetup = False
         self.position = start_position
@@ -165,11 +170,19 @@ class Game(object):
                 if resp.type == "bestmove":
                     break
                 if resp.type == "info":
-                    log.info("%s (%s) info: %s", engine.ident["name"],
-                             "gs" [side], resp.message)
+                    log.info(
+                        "%s (%s) info: %s",
+                        engine.ident["name"],
+                        "gs"[side],
+                        resp.message,
+                    )
                 elif resp.type == "log":
-                    log.info("%s (%s) log: %s", engine.ident["name"],
-                             "gs" [side], resp.message)
+                    log.info(
+                        "%s (%s) log: %s",
+                        engine.ident["name"],
+                        "gs"[side],
+                        resp.message,
+                    )
             except socket.timeout:
                 pass
         moveend = time.time()
@@ -179,9 +192,8 @@ class Game(object):
                 return (self.limit_winner, "s")
             else:
                 return (side ^ 1, "t")
-        if not resp or resp.type != "bestmove": # pragma: no cover
-            raise RuntimeError(
-                "Stopped waiting without a timeout or a move")
+        if not resp or resp.type != "bestmove":  # pragma: no cover
+            raise RuntimeError("Stopped waiting without a timeout or a move")
         if tc:
             if not self.insetup:
                 reserve_change = tc.move - (moveend - movestart)
@@ -191,17 +203,13 @@ class Game(object):
                     reserve_change *= tc.percent / 100.0
                 self.reserves[side] += reserve_change
                 if tc.max_reserve:
-                    self.reserves[side] = min(self.reserves[side],
-                                              tc.max_reserve)
+                    self.reserves[side] = min(self.reserves[side], tc.max_reserve)
         move = resp.move
         if move.lower() == "resign":
             return (side ^ 1, "r")
-        self.moves.append("%d%s %s" % (self.movenumber,
-                                       "gs" [position.color], move))
+        self.moves.append("%d%s %s" % (self.movenumber, "gs"[position.color], move))
         if self.insetup:
-            position = position.do_move_str(
-                move,
-                strict_checks=self.strict_setup)
+            position = position.do_move_str(move, strict_checks=self.strict_setup)
         else:
             position = position.do_move_str(move)
         if position.bitBoards == self.position.bitBoards:

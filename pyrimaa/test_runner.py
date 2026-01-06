@@ -27,6 +27,7 @@ import unittest
 # Try to import coverage, but make it optional
 try:
     import coverage
+
     HAS_COVERAGE = True
 except ImportError:
     HAS_COVERAGE = False
@@ -35,29 +36,30 @@ except ImportError:
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
-        description='Run pyrimaa test suite with optional code coverage'
+        description="Run pyrimaa test suite with optional code coverage"
     )
     parser.add_argument(
-        '--coverage',
-        action='store_true',
-        help='Enable code coverage reporting (terminal output)'
+        "--coverage",
+        action="store_true",
+        help="Enable code coverage reporting (terminal output)",
     )
     parser.add_argument(
-        '--coverage-html',
-        action='store_true',
-        help='Generate HTML coverage report (implies --coverage)'
+        "--coverage-html",
+        action="store_true",
+        help="Generate HTML coverage report (implies --coverage)",
     )
     parser.add_argument(
-        '--coverage-xml',
-        action='store_true',
-        help='Generate XML coverage report for CI/CD (implies --coverage)'
+        "--coverage-xml",
+        action="store_true",
+        help="Generate XML coverage report for CI/CD (implies --coverage)",
     )
     parser.add_argument(
-        '-v', '--verbosity',
+        "-v",
+        "--verbosity",
         type=int,
         default=2,
         choices=[0, 1, 2],
-        help='Test output verbosity: 0=quiet, 1=normal, 2=verbose (default: 2)'
+        help="Test output verbosity: 0=quiet, 1=normal, 2=verbose (default: 2)",
     )
     args = parser.parse_args()
 
@@ -69,7 +71,7 @@ def main():
         print("ERROR: coverage.py not installed.", file=sys.stderr)
         print("Install with: uv pip install coverage", file=sys.stderr)
         print(
-            "Or install dev dependencies: uv pip install -e \".[dev]\"",
+            'Or install dev dependencies: uv pip install -e ".[dev]"',
             file=sys.stderr,
         )
         sys.exit(1)
@@ -92,9 +94,9 @@ def main():
         cov.save()
 
         # Always show terminal report if coverage was enabled
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("Coverage Report")
-        print("="*70)
+        print("=" * 70)
         cov.report()
 
         # Generate HTML report if requested

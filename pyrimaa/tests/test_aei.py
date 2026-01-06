@@ -45,12 +45,12 @@ class MockEngine:
             self.event += 1
             raise expected[1]
         if expected[0] != "s":
-            raise Exception("Mock engine send called when expecting, %s" %
-                            (expected, ))
+            raise Exception("Mock engine send called when expecting, %s" % (expected,))
         if msg.rstrip() != expected[1]:
             raise Exception(
                 "Mock engine send called with unexpected message (%s) expected (%s)."
-                % (msg, expected[1]))
+                % (msg, expected[1])
+            )
         self.event += 1
 
     def readline(self, timeout=None):
@@ -58,8 +58,9 @@ class MockEngine:
             raise Exception("Mock engine readline called after cleanup.")
         expected = self.expected[self.event]
         if expected[0] != "r":
-            raise Exception("Mock engine readline called when expecting, %s" %
-                            (expected[1], ))
+            raise Exception(
+                "Mock engine readline called when expecting, %s" % (expected[1],)
+            )
         self.event += 1
         return expected[1]
 
@@ -69,8 +70,9 @@ class MockEngine:
         msg = msg.rstrip()
         expected = self.expected[self.event]
         if expected[0] not in ["r", "raise"]:
-            raise Exception("Mock engine waitfor called when expecting, %s" %
-                            (expected, ))
+            raise Exception(
+                "Mock engine waitfor called when expecting, %s" % (expected,)
+            )
         responses = []
         while expected[0] == "r" and expected[1] != msg:
             responses.append(expected[1])
@@ -85,8 +87,8 @@ class MockEngine:
             raise expected[1]()
         else:
             raise Exception(
-                "Mock engine waitfor called with unexpected message (%s)" %
-                (msg, ))
+                "Mock engine waitfor called with unexpected message (%s)" % (msg,)
+            )
         self.event += 1
         return responses
 
@@ -103,13 +105,13 @@ class MockLog:
         self.warning = ""
 
     def debug(self, message):
-        self.debugging += message + '\n'
+        self.debugging += message + "\n"
 
     def info(self, message):
-        self.information += message + '\n'
+        self.information += message + "\n"
 
     def warn(self, message):
-        self.warning += message + '\n'
+        self.warning += message + "\n"
 
 
 protocol0 = [
@@ -120,8 +122,9 @@ protocol0 = [
     ("s", "isready"),
     ("r", "readyok"),
     ("s", "newgame"),
-    ("s",
-     "setposition w [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]"
+    (
+        "s",
+        "setposition w [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
 ]
 
@@ -134,8 +137,9 @@ bad_protocol = [
     ("s", "isready"),
     ("r", "readyok"),
     ("s", "newgame"),
-    ("s",
-     "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]"
+    (
+        "s",
+        "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
     ("s", "go"),
     ("s", "stop"),
@@ -155,8 +159,9 @@ protocol1 = [
     ("r", "log Engine initialized"),
     ("s", "setoption name depth value 4"),
     ("s", "newgame"),
-    ("s",
-     "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]"
+    (
+        "s",
+        "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
     ("s", "go"),
     ("s", "stop"),
@@ -189,6 +194,7 @@ aeiok_timeout = [
 aei_send_error = [
     ("raise", IOError),
 ]
+
 
 class EngineControllerTest(unittest.TestCase):
     def test_protocol_versions(self):
@@ -224,8 +230,9 @@ class EngineControllerTest(unittest.TestCase):
         resp = ctl.get_response()
         self.assertIsInstance(resp, EngineResponse)
         self.assertEqual(resp.type, "log")
-        self.assertEqual(resp.message,
-                         eng.expected[eng.event - 1][1].split("log ", 1)[1])
+        self.assertEqual(
+            resp.message, eng.expected[eng.event - 1][1].split("log ", 1)[1]
+        )
         ctl.setoption("depth", 4)
         ctl.newgame()
         pos = board.Position(board.Color.GOLD, 4, board.BASIC_SETUP)
@@ -234,12 +241,14 @@ class EngineControllerTest(unittest.TestCase):
         ctl.stop()
         resp = ctl.get_response()
         self.assertEqual(resp.type, "info")
-        self.assertEqual(resp.message,
-                         eng.expected[eng.event - 1][1].split("info ", 1)[1])
+        self.assertEqual(
+            resp.message, eng.expected[eng.event - 1][1].split("info ", 1)[1]
+        )
         resp = ctl.get_response()
         self.assertEqual(resp.type, "bestmove")
-        self.assertEqual(resp.move,
-                         eng.expected[eng.event - 1][1].split("bestmove ", 1)[1])
+        self.assertEqual(
+            resp.move, eng.expected[eng.event - 1][1].split("bestmove ", 1)[1]
+        )
         ctl.makemove("Hb2n Ed2n")
         ctl.go("ponder")
         ctl.quit()

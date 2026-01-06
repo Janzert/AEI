@@ -35,20 +35,20 @@ log = logging.getLogger("postal")
 def main(args=sys.argv):
     opt_parser = optparse.OptionParser(
         usage="usage: %prog [-c CONFIG] [-b BOT]",
-        description="Manage bot playing multiple postal games.")
-    opt_parser.add_option('-c', '--config',
-                          default="gameroom.cfg",
-                          help="Configuration file to use.")
-    opt_parser.add_option('-b', '--bot',
-                          help="Bot section to use as the default.")
+        description="Manage bot playing multiple postal games.",
+    )
+    opt_parser.add_option(
+        "-c", "--config", default="gameroom.cfg", help="Configuration file to use."
+    )
+    opt_parser.add_option("-b", "--bot", help="Bot section to use as the default.")
     options, args = opt_parser.parse_args(args)
     if len(args) > 1:
-        print("Unrecognized command line arguments: %s" % (args[1:], ))
+        print("Unrecognized command line arguments: %s" % (args[1:],))
         return 1
     config = ConfigParser()
     read_files = config.read(options.config)
     if len(read_files) == 0:
-        print("Could not open '%s'." % (options.config, ))
+        print("Could not open '%s'." % (options.config,))
         return 1
 
     try:
@@ -59,9 +59,7 @@ def main(args=sys.argv):
         except ConfigError:
             log_dir = "."
     if not os.path.exists(log_dir):
-        print("Log directory '%s' not found, attempting to create it." % (
-            log_dir
-        ))
+        print("Log directory '%s' not found, attempting to create it." % (log_dir))
         os.makedirs(log_dir)
 
     try:
@@ -69,8 +67,9 @@ def main(args=sys.argv):
     except ConfigError:
         log_filename = "postal-" + time.strftime("%Y-%m") + ".log"
     log_path = os.path.join(log_dir, log_filename)
-    logfmt = logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s",
-                               datefmt="%Y-%m-%d %H:%M:%S")
+    logfmt = logging.Formatter(
+        fmt="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
     loghandler = logging.FileHandler(log_path)
     loghandler.setFormatter(logfmt)
     log.addHandler(loghandler)
@@ -98,7 +97,7 @@ def main(args=sys.argv):
 
     while True:
         try:
-            open("stop_postal", 'r')
+            open("stop_postal", "r")
             log.info("Exiting after finding stop file")
             return 0
         except IOError:
@@ -108,44 +107,51 @@ def main(args=sys.argv):
         games = gr_con.mygames()
         gr_con.logout()
         total_games = len(games)
-        games = [g for g in games if g['postal'] == '1']
+        games = [g for g in games if g["postal"] == "1"]
         postal_games = len(games)
-        games = [g for g in games if g['turn'] == g['side']]
+        games = [g for g in games if g["turn"] == g["side"]]
         my_turn_games = len(games)
-        log.info("Found %d games with %d postal games and %d on my turn." %
-                 (total_games, postal_games, my_turn_games))
+        log.info(
+            "Found %d games with %d postal games and %d on my turn."
+            % (total_games, postal_games, my_turn_games)
+        )
         if games:
-            games.sort(key=lambda x: x['turnts'])
+            games.sort(key=lambda x: x["turnts"])
             for game_num, game in enumerate(games):
                 try:
-                    open("stop_postal", 'r')
+                    open("stop_postal", "r")
                     log.info("Exiting after finding stop file")
                     return 0
                 except IOError:
                     pass
-                log.info("%d/%d: Playing move against %s game #%s" %
-                         (game_num + 1, my_turn_games, game['player'],
-                          game['gid']))
-                game_args = ["gameroom", "move", game['gid'], game['side']]
-                if config.has_option("postal", game['gid']):
-                    section = config.get("postal", game['gid'])
+                log.info(
+                    "%d/%d: Playing move against %s game #%s"
+                    % (game_num + 1, my_turn_games, game["player"], game["gid"])
+                )
+                game_args = ["gameroom", "move", game["gid"], game["side"]]
+                if config.has_option("postal", game["gid"]):
+                    section = config.get("postal", game["gid"])
                     game_args += ["-b", section]
-                    log.info("Using section %s for use with gid #%s" %
-                             (section, game['gid']))
-                elif config.has_option("postal", game['player']):
-                    section = config.get("postal", game['player'])
+                    log.info(
+                        "Using section %s for use with gid #%s" % (section, game["gid"])
+                    )
+                elif config.has_option("postal", game["player"]):
+                    section = config.get("postal", game["player"])
                     game_args += ["-b", section]
-                    log.info("Using section %s for use against %s" %
-                             (section, game['player']))
+                    log.info(
+                        "Using section %s for use against %s"
+                        % (section, game["player"])
+                    )
                 gmoptions = gameroom.parseargs(game_args)
                 res = gameroom.run_game(gmoptions, config)
                 if res is not None and res != 0:
-                    log.warning("Error result from gameroom run %d." % (res, ))
+                    log.warning("Error result from gameroom run %d." % (res,))
         else:
             log.info("No postal games with a turn found, sleeping.")
             time.sleep(300)
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

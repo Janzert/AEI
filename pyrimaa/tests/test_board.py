@@ -140,9 +140,9 @@ BASIC_SETUP_LONG = """ +-----------------+
    a b c d e f g h  """
 BASIC_SETUP_SHORT = "[rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]"
 BASIC_SETUP_PLACING = (
-    'g Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Cc2 Cf2 Da2 Dh2 Hb2 Hg2 Md2 Ee2',
-    's ra8 rb8 rc8 rd8 re8 rf8 rg8 rh8 cc7 cf7 da7 dh7 hb7 hg7 me7 ed7'
-    )
+    "g Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Cc2 Cf2 Da2 Dh2 Hb2 Hg2 Md2 Ee2",
+    "s ra8 rb8 rc8 rd8 re8 rf8 rg8 rh8 cc7 cf7 da7 dh7 hb7 hg7 me7 ed7",
+)
 
 CHECK_STEP_POS = """1g
  +-----------------+
@@ -301,7 +301,7 @@ class BoardTest(unittest.TestCase):
 
     def test_parsing(self):
         self.assertRaises(ValueError, board.parse_move, " ")
-        directional_move = [(0,8), (8, 9), (9, 1), (1, 0)]
+        directional_move = [(0, 8), (8, 9), (9, 1), (1, 0)]
         self.assertEqual(board.parse_move("Ea1n Ea2e Eb2s Eb1w"), directional_move)
         self.assertEqual(board.parse_move("Eb2w Cc3x Ea2n"), [(9, 8), (8, 16)])
         self.assertRaises(ValueError, board.parse_move, "Ed4d")
@@ -333,9 +333,7 @@ class BoardTest(unittest.TestCase):
         self.assertRaises(ValueError, board.parse_long_pos, bad_piece)
 
         extra_moves = ["1g"] + BASIC_SETUP_LONG.splitlines()
-        extra_moves += [
-            "1g Ee2n Md2n", "1s Ed7s Me7s", "# stop parsing", "2g Ee3s"
-        ]
+        extra_moves += ["1g Ee2n Md2n", "1s Ed7s Me7s", "# stop parsing", "2g Ee3s"]
         parsed_move, parsed_pos = board.parse_long_pos(extra_moves)
         self.assertEqual(parsed_move, 2)
         self.assertEqual(parsed_pos.color, board.Color.GOLD)
@@ -351,14 +349,12 @@ class BoardTest(unittest.TestCase):
             "2| D H C     C H D |",
             "1| R R R R R R R R |",
             " +-----------------+",
-            "   a b c d e f g h  "
+            "   a b c d e f g h  ",
         ]
         extra_move_num, extra_move_pos = board.parse_long_pos(extra_move_board)
         self.assertEqual(parsed_pos, extra_move_pos)
 
-        self.assertRaises(
-            ValueError, board.parse_short_pos, 3, 4, BASIC_SETUP_SHORT
-        )
+        self.assertRaises(ValueError, board.parse_short_pos, 3, 4, BASIC_SETUP_SHORT)
         self.assertRaises(
             ValueError,
             board.parse_short_pos,
@@ -389,14 +385,14 @@ class BoardTest(unittest.TestCase):
         self.assertRaises(ValueError, pos.board_to_str, "invalidformat")
         self.assertEqual(pos.to_placing_move(), BASIC_SETUP_PLACING)
         oldcolor = list(BASIC_SETUP_PLACING)
-        oldcolor[0] = 'w' + oldcolor[0][1:]
-        oldcolor[1] = 'b' + oldcolor[1][1:]
+        oldcolor[0] = "w" + oldcolor[0][1:]
+        oldcolor[1] = "b" + oldcolor[1][1:]
         oldcolor = tuple(oldcolor)
         self.assertEqual(pos.to_placing_move(old_colors=True), oldcolor)
-        self.assertEqual(pos.steps_to_str([(10, 18), (12, 20)]),
-                                          "Cc2n Cc3x Ee2n")
-        self.assertEqual(pos.steps_to_str([(11, 19), (10, 18), (19, 27)]),
-                                          "Md2n Cc2n Md3n Cc3x")
+        self.assertEqual(pos.steps_to_str([(10, 18), (12, 20)]), "Cc2n Cc3x Ee2n")
+        self.assertEqual(
+            pos.steps_to_str([(11, 19), (10, 18), (19, 27)]), "Md2n Cc2n Md3n Cc3x"
+        )
         # try to move empty square
         self.assertRaises(ValueError, pos.steps_to_str, [(18, 19)])
         # make irregular, non-orthogonal step
@@ -478,20 +474,23 @@ class BoardTest(unittest.TestCase):
         pos.do_move(jumpstep, strict_checks=False)
         pos.do_move_str("Da2n Hb2n Cc2n Hb3s Cc3x")
         pos.do_move_str("Hb2n Hb3e Hc3w Hb3s")
-        self.assertRaises(board.IllegalMove, pos.do_move_str,
-                          "Hb2n Hb3n Hb4n Hb5e Hc5e")
+        self.assertRaises(
+            board.IllegalMove, pos.do_move_str, "Hb2n Hb3n Hb4n Hb5e Hc5e"
+        )
         pos = board.Position(board.Color.GOLD, 4, board.BLANK_BOARD)
         setup = "Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Da2 Hb2 Cc2 Md2 Ee2 Cf2 Hg2 Dh2"
         pos.do_move_str(setup)
         partial_setup = "Ra1 Rb1 Cc2 Md2 Ee2"
         self.assertRaises(board.IllegalMove, pos.do_move_str, partial_setup)
-        pos.do_move_str(partial_setup, strict_checks = False)
+        pos.do_move_str(partial_setup, strict_checks=False)
         mixed_steps = "Ra1 Rb1 Ra1n"
-        self.assertRaises(board.IllegalMove, pos.do_move_str,
-                          mixed_steps, strict_checks=False)
+        self.assertRaises(
+            board.IllegalMove, pos.do_move_str, mixed_steps, strict_checks=False
+        )
         doubled_square = "Ra1 Rb1 Rc1 Ca1"
-        self.assertRaises(board.IllegalMove, pos.do_move_str,
-                          doubled_square, strict_checks=False)
+        self.assertRaises(
+            board.IllegalMove, pos.do_move_str, doubled_square, strict_checks=False
+        )
         opp = "Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Da2 Hb2 Cc2 Md2 Ee2 Cf2 Hg2 dh2"
         self.assertRaises(board.IllegalMove, pos.do_move_str, opp)
         outside = "Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Da2 Hb2 Cc2 Md2 Ee3 Cf2 Hg2 Dh2"
@@ -505,10 +504,34 @@ class BoardTest(unittest.TestCase):
         step_tuples = [s for s, b in single_steps]
         step_tuples.sort()
         expected_single = [
-            (1, 9), (2, 10), (3, 11), (4, 12), (5, 13), (6, 7), (8, 9), (8, 16),
-            (14, 13), (14, 15), (14, 22), (17, 9), (17, 16), (17, 18), (17, 25),
-            (23, 22), (23, 31), (28, 20), (28, 27), (29, 21), (29, 30), (34, 26),
-            (34, 33), (34, 35), (34, 42), (37, 45), (54, 46), (54, 62)
+            (1, 9),
+            (2, 10),
+            (3, 11),
+            (4, 12),
+            (5, 13),
+            (6, 7),
+            (8, 9),
+            (8, 16),
+            (14, 13),
+            (14, 15),
+            (14, 22),
+            (17, 9),
+            (17, 16),
+            (17, 18),
+            (17, 25),
+            (23, 22),
+            (23, 31),
+            (28, 20),
+            (28, 27),
+            (29, 21),
+            (29, 30),
+            (34, 26),
+            (34, 33),
+            (34, 35),
+            (34, 42),
+            (37, 45),
+            (54, 46),
+            (54, 62),
         ]
         self.assertEqual(step_tuples, expected_single)
         self.assertEqual(single_steps[0][1].color, board.Color.GOLD)
@@ -518,8 +541,14 @@ class BoardTest(unittest.TestCase):
         step_tuples = [s for s, b in single_steps]
         step_tuples.sort()
         expected_steps = [
-            (48, 40), (49, 41), (50, 42), (51, 43), (52, 44), (53, 45), (54, 46),
-            (55, 47)
+            (48, 40),
+            (49, 41),
+            (50, 42),
+            (51, 43),
+            (52, 44),
+            (53, 45),
+            (54, 46),
+            (55, 47),
         ]
         self.assertEqual(step_tuples, expected_steps)
         self.assertEqual(single_steps[0][1].color, board.Color.GOLD)
@@ -529,11 +558,42 @@ class BoardTest(unittest.TestCase):
         step_tuples = [s for s, b in all_steps]
         step_tuples.sort()
         expected_trap = [
-            (1, 9), (2, 10), (3, 11), (4, 12), (5, 13), (6, 7), (8, 9), (8, 16),
-            (14, 13), (14, 15), (14, 22), (17, 9), (17, 16), (17, 18), (17, 25),
-            (23, 22), (23, 31), (28, 20), (28, 27), (29, 21), (29, 30), (34, 26),
-            (34, 33), (34, 35), (34, 42), (36, 35), (36, 44), (37, 45), (38, 30),
-            (38, 39), (38, 46), (53, 45), (53, 52), (54, 46), (54, 62), (55, 47)
+            (1, 9),
+            (2, 10),
+            (3, 11),
+            (4, 12),
+            (5, 13),
+            (6, 7),
+            (8, 9),
+            (8, 16),
+            (14, 13),
+            (14, 15),
+            (14, 22),
+            (17, 9),
+            (17, 16),
+            (17, 18),
+            (17, 25),
+            (23, 22),
+            (23, 31),
+            (28, 20),
+            (28, 27),
+            (29, 21),
+            (29, 30),
+            (34, 26),
+            (34, 33),
+            (34, 35),
+            (34, 42),
+            (36, 35),
+            (36, 44),
+            (37, 45),
+            (38, 30),
+            (38, 39),
+            (38, 46),
+            (53, 45),
+            (53, 52),
+            (54, 46),
+            (54, 62),
+            (55, 47),
         ]
         self.assertEqual(step_tuples, expected_trap)
         in_push = pos.do_step((53, 45))
@@ -544,14 +604,43 @@ class BoardTest(unittest.TestCase):
         step_tuples = [s for s, b in all_steps]
         step_tuples.sort()
         expected_pull = [
-            (1, 9), (2, 10), (3, 11), (4, 12), (5, 13), (6, 7), (8, 9), (8, 16),
-            (14, 13), (14, 15), (14, 22), (17, 9), (17, 16), (17, 18), (17, 25),
-            (23, 22), (23, 31), (28, 20), (28, 27), (29, 21), (29, 30), (34, 26),
-            (34, 33), (34, 35), (34, 42), (36, 35), (36, 44), (37, 45), (38, 30),
-            (38, 39), (46, 45), (46, 47), (46, 54), (53, 54), (55, 54)
+            (1, 9),
+            (2, 10),
+            (3, 11),
+            (4, 12),
+            (5, 13),
+            (6, 7),
+            (8, 9),
+            (8, 16),
+            (14, 13),
+            (14, 15),
+            (14, 22),
+            (17, 9),
+            (17, 16),
+            (17, 18),
+            (17, 25),
+            (23, 22),
+            (23, 31),
+            (28, 20),
+            (28, 27),
+            (29, 21),
+            (29, 30),
+            (34, 26),
+            (34, 33),
+            (34, 35),
+            (34, 42),
+            (36, 35),
+            (36, 44),
+            (37, 45),
+            (38, 30),
+            (38, 39),
+            (46, 45),
+            (46, 47),
+            (46, 54),
+            (53, 54),
+            (55, 54),
         ]
         self.assertEqual(step_tuples, expected_pull)
-
 
     def test_generate_moves(self):
         pos = board.Position(board.Color.GOLD, 4, board.BASIC_SETUP)

@@ -30,15 +30,19 @@ class MockController:
     def __init__(self):
         self.messages = Queue()
         self.eng_messages = []
+
         class MockEvent:
             def __init__(self):
                 self.stopped = False
+
             def is_set(self):
                 return self.stopped
+
         self.stop = MockEvent()
 
     def send(self, msg):
         self.eng_messages.append(msg)
+
 
 class EngineTest(unittest.TestCase):
     def test_aeiengine(self):
@@ -52,8 +56,10 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(ctl.eng_messages[3], "aeiok")
 
         ctl = MockController()
+
         def fake_get(timeout):
             raise Empty()
+
         ctl.messages.get = fake_get
         self.assertRaises(simple_engine.AEIException, simple_engine.AEIEngine, ctl)
         ctl = MockController()
@@ -114,16 +120,15 @@ class EngineTest(unittest.TestCase):
             (r"info time [\d]+$", "info time"),
             (r"bestmove $", "blank bestmove"),
             (r"log .+", "log"),
-            (r"info move gen time .+", "info move gen time")
+            (r"info move gen time .+", "info move gen time"),
         ]
         for response, (pattern, exp_msg) in zip(ctl.eng_messages, expected):
             self.assertTrue(
                 re.match(pattern, response),
-                "Expected %s message got %s" % (exp_msg, response)
+                "Expected %s message got %s" % (exp_msg, response),
             )
         self.assertEqual(
-            len(ctl.eng_messages), len(expected),
-            "Unexpected number of responses"
+            len(ctl.eng_messages), len(expected), "Unexpected number of responses"
         )
 
         ctl = MockController()
@@ -142,16 +147,15 @@ class EngineTest(unittest.TestCase):
             (r"id author .+", "bot author"),
             (r"aeiok$", "aeiok"),
             (r"readyok$", "readyok"),
-            (r"log Error:", "log Error")
+            (r"log Error:", "log Error"),
         ]
         for response, (pattern, exp_msg) in zip(ctl.eng_messages, expected):
             self.assertTrue(
                 re.match(pattern, response),
-                "Expected %s message got %s" % (exp_msg, response)
+                "Expected %s message got %s" % (exp_msg, response),
             )
         self.assertEqual(
-            len(ctl.eng_messages), len(expected),
-            "Unexpected number of responses"
+            len(ctl.eng_messages), len(expected), "Unexpected number of responses"
         )
 
     def test_script(self):
@@ -166,13 +170,12 @@ class EngineTest(unittest.TestCase):
             (r"id author .+", "bot author"),
             (r"aeiok$", "aeiok"),
             (r"readyok$", "readyok"),
-            (r"log Debug:", "log Debug")
+            (r"log Debug:", "log Debug"),
         ]
         response, _ = proc.communicate()
         response_lines = response.decode("utf-8").splitlines()
         for line, (pattern, exp_msg) in zip(response_lines, expected):
             self.assertTrue(
-                re.match(pattern, line),
-                "Expected %s message got %s" % (exp_msg, line)
+                re.match(pattern, line), "Expected %s message got %s" % (exp_msg, line)
             )
         self.assertEqual(len(response_lines), len(expected))

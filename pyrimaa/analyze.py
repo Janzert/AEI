@@ -42,7 +42,7 @@ def parse_start(start_lines, stop_move=None):
         del start_lines[0]
     if not start_lines:
         raise ParseError("No board or moves")
-    if len(start_lines) < 2 or start_lines[1][0] != '+':
+    if len(start_lines) < 2 or start_lines[1][0] != "+":
         have_board = False
         start = []
         while start_lines and start_lines[0][0].isdigit():
@@ -62,37 +62,42 @@ def get_config(args=None):
 
     notset = NotSet()
     parser = ArgumentParser(description="Analyze a given position.")
-    parser.add_argument("-b", "--bot",
-                        help="Which engine to use in config file")
-    parser.add_argument("-c", "--config",
-                        default="analyze.cfg",
-                        help="Configuration file to use.")
+    parser.add_argument("-b", "--bot", help="Which engine to use in config file")
+    parser.add_argument(
+        "-c", "--config", default="analyze.cfg", help="Configuration file to use."
+    )
     parser.add_argument("--log", help="Set log output level.")
-    parser.add_argument("--strict-checks",
-                        action="store_true",
-                        default=notset,
-                        help="Use strict checking on move legality")
-    parser.add_argument("--skip-checks",
-                        action="store_false",
-                        dest="strict_checks",
-                        help="Skip extra legality checks for moves")
+    parser.add_argument(
+        "--strict-checks",
+        action="store_true",
+        default=notset,
+        help="Use strict checking on move legality",
+    )
+    parser.add_argument(
+        "--skip-checks",
+        action="store_false",
+        dest="strict_checks",
+        help="Skip extra legality checks for moves",
+    )
     parser.add_argument(
         "--strict-setup",
         action="store_true",
         default=notset,
-        help="Require the setup moves to be complete and legal")
+        help="Require the setup moves to be complete and legal",
+    )
     parser.add_argument(
         "--allow-setup",
         dest="strict_setup",
         action="store_false",
-        help="Allow incomplete or otherwise illegal setup moves")
+        help="Allow incomplete or otherwise illegal setup moves",
+    )
     parser.add_argument("position_file", help="File with board or move list")
     parser.add_argument("move_number", help="Move to analyze", nargs="?")
     args = parser.parse_args(args)
 
     config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        print("Could not open '%s'" % (args.config, ))
+        print("Could not open '%s'" % (args.config,))
         sys.exit(1)
     try:
         loglevel = config.get("global", "log_level")
@@ -102,9 +107,9 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print("Bad log level \"%s\", use ERROR, WARNING, INFO or DEBUG." % (
-                loglevel,
-            ))
+            print(
+                'Bad log level "%s", use ERROR, WARNING, INFO or DEBUG.' % (loglevel,)
+            )
             sys.exit(1)
         logging.basicConfig(level=loglevel)
 
@@ -126,11 +131,11 @@ def get_config(args=None):
         args.bot = config.get("global", "default_engine")
     cfg_sections = config.sections()
     if args.bot not in cfg_sections:
-        print("Engine configuration for %s not found in config." % (args.bot, ))
-        print("Available configs are:", end=' ')
+        print("Engine configuration for %s not found in config." % (args.bot,))
+        print("Available configs are:", end=" ")
         for section in cfg_sections:
             if section != "global":
-                print(section, end=' ')
+                print(section, end=" ")
         print()
         sys.exit(1)
 
@@ -142,7 +147,7 @@ def get_config(args=None):
         args.enginecmd = config.get(args.bot, "cmdline")
     except NoOptionError:
         print("No engine command line found in config file.")
-        print("Add cmdline option for engine %s" % (args.bot, ))
+        print("Add cmdline option for engine %s" % (args.bot,))
         sys.exit(1)
 
     args.bot_options = []
@@ -165,14 +170,14 @@ def main(args=None):
     except SystemExit as exc:
         return exc.code
 
-    with open(cfg.position_file, 'r') as pfile:
+    with open(cfg.position_file, "r") as pfile:
         plines = pfile.readlines()
     try:
         have_board, start = parse_start(plines, cfg.move_number)
     except ParseError:
-        print("File %s does not appear to be a board or move list." % (
-            cfg.position_file,
-        ))
+        print(
+            "File %s does not appear to be a board or move list." % (cfg.position_file,)
+        )
         return 0
 
     if cfg.strict_checks:
@@ -211,7 +216,7 @@ def main(args=None):
                 try:
                     pos = pos.do_move_str(move, do_checks)
                 except board.IllegalMove as exc:
-                    print("Illegal move found \"%s\", %s" % (full_move, exc))
+                    print('Illegal move found "%s", %s' % (full_move, exc))
                     return 1
                 eng.makemove(move)
         print(pos.board_to_str())
@@ -228,9 +233,9 @@ def main(args=None):
                 if resp.type == "info":
                     print(resp.message)
                 elif resp.type == "log":
-                    print("log: %s" % (resp.message, ))
+                    print("log: %s" % (resp.message,))
                 elif resp.type == "bestmove":
-                    print("bestmove: %s" % (resp.move, ))
+                    print("bestmove: %s" % (resp.move,))
                     break
             except socket.timeout:
                 if not cfg.search_position:
@@ -245,7 +250,7 @@ def main(args=None):
                 if resp.type == "info":
                     print(resp.message)
                 elif resp.type == "log":
-                    print("log: %s" % (resp.message, ))
+                    print("log: %s" % (resp.message,))
             except socket.timeout:
                 try:
                     eng.quit()

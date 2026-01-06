@@ -460,42 +460,42 @@ class GameTest(unittest.TestCase):
         # check basic endings, goal, immobilization and elimination
         p = MockEngine()
         game = Game(p, p)
-        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(game.play(), (0, "g"))
         for num, move in enumerate(game.moves):
             self.assertEqual(move, goal_moves[num])
-        self.assertEqual(game.result, (0, 'g'))
+        self.assertEqual(game.result, (0, "g"))
         self.assertRaises(RuntimeError, game.play)
         p = MockEngine(moves=immo_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (1, 'm'))
+        self.assertEqual(game.play(), (1, "m"))
         p = MockEngine(moves=elim_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (1, 'e'))
+        self.assertEqual(game.play(), (1, "e"))
         # check bot resign ending
         p = MockEngine(moves=resign_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (0, 'r'))
+        self.assertEqual(game.play(), (0, "r"))
         # check illegality of taking opponent steps
         p = MockEngine(moves=extra_step_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (1, 'i'))
+        self.assertEqual(game.play(), (1, "i"))
         self.assertEqual(p.move, 4)
         # check illegality of 3 time repetition
         p = MockEngine(moves=repetition_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (0, 'i'))
+        self.assertEqual(game.play(), (0, "i"))
         self.assertEqual(p.move, 7)
         # check illegality of not changing the board state
         p = MockEngine(moves=null_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (1, 'i'))
+        self.assertEqual(game.play(), (1, "i"))
         self.assertEqual(p.move, 4)
         # check loose setup enforcement
         p = MockEngine(moves=handicap_moves)
         game = Game(p, p)
-        self.assertEqual(game.play(), (1, 'i'))
+        self.assertEqual(game.play(), (1, "i"))
         game = Game(p, p, strict_setup=False)
-        self.assertEqual(game.play(), (1, 'e'))
+        self.assertEqual(game.play(), (1, "e"))
 
     def test_mintimeleft_handling(self):
         rt = pyrimaa.game.time
@@ -504,14 +504,14 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 1.1, 3.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc, min_timeleft=1.1)
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         self.assertEqual(p.stopMove, 1)
         tc = TimeControl("3s/0s/0")
         p = MockEngine(delay=[2, 2, 0])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc, min_timeleft=1.5)
-        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(game.play(), (0, "g"))
         self.assertEqual(p.stopCount, 2)
         self.assertEqual(p.stopMove, 0)
         pyrimaa.game.time = rt
@@ -523,42 +523,291 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 1.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         p = MockEngine(delay=[0, 0, 0, 0, 1.2])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(game.play(), (0, "g"))
         self.assertEqual(p.stopCount, 0)
         # additionally check that the correct options were sent to the bot
-        expected_options_set = {'tctotal': [0, 0], 'tcmove': [1, 1],
-                'tcturns': [0, 0], 'tcreserve': [0, 0], 'tcmax': [0, 0],
-                'tcpercent': [50, 50], 'tcturntime': [0, 0],
-                'moveused': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0],
-                'sreserve': [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3,
-                    3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8,
-                    8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
-                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
-                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
-                    19, 20, 20, 20],
-                'greserve': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-                    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7,
-                    8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
-                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
-                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
-                    19],
-                }
+        expected_options_set = {
+            "tctotal": [0, 0],
+            "tcmove": [1, 1],
+            "tcturns": [0, 0],
+            "tcreserve": [0, 0],
+            "tcmax": [0, 0],
+            "tcpercent": [50, 50],
+            "tcturntime": [0, 0],
+            "moveused": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            "sreserve": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                3,
+                3,
+                4,
+                4,
+                4,
+                4,
+                5,
+                5,
+                5,
+                5,
+                6,
+                6,
+                6,
+                6,
+                7,
+                7,
+                7,
+                7,
+                8,
+                8,
+                8,
+                8,
+                9,
+                9,
+                9,
+                9,
+                10,
+                10,
+                10,
+                10,
+                11,
+                11,
+                11,
+                11,
+                12,
+                12,
+                12,
+                12,
+                13,
+                13,
+                13,
+                13,
+                14,
+                14,
+                14,
+                14,
+                15,
+                15,
+                15,
+                15,
+                16,
+                16,
+                16,
+                16,
+                17,
+                17,
+                17,
+                17,
+                18,
+                18,
+                18,
+                18,
+                19,
+                19,
+                19,
+                19,
+                20,
+                20,
+                20,
+            ],
+            "greserve": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                3,
+                3,
+                4,
+                4,
+                4,
+                4,
+                5,
+                5,
+                5,
+                5,
+                6,
+                6,
+                6,
+                6,
+                7,
+                7,
+                7,
+                7,
+                8,
+                8,
+                8,
+                8,
+                9,
+                9,
+                9,
+                9,
+                10,
+                10,
+                10,
+                10,
+                11,
+                11,
+                11,
+                11,
+                12,
+                12,
+                12,
+                12,
+                13,
+                13,
+                13,
+                13,
+                14,
+                14,
+                14,
+                14,
+                15,
+                15,
+                15,
+                15,
+                16,
+                16,
+                16,
+                16,
+                17,
+                17,
+                17,
+                17,
+                18,
+                18,
+                18,
+                18,
+                19,
+                19,
+                19,
+                19,
+            ],
+        }
         for option, value in expected_options_set.items():
             self.assertIn(option, p.options_set)
             self.assertEqual(p.options_set[option], value)
@@ -568,30 +817,279 @@ class GameTest(unittest.TestCase):
         p.protocol_version = 0
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(game.play(), (0, "g"))
         self.assertEqual(p.stopCount, 0)
         # additionally check that the correct options were sent to the bot
-        expected_options_set = {'tctotal': [0, 0], 'tcmove': [1, 1],
-                'tcturns': [0, 0], 'tcreserve': [0, 0], 'tcmax': [0, 0],
-                'tcpercent': [50, 50], 'tcturntime': [0, 0],
-                'moveused': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0],
-                'breserve': [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3,
-                    3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8,
-                    8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
-                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
-                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
-                    19, 20, 20, 20],
-                'wreserve': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-                    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7,
-                    8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12,
-                    12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
-                    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
-                    19],
-                }
+        expected_options_set = {
+            "tctotal": [0, 0],
+            "tcmove": [1, 1],
+            "tcturns": [0, 0],
+            "tcreserve": [0, 0],
+            "tcmax": [0, 0],
+            "tcpercent": [50, 50],
+            "tcturntime": [0, 0],
+            "moveused": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            "breserve": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                3,
+                3,
+                4,
+                4,
+                4,
+                4,
+                5,
+                5,
+                5,
+                5,
+                6,
+                6,
+                6,
+                6,
+                7,
+                7,
+                7,
+                7,
+                8,
+                8,
+                8,
+                8,
+                9,
+                9,
+                9,
+                9,
+                10,
+                10,
+                10,
+                10,
+                11,
+                11,
+                11,
+                11,
+                12,
+                12,
+                12,
+                12,
+                13,
+                13,
+                13,
+                13,
+                14,
+                14,
+                14,
+                14,
+                15,
+                15,
+                15,
+                15,
+                16,
+                16,
+                16,
+                16,
+                17,
+                17,
+                17,
+                17,
+                18,
+                18,
+                18,
+                18,
+                19,
+                19,
+                19,
+                19,
+                20,
+                20,
+                20,
+            ],
+            "wreserve": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                3,
+                3,
+                4,
+                4,
+                4,
+                4,
+                5,
+                5,
+                5,
+                5,
+                6,
+                6,
+                6,
+                6,
+                7,
+                7,
+                7,
+                7,
+                8,
+                8,
+                8,
+                8,
+                9,
+                9,
+                9,
+                9,
+                10,
+                10,
+                10,
+                10,
+                11,
+                11,
+                11,
+                11,
+                12,
+                12,
+                12,
+                12,
+                13,
+                13,
+                13,
+                13,
+                14,
+                14,
+                14,
+                14,
+                15,
+                15,
+                15,
+                15,
+                16,
+                16,
+                16,
+                16,
+                17,
+                17,
+                17,
+                17,
+                18,
+                18,
+                18,
+                18,
+                19,
+                19,
+                19,
+                19,
+            ],
+        }
         for option, value in expected_options_set.items():
             self.assertIn(option, p.options_set)
             self.assertEqual(p.options_set[option], value)
@@ -600,58 +1098,58 @@ class GameTest(unittest.TestCase):
         p = MockEngine(delay=[0, 0, 1.5, 0, 1.6])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         # check maximum reserve
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 2.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(game.play(), (0, "t"))
         self.assertEqual(p.stopCount, 1)
         # check game time limit
         tc = TimeControl("1s/1s/100/0/2s")
         p = MockEngine(delay=[0, 0, 1, 1, 0.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (1, 's'))
+        self.assertEqual(game.play(), (1, "s"))
         self.assertEqual(p.stopCount, 1)
         # check game move limit
         tc = TimeControl("1s/1s/100/0/33t")
         p = MockEngine()
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (0, 's'))
+        self.assertEqual(game.play(), (0, "s"))
         self.assertEqual(p.stopCount, 0)
         # check maximum move time limit
         tc = TimeControl("1s/1s/100/0/0/2s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, tc)
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         # check differing time control for each player
         tc = TimeControl("1s/1s/100/1s")
         p = MockEngine(delay=[0, 0, 0, 0, 2.1, 2.1])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [None, tc])
-        self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(game.play(), (0, "t"))
         self.assertEqual(p.stopCount, 1)
         tc1 = TimeControl("2s/0s/100")
         tc2 = TimeControl("1s/4s/100/6s")
         p = MockEngine(delay=[0, 0, 0, 0, 0, 5, 0, 0, 7.5])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
-        self.assertEqual(game.play(), (0, 'g'))
+        self.assertEqual(game.play(), (0, "g"))
         self.assertEqual(p.stopCount, 0)
         p = MockEngine(delay=[0, 0, 0, 0, 5])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
-        self.assertEqual(game.play(), (1, 't'))
+        self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
         p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 0, 0, 7.5])
         pyrimaa.game.time = MockTime(p)
         game = Game(p, p, [tc1, tc2])
-        self.assertEqual(game.play(), (0, 't'))
+        self.assertEqual(game.play(), (0, "t"))
         self.assertEqual(p.stopCount, 1)
         pyrimaa.game.time = rt

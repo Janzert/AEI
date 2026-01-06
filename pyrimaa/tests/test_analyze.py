@@ -160,8 +160,7 @@ basic_pos = """
    a b c d e f g h
 """
 
-basic_pos_short = "[rrrrrrrrh c echdd   m           "\
-                   "    E       R   HDCM CDHRRRR RRR]"
+basic_pos_short = "[rrrrrrrrh c echdd   m               E       R   HDCM CDHRRRR RRR]"
 
 basic_movelist = """\
 1g Ra1 Rb1 Cc1 Rd1 Re1 Rf1 Rg1 Rh1 Ha2 Mb2 Dc2 Ed2 De2 Cf2 Hg2 Rh2
@@ -184,8 +183,7 @@ movelist_2s = """ +-----------------+
  +-----------------+
    a b c d e f g h"""
 
-movelist_2s_short = "[rrrcdrrrrhdhecmr            E   "\
-                     "                HMD DCHRRRCRRRRR]"
+movelist_2s_short = "[rrrcdrrrrhdhecmr            E                   HMD DCHRRRCRRRRR]"
 
 movelist_4g = """ +-----------------+
 8| r r r c . r r r |
@@ -199,8 +197,7 @@ movelist_4g = """ +-----------------+
  +-----------------+
    a b c d e f g h"""
 
-movelist_4g_short = "[rrrc rrrr dhdcmrHh       e  E   "\
-                     "                 MD DCHRRRCRRRRR]"
+movelist_4g_short = "[rrrc rrrr dhdcmrHh       e  E                    MD DCHRRRCRRRRR]"
 
 illegal_moves = """\
 1g Ra1 Rb1 Cc1 Rd1 Re1 Rf1 Rg1 Rh1 Ha2 Mb2 Dc2 Ed2 De2 Cf2 Hg2 Rh2
@@ -215,6 +212,7 @@ illegal_setup = """\
 1s ra7 hb7 dc7 hd7 ed6 cf7 mg7 rh7 ra8 rb8 rc8 cd8 de8 rf8 rg8 rh8
 """
 
+
 class FastTimeoutCom(aei._ProcCom):
     _original_procom = aei._ProcCom
 
@@ -227,15 +225,17 @@ class FastTimeoutCom(aei._ProcCom):
 
     def _fast_timeout_get(self, block=True, timeout=None):
         self.get_called += 1
-        if timeout and self.get_called > 2: # don't shorten first calls
+        if timeout and self.get_called > 2:  # don't shorten first calls
             timeout = min(timeout, 0.2)
         return self._original_outq_get(block, timeout)
 
 
 class AnalyzeTest(unittest.TestCase):
     def test_parse_start(self):
-        prelines = ["This is just other text before the position or",
-                    "movelist that should be thrown out before parsing"]
+        prelines = [
+            "This is just other text before the position or",
+            "movelist that should be thrown out before parsing",
+        ]
         # check handling if no move or board given
         self.assertRaises(analyze.ParseError, analyze.parse_start, prelines)
         # check board parsing with and without extra lines before
@@ -277,7 +277,7 @@ class AnalyzeTest(unittest.TestCase):
             with save_stdio() as (out, err):
                 ret = analyze.main(["--config", cfg.name, pos.name])
                 stdout = out.getvalue()
-            self.assertIn("Bad log level \"Level UNKNOWN_LEVEL\", use ", stdout)
+            self.assertIn('Bad log level "Level UNKNOWN_LEVEL", use ', stdout)
             self.assertGreater(ret, 0)
             # good log level
             cfg.seek(0)
@@ -300,8 +300,9 @@ class AnalyzeTest(unittest.TestCase):
             self.assertGreater(ret, 0)
             self.assertIn("configuration for bot_simplydone", stdout)
             with save_stdio() as (out, err):
-                ret = analyze.main(["--config", cfg.name, pos.name,
-                                    "--bot", "bot_simple"])
+                ret = analyze.main(
+                    ["--config", cfg.name, pos.name, "--bot", "bot_simple"]
+                )
             self.assertEqual(ret, 0)
             # missing bot command
             cfg.seek(0)
@@ -337,14 +338,10 @@ class AnalyzeTest(unittest.TestCase):
                 ret = analyze.main(["--config", cfg.name, pos.name])
                 stdout = out.getvalue()
             self.assertEqual(ret, 0)
-            self.assertIn("Warning: Received unrecognized option, nonoption",
-                          stdout)
-            self.assertIn("Warning: Received unrecognized option, another",
-                          stdout)
-            self.assertIn("Warning: Received unrecognized option, afteroption",
-                          stdout)
-            self.assertIn("Warning: Received unrecognized option, aftertwo",
-                          stdout)
+            self.assertIn("Warning: Received unrecognized option, nonoption", stdout)
+            self.assertIn("Warning: Received unrecognized option, another", stdout)
+            self.assertIn("Warning: Received unrecognized option, afteroption", stdout)
+            self.assertIn("Warning: Received unrecognized option, aftertwo", stdout)
             # monkey patch aei._ProcCom to force fast communication timeouts
             real_ProcCom = aei._ProcCom
             try:
@@ -427,16 +424,14 @@ class AnalyzeTest(unittest.TestCase):
             pos.flush()
             # with strict checks
             with save_stdio() as (out, err):
-                ret = analyze.main(["--config", cfg.name, pos.name,
-                                    "--strict-checks"])
+                ret = analyze.main(["--config", cfg.name, pos.name, "--strict-checks"])
                 stdout = out.getvalue()
             self.assertGreater(ret, 0)
             self.assertIn("Enabling full legality checking on moves", stdout)
             self.assertIn("Illegal move found", stdout)
             # without strict checks
             with save_stdio() as (out, err):
-                ret = analyze.main(["--config", cfg.name, pos.name,
-                                    "--skip-checks"])
+                ret = analyze.main(["--config", cfg.name, pos.name, "--skip-checks"])
                 stdout = out.getvalue()
             self.assertEqual(ret, 0)
             self.assertNotIn("Illegal move found", stdout)
@@ -446,16 +441,13 @@ class AnalyzeTest(unittest.TestCase):
             pos.write(illegal_setup.encode("utf-8"))
             pos.close()
             with save_stdio() as (out, err):
-                ret = analyze.main(["--config", cfg.name, pos.name,
-                                    "--strict-setup"])
+                ret = analyze.main(["--config", cfg.name, pos.name, "--strict-setup"])
                 stdout = out.getvalue()
             self.assertGreater(ret, 0)
             self.assertIn("Enabling full legality checking on setup", stdout)
             self.assertIn("Tried to place a piece outside", stdout)
             with save_stdio() as (out, err):
-                ret = analyze.main(["--config", cfg.name, pos.name,
-                                    "--allow-setup"])
+                ret = analyze.main(["--config", cfg.name, pos.name, "--allow-setup"])
                 stdout = out.getvalue()
             self.assertEqual(ret, 0)
             self.assertIn("Disabling full legality checking on setup", stdout)
-

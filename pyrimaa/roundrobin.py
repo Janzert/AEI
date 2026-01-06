@@ -32,21 +32,22 @@ from pyrimaa.util import TimeControl
 
 log = logging.getLogger("roundrobin")
 
+
 class ConfigError(Exception):
     pass
 
 
 def run_bot(bot, config, global_options):
-    cmdline = config.get(bot['name'], "cmdline")
-    if config.has_option(bot['name'], "communication_method"):
-        com_method = config.get(bot['name'], "communication_method").lower()
+    cmdline = config.get(bot["name"], "cmdline")
+    if config.has_option(bot["name"], "communication_method"):
+        com_method = config.get(bot["name"], "communication_method").lower()
     else:
         com_method = "stdio"
     eng_com = aei.get_engine(com_method, cmdline, "roundrobin.aei")
     engine = aei.EngineController(eng_com)
     for option, value in global_options:
         engine.setoption(option, value)
-    for name, value in config.items(bot['name']):
+    for name, value in config.items(bot["name"]):
         if name.startswith("bot_"):
             engine.setoption(name[4:], value)
     return engine
@@ -71,44 +72,44 @@ def get_config(args=None):
         pass
 
     notset = NotSet()
-    parser = ArgumentParser(
-        description="Play engines in a round robin tournament.")
-    parser.add_argument("--config",
-                        default="roundrobin.cfg",
-                        help="Configuration file to use")
+    parser = ArgumentParser(description="Play engines in a round robin tournament.")
+    parser.add_argument(
+        "--config", default="roundrobin.cfg", help="Configuration file to use"
+    )
     parser.add_argument("--log", help="Set log output level")
     parser.add_argument("--pgn", help="PGN results filename")
-    parser.add_argument("-r", "--rounds",
-                        type=int,
-                        help="Number of rounds to run")
+    parser.add_argument("-r", "--rounds", type=int, help="Number of rounds to run")
     parser.add_argument(
         "--stop-time",
         type=int,
-        help="Number of seconds to leave when sending a bot a stop command")
+        help="Number of seconds to leave when sending a bot a stop command",
+    )
     parser.add_argument(
         "--strict-setup",
         action="store_true",
         default=notset,
-        help="Require the setup moves to be complete and legal")
+        help="Require the setup moves to be complete and legal",
+    )
     parser.add_argument(
         "--allow-setup",
         dest="strict_setup",
         action="store_false",
-        help="Allow incomplete or otherwise illegal setup moves")
+        help="Allow incomplete or otherwise illegal setup moves",
+    )
     parser.add_argument("--timecontrol", "--tc", help="Timecontrol to use")
     parser.add_argument("bots", nargs="*", help="Bots to use in tournament")
     args = parser.parse_args(args)
 
     config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        raise ConfigError("Could not open '%s'" % (args.config, ))
+        raise ConfigError("Could not open '%s'" % (args.config,))
     args.ini = config
     args.bot_sections = set(config.sections())
     if "global" not in args.bot_sections:
         raise ConfigError(
             "Did not find expected 'global' section in configuration file."
         )
-    args.bot_sections.remove('global')
+    args.bot_sections.remove("global")
 
     try:
         loglevel = config.get("global", "loglevel")
@@ -118,9 +119,7 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print("Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (
-                loglevel,
-            ))
+            print("Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (loglevel,))
         logging.basicConfig(level=loglevel)
 
     if args.pgn is None:
@@ -174,7 +173,7 @@ def main(args=None):
         return 1
 
     if cfg.rounds:
-        print("Number of rounds: %d" % (cfg.rounds, ))
+        print("Number of rounds: %d" % (cfg.rounds,))
     else:
         print("Number of rounds not specified, running 1 round.")
         cfg.rounds = 1
@@ -185,7 +184,7 @@ def main(args=None):
             timecontrol = None
         else:
             timecontrol = TimeControl(tctl_str)
-            print("At timecontrol %s" % (tctl_str, ))
+            print("At timecontrol %s" % (tctl_str,))
     except NoOptionError:
         timecontrol = None
 
@@ -194,9 +193,9 @@ def main(args=None):
         for name, value in cfg.global_options:
             print("  %s: %s" % (name, value))
 
-    print("Playing bots: ", end='')
+    print("Playing bots: ", end="")
     for bot in cfg.bots:
-        print(bot, end=' ')
+        print(bot, end=" ")
     print()
 
     # setup to write a bayeselo compatible pgn file
@@ -205,9 +204,9 @@ def main(args=None):
         try:
             pgn_file = open(cfg.pgn, "a+")
         except IOError:
-            print("Could not open pgn file %s" % (cfg.pgn, ))
+            print("Could not open pgn file %s" % (cfg.pgn,))
             return 1
-        print("Writing results to pgn file: %s" % (cfg.pgn, ))
+        print("Writing results to pgn file: %s" % (cfg.pgn,))
         write_pgn = True
 
     bots = []
@@ -219,12 +218,12 @@ def main(args=None):
                     if name.startswith("bot_"):
                         bot_options.append((name[4:], value))
                 bot = {
-                    'name': bsection,
-                    'options': bot_options,
-                    'gold': 0,
-                    'wins': 0,
-                    'timeouts': 0,
-                    'reasons': {}
+                    "name": bsection,
+                    "options": bot_options,
+                    "gold": 0,
+                    "wins": 0,
+                    "timeouts": 0,
+                    "reasons": {},
                 }
                 if cfg.ini.has_option(bsection, "timecontrol"):
                     tctl_str = cfg.ini.get(bsection, "timecontrol")
@@ -233,7 +232,7 @@ def main(args=None):
                     else:
                         tc = TimeControl(tctl_str)
                         print("bot %s at timecontrol %s" % (bsection, tctl_str))
-                    bot['timecontrol'] = tc
+                    bot["timecontrol"] = tc
                 bots.append(bot)
                 break
         else:
@@ -243,24 +242,28 @@ def main(args=None):
     start_time = time.time()
     for round_num in range(cfg.rounds):
         for bot_ix, bot in enumerate(bots[:-1]):
-            for opp in bots[bot_ix + 1:]:
-                if bot['gold'] <= opp['gold']:
+            for opp in bots[bot_ix + 1 :]:
+                if bot["gold"] <= opp["gold"]:
                     gbot = bot
                     sbot = opp
                 else:
                     gbot = opp
                     sbot = bot
-                gbot['gold'] += 1
+                gbot["gold"] += 1
                 gengine = run_bot(gbot, cfg.ini, cfg.global_options)
                 sengine = run_bot(sbot, cfg.ini, cfg.global_options)
                 tc = [timecontrol, timecontrol]
-                if 'timecontrol' in gbot:
-                    tc[0] = gbot['timecontrol']
-                if 'timecontrol' in sbot:
-                    tc[1] = sbot['timecontrol']
-                game = Game(gengine, sengine, tc,
-                            strict_setup=cfg.strict_setup,
-                            min_timeleft=cfg.stop_time)
+                if "timecontrol" in gbot:
+                    tc[0] = gbot["timecontrol"]
+                if "timecontrol" in sbot:
+                    tc[1] = sbot["timecontrol"]
+                game = Game(
+                    gengine,
+                    sengine,
+                    tc,
+                    strict_setup=cfg.strict_setup,
+                    min_timeleft=cfg.stop_time,
+                )
                 wside, reason = game.play()
                 gengine.quit()
                 sengine.quit()
@@ -268,17 +271,18 @@ def main(args=None):
                 loser = [gbot, sbot][wside ^ 1]
 
                 # Display result of game
-                print("%d%s" % (game.movenumber, "gs" [game.position.color]))
+                print("%d%s" % (game.movenumber, "gs"[game.position.color]))
                 print(game.position.board_to_str())
-                print("%s beat %s because of %s playing side %s" % (
-                    winner['name'], loser['name'], reason, "gs" [wside]
-                ))
+                print(
+                    "%s beat %s because of %s playing side %s"
+                    % (winner["name"], loser["name"], reason, "gs"[wside])
+                )
 
                 # Record game result stats
-                winner['wins'] += 1
-                if reason == 't':
-                    [gbot, sbot][wside ^ 1]['timeouts'] += 1
-                winner['reasons'][reason] = winner['reasons'].get(reason, 0) + 1
+                winner["wins"] += 1
+                if reason == "t":
+                    [gbot, sbot][wside ^ 1]["timeouts"] += 1
+                winner["reasons"][reason] = winner["reasons"].get(reason, 0) + 1
 
                 # write game result to pgn file
                 if write_pgn:
@@ -287,38 +291,40 @@ def main(args=None):
                         ply_count -= 1
                     else:
                         ply_count -= 2
-                    results = ['1-0', '0-1']
-                    pgn_file.write('[White "%s"]\n' % (gbot['name'], ))
-                    pgn_file.write('[Black "%s"]\n' % (sbot['name'], ))
+                    results = ["1-0", "0-1"]
+                    pgn_file.write('[White "%s"]\n' % (gbot["name"],))
+                    pgn_file.write('[Black "%s"]\n' % (sbot["name"],))
                     if timecontrol:
-                        pgn_file.write('[TimeControl "%s"]\n' % (tctl_str, ))
-                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count, ))
-                    pgn_file.write('[ResultCode "%s"]\n' % (reason, ))
-                    pgn_file.write('[Result "%s"]\n' % (results[wside], ))
-                    pgn_file.write('\n')
+                        pgn_file.write('[TimeControl "%s"]\n' % (tctl_str,))
+                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count,))
+                    pgn_file.write('[ResultCode "%s"]\n' % (reason,))
+                    pgn_file.write('[Result "%s"]\n' % (results[wside],))
+                    pgn_file.write("\n")
                     for move in game.moves:
-                        pgn_file.write('%s\n' % (move, ))
-                    pgn_file.write('%s\n\n' % (results[wside]))
+                        pgn_file.write("%s\n" % (move,))
+                    pgn_file.write("%s\n\n" % (results[wside]))
                     pgn_file.flush()
 
                 # give the engines up to 30 more seconds to exit normally
                 for _ in range(30):
-                    if (not gengine.is_running() and not sengine.is_running()):
+                    if not gengine.is_running() and not sengine.is_running():
                         break
                     time.sleep(1)
                 gengine.cleanup()
                 sengine.cleanup()
         round_end = time.time()
         total_time = round_end - start_time
-        print("After round %d and %s:" % (round_num + 1,
-                                          format_time(total_time)))
+        print("After round %d and %s:" % (round_num + 1, format_time(total_time)))
         for bot in bots:
-            print("%s has %d wins and %d timeouts" % (bot['name'], bot['wins'],
-                                                      bot['timeouts']))
-            for name, value in bot['reasons'].items():
+            print(
+                "%s has %d wins and %d timeouts"
+                % (bot["name"], bot["wins"], bot["timeouts"])
+            )
+            for name, value in bot["reasons"].items():
                 print("    %d by %s" % (value, name))
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

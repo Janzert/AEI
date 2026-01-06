@@ -44,7 +44,7 @@ def _parse_timefield(full_field, start_unit="m"):
         seconds += num * units[sep]
         if ":" in units:
             del units[":"]
-        field = field[end + 1:]
+        field = field[end + 1 :]
         nmatch = num_re.match(field)
     if field:
         raise ValueError("Invalid time field encountered %s" % (full_field))
@@ -60,7 +60,7 @@ def _time_str(seconds):
             out.append("%s%s" % (int(span), tag))
         seconds -= span * length
     if seconds != 0:
-        out.append("%gs" % (seconds, ))
+        out.append("%gs" % (seconds,))
     if len(out) == 0:
         out = ["0"]
     return "".join(out)
@@ -79,7 +79,7 @@ class TimeControl(object):
             else:
                 end = fmatch.end()
                 f_str = tstr[:end]
-                rest = tstr[end + 1:]
+                rest = tstr[end + 1 :]
             return (f_str, rest)
 
         f_str, tc_str = _split_tc(tc_str)
@@ -96,7 +96,7 @@ class TimeControl(object):
         f_str, tc_str = _split_tc(tc_str)
         self.max_reserve = _parse_timefield(f_str)
         f_str, tc_str = _split_tc(tc_str)
-        if f_str and f_str[-1] == 't':
+        if f_str and f_str[-1] == "t":
             self.turn_limit = int(f_str[:-1])
             self.time_limit = 0
         else:
@@ -109,7 +109,7 @@ class TimeControl(object):
         out.append(str(self.percent))
         out.append(_time_str(self.max_reserve))
         if self.turn_limit:
-            out.append("%st" % (self.turn_limit, ))
+            out.append("%st" % (self.turn_limit,))
         else:
             out.append(_time_str(self.time_limit))
         out.append(_time_str(self.max_turntime))

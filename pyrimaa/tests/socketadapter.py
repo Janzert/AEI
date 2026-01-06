@@ -54,8 +54,7 @@ def main(args=sys.argv[1:]):
     sock = socket.socket()
     sock.connect(address)
 
-    proc = Popen("simple_engine", stdin=PIPE, stdout=PIPE,
-                 universal_newlines=True)
+    proc = Popen("simple_engine", stdin=PIPE, stdout=PIPE, universal_newlines=True)
     com = _ProcCom(proc, sock)
     com.start()
 
@@ -70,6 +69,7 @@ def main(args=sys.argv[1:]):
         proc.stdin.flush()
     com.stop.set()
     sock.close()
+
 
 if __name__ == "__main__":
     main()

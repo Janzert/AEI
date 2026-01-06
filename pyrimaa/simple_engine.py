@@ -70,8 +70,7 @@ class AEIEngine(object):
         except Empty:
             raise AEIException("Timed out waiting for aei header") from None
         if header != "aei":
-            raise AEIException("Did not receive aei header, instead (%s)" %
-                               (header))
+            raise AEIException("Did not receive aei header, instead (%s)" % (header))
         controller.send("protocol-version 1")
         controller.send("id name Sample Engine")
         controller.send("id author Janzert")
@@ -88,10 +87,23 @@ class AEIEngine(object):
         self.insetup = False
 
     def setoption(self, name, value):
-        std_opts = {"tcmove", "tcreserve", "tcpercent", "tcmax", "tctotal",
-                    "tcturns", "tcturntime", "greserve", "sreserve",
-                    "gused", "sused", "lastmoveused", "moveused",
-                    "opponent", "opponent_rating"}
+        std_opts = {
+            "tcmove",
+            "tcreserve",
+            "tcpercent",
+            "tcmax",
+            "tctotal",
+            "tcturns",
+            "tcturntime",
+            "greserve",
+            "sreserve",
+            "gused",
+            "sused",
+            "lastmoveused",
+            "moveused",
+            "opponent",
+            "opponent_rating",
+        }
         if name == "checkmoves":
             self.strict_checks = value.lower().strip() not in ["false", "no", "0"]
         elif name == "delaymove":
@@ -101,8 +113,7 @@ class AEIEngine(object):
 
     def makemove(self, move_str):
         try:
-            self.position = self.position.do_move_str(move_str,
-                                                      self.strict_checks)
+            self.position = self.position.do_move_str(move_str, self.strict_checks)
         except IllegalMove:
             self.log("Error: received illegal move %s" % (move_str,))
             return False
@@ -129,7 +140,14 @@ class AEIEngine(object):
             time.sleep(self.move_delay)
         move_time = time.time() - start_time
         self.total_move_time += move_time
-        self.info("time %d" % (int(round(move_time),)))
+        self.info(
+            "time %d"
+            % (
+                int(
+                    round(move_time),
+                )
+            )
+        )
         self.bestmove(move_str)
 
     def info(self, msg):
@@ -158,7 +176,7 @@ class AEIEngine(object):
                 v_ix = msg.find(name) + len(name)
                 v_ix = msg.find("value", v_ix)
                 if v_ix != -1:
-                    value = msg[v_ix + 5:]
+                    value = msg[v_ix + 5 :]
                 else:
                     value = None
                 self.setoption(name, value)
