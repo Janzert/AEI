@@ -227,7 +227,7 @@ class Position(object):
             #    return False
             if self.bitBoards != other.bitBoards:
                 return False
-        except:
+        except Exception:
             return False
         return True
 

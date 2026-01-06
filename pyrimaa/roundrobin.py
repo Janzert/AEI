@@ -127,7 +127,7 @@ def get_config(args=None):
     if args.pgn is None:
         try:
             args.pgn = config.get("global", "pgn_filename")
-        except:
+        except Exception:
             pass
 
     if args.rounds is None:
