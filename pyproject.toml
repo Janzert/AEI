@@ -42,6 +42,7 @@ simple_engine = "pyrimaa.simple_engine:main"
 dev = [
     "coverage[toml]>=7.0",
     "ruff>=0.8.0",
+    "pre-commit>=3.0.0",
 ]
 
 [tool.setuptools]
