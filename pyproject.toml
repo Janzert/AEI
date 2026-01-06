@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "AEI"
 version = "1.4.0"
 description = "Arimaa Engine Interface tools"
-readme = "readme.rst"
+readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
@@ -47,7 +47,7 @@ dev = [
 packages = ["pyrimaa", "pyrimaa.tests"]
 
 [tool.setuptools.package-data]
-"*" = ["*.txt", "*.rst", "*example.cfg"]
+"*" = ["*.txt", "*.md", "*example.cfg"]
 
 [tool.coverage.run]
 source = ["pyrimaa"]
