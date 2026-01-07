@@ -1,23 +1,3 @@
-# Copyright (c) 2008-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import math
 import random
 import sys
@@ -193,7 +173,7 @@ class IllegalMove(ValueError):
     pass
 
 
-class Position(object):
+class Position:
     def __init__(
         self,
         side,
@@ -284,10 +264,10 @@ class Position(object):
                     continue
                 double = pboard & cboard
                 if pboard & cboard:
-                    print("%X %X %X %d %d" % (pboard, cboard, double, pnum, cnum))
+                    print(f"{pboard:X} {cboard:X} {double:X} {pnum} {cnum}")
                     raise RuntimeError(
-                        "Two pieces occupy one square: %s %s"
-                        % (Piece.PCHARS[pnum], Piece.PCHARS[cnum])
+                        f"Two pieces occupy one square: "
+                        f"{Piece.PCHARS[pnum]} {Piece.PCHARS[cnum]}"
                     )
             if pnum != 0:
                 if (pnum ^ Piece.COLOR) & Piece.COLOR:
@@ -297,12 +277,12 @@ class Position(object):
             empty &= ~pboard
         if cplacement != self.placement:
             if cplacement[0] != self.placement[0]:
-                print("gplacement %X %X" % (cplacement[0], self.placement[0]))
+                print(f"gplacement {cplacement[0]:X} {self.placement[0]:X}")
             if cplacement[1] != self.placement[1]:
-                print("splacement %X %X" % (cplacement[1], self.placement[1]))
+                print(f"splacement {cplacement[1]:X} {self.placement[1]:X}")
             raise RuntimeError("Placement boards are incorrect")
         if empty != bitboards[0]:
-            raise RuntimeError("Empty board is incorrect %X %X" % (bitboards[0], empty))
+            raise RuntimeError(f"Empty board is incorrect {bitboards[0]:X} {empty:X}")
 
     def is_goal(self):
         """Check to see if this position is goal for either side"""
@@ -358,7 +338,7 @@ class Position(object):
         bitBoards = self.bitBoards
         layout = [" +-----------------+"]
         for row in range(8, 0, -1):
-            rows = ["%d| " % row]
+            rows = [f"{row}| "]
             rix = 8 * (row - 1)
             for col in range(8):
                 ix = rix + col
@@ -754,7 +734,7 @@ class Position(object):
         if (self.color and ix < 48) or (not self.color and ix > 15):
             raise IllegalMove("Tried to place a piece outside of setup area")
         if available[piece & ~Piece.COLOR] < 1:
-            raise IllegalMove("Tried to place too many '%s'" % (Piece.PCHARS[piece],))
+            raise IllegalMove(f"Tried to place too many '{Piece.PCHARS[piece]}'")
 
     def do_move_str(self, move_str, strict_checks=True):
         try:
@@ -1088,7 +1068,7 @@ def parse_move(line):
     """Parse steps from a move string"""
     text = line.split()
     if len(text) == 0:
-        raise ValueError("No steps in move given to parse. %s" % (repr(line)))
+        raise ValueError(f"No steps in move given to parse. {repr(line)}")
 
     steps = []
     for step in text:
@@ -1144,7 +1124,7 @@ def parse_long_pos(text):
     bitboards = list(BLANK_BOARD)
     for line in text[2:10]:
         if not line[0].isdigit() or int(line[0]) - 1 != ranknum:
-            raise ValueError("Unexpected rank number at rank %d" % (ranknum + 1,))
+            raise ValueError(f"Unexpected rank number at rank {ranknum + 1}")
         for piece_index in range(3, 18, 2):
             colnum = (piece_index - 3) // 2
             bit = 1 << ((ranknum * 8) + colnum)
@@ -1156,9 +1136,7 @@ def parse_long_pos(text):
                 bitboards[piece] |= bit
                 bitboards[Piece.EMPTY] &= ~bit
             else:
-                raise ValueError(
-                    "Invalid piece at %s%d" % ("abcdefgh"[colnum], ranknum + 1)
-                )
+                raise ValueError(f"Invalid piece at {'abcdefgh'[colnum]}{ranknum + 1}")
         ranknum -= 1
     pos = Position(color, steps, bitboards)
 
@@ -1179,11 +1157,9 @@ def parse_long_pos(text):
 def parse_short_pos(side, stepsleft, text):
     """Parse a position from a short format string"""
     if side not in [Color.GOLD, Color.SILVER]:
-        raise ValueError("Invalid side passed into parse_short_pos, %d" % (side))
+        raise ValueError(f"Invalid side passed into parse_short_pos, {side}")
     if stepsleft > 4 or stepsleft < 0:
-        raise ValueError(
-            "Invalid steps left passed into parse_short_pos, %d" % (stepsleft)
-        )
+        raise ValueError(f"Invalid steps left passed into parse_short_pos, {stepsleft}")
 
     bitboards = list(BLANK_BOARD)
     for place, piecetext in enumerate(text[1:-1]):
@@ -1192,7 +1168,7 @@ def parse_short_pos(side, stepsleft, text):
                 piece = Piece.PCHARS.index(piecetext)
             except ValueError:
                 raise ValueError(
-                    "Invalid piece at position %d, %s" % (place, piecetext)
+                    f"Invalid piece at position {place}, {piecetext}"
                 ) from None
             index = sq_to_index(place % 8, 7 - (place // 8))
             bit = 1 << index
@@ -1220,7 +1196,7 @@ def test_random_play():
             print()
             if len(moves) == 0:
                 immo_wins += 1
-                print("%d, %d win by immobilization. " % (i + 1, immo_wins))
+                print(f"{i + 1}, {immo_wins} win by immobilization. ")
                 break
 
             turn += 1
@@ -1229,11 +1205,11 @@ def test_random_play():
         total_turns += turn
         if len(moves) != 0:
             goal_wins += 1
-            print("%d, %d win by goal." % (i + 1, goal_wins))
+            print(f"{i + 1}, {goal_wins} win by goal.")
 
     print(
-        "%.2f %d %d %.2f"
-        % (total_turns / 100.0, goal_wins, immo_wins, time.time() - start_time)
+        f"{total_turns / 100.0:.2f} {goal_wins} {immo_wins} "
+        f"{time.time() - start_time:.2f}"
     )
 
 
@@ -1283,7 +1259,7 @@ def test_rnd_steps():
 
         turn = 3
         while not pos.is_goal():
-            print("%d%s" % (math.ceil(turn / 2.0), ["b", "w"][turn % 2]), end=" ")
+            print(f"{math.ceil(turn / 2.0):.0f}{['b', 'w'][turn % 2]}", end=" ")
             steps, result = pos.get_rnd_step_move()
             if steps is None:
                 print()
@@ -1305,13 +1281,13 @@ def test_rnd_steps():
 
         total_turns += turn
         if steps is not None:
-            print("%d%s" % (math.ceil(turn / 2.0), ["b", "w"][turn % 2]))
+            print(f"{math.ceil(turn / 2.0):.0f}{['b', 'w'][turn % 2]}")
             print(pos.board_to_str())
             print("Win by goal.")
             print()
             goal_wins += 1
 
-    print("%.2f %d %d" % (total_turns / 100.0, goal_wins, immo_wins))
+    print(f"{total_turns / 100.0:.2f} {goal_wins} {immo_wins}")
 
 
 def main(args=None):
@@ -1325,7 +1301,7 @@ def main(args=None):
     parser.add_argument("filename", help="Position file to look at")
     config = parser.parse_args(args)
     filename = config.filename
-    positionfile = open(filename, "r")
+    positionfile = open(filename)
     positiontext = positionfile.readlines()
     if positiontext[1][0] == "[":
         positiontext = [x.strip() for x in positiontext]
@@ -1333,7 +1309,7 @@ def main(args=None):
         pos = parse_short_pos("wbgs".index(positiontext[0][-1]) % 2, 4, positiontext[1])
     else:
         movenum, pos = parse_long_pos(positiontext)
-    print("%d%s" % (movenum, "gs"[pos.color]))
+    print(f"{movenum}{'gs'[pos.color]}")
     print()
     print(pos.board_to_str())
     print()
@@ -1356,13 +1332,13 @@ def main(args=None):
     if steps is None:
         print("No move found by random steps.")
     else:
-        print("Random step move: %s" % (pos.steps_to_str(steps),))
+        print(f"Random step move: {pos.steps_to_str(steps)}")
     print()
 
     starttime = time.time()
     moves, nodes = pos.get_moves_nodes()
     gentime = time.time() - starttime
-    print("%d unique moves generated in %.2f seconds" % (len(moves), gentime))
+    print(f"{len(moves)} unique moves generated in {gentime:.2f} seconds")
 
     real_steps = [s for s, m in pos.get_steps()]
     for i in range(64):
@@ -1371,19 +1347,15 @@ def main(args=None):
             check_resp = pos.check_step(tstep)
             if check_resp and tstep not in real_steps:
                 print(
-                    "check_step thought %s to %s was valid step %d,%d"
-                    % (
-                        index_to_alg(tstep[0]),
-                        index_to_alg(tstep[1]),
-                        tstep[0],
-                        tstep[1],
-                    )
+                    f"check_step thought {index_to_alg(tstep[0])} to "
+                    f"{index_to_alg(tstep[1])} was valid step "
+                    f"{tstep[0]},{tstep[1]}"
                 )
                 return
             if not check_resp and tstep in real_steps:
                 print(
-                    "check_step thought %s to %s was invalid step"
-                    % (index_to_alg(tstep[0]), index_to_alg(tstep[1]))
+                    f"check_step thought {index_to_alg(tstep[0])} to "
+                    f"{index_to_alg(tstep[1])} was invalid step"
                 )
                 return
 

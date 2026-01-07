@@ -1,23 +1,4 @@
 #!/usr/bin/env python
-# Copyright (c) 2009-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
 
 import logging
 import optparse
@@ -43,12 +24,12 @@ def main(args=sys.argv):
     opt_parser.add_option("-b", "--bot", help="Bot section to use as the default.")
     options, args = opt_parser.parse_args(args)
     if len(args) > 1:
-        print("Unrecognized command line arguments: %s" % (args[1:],))
+        print(f"Unrecognized command line arguments: {args[1:]}")
         return 1
     config = ConfigParser()
     read_files = config.read(options.config)
     if len(read_files) == 0:
-        print("Could not open '%s'." % (options.config,))
+        print(f"Could not open '{options.config}'.")
         return 1
 
     try:
@@ -59,7 +40,7 @@ def main(args=sys.argv):
         except ConfigError:
             log_dir = "."
     if not os.path.exists(log_dir):
-        print("Log directory '%s' not found, attempting to create it." % (log_dir))
+        print(f"Log directory '{log_dir}' not found, attempting to create it.")
         os.makedirs(log_dir)
 
     try:
@@ -97,10 +78,10 @@ def main(args=sys.argv):
 
     while True:
         try:
-            open("stop_postal", "r")
+            open("stop_postal")
             log.info("Exiting after finding stop file")
             return 0
-        except IOError:
+        except OSError:
             pass
         gr_con = gameroom.GameRoom(gameroom_url)
         gr_con.login(bot_username, bot_password)
@@ -112,40 +93,37 @@ def main(args=sys.argv):
         games = [g for g in games if g["turn"] == g["side"]]
         my_turn_games = len(games)
         log.info(
-            "Found %d games with %d postal games and %d on my turn."
-            % (total_games, postal_games, my_turn_games)
+            f"Found {total_games} games {postal_games} with  postal games "
+            f"and {my_turn_games} on my turn."
         )
         if games:
             games.sort(key=lambda x: x["turnts"])
             for game_num, game in enumerate(games):
                 try:
-                    open("stop_postal", "r")
+                    open("stop_postal")
                     log.info("Exiting after finding stop file")
                     return 0
-                except IOError:
+                except OSError:
                     pass
                 log.info(
-                    "%d/%d: Playing move against %s game #%s"
-                    % (game_num + 1, my_turn_games, game["player"], game["gid"])
+                    f"{game_num + 1}/{my_turn_games}: Playing move against "
+                    f"{game['player']} game #{game['gid']}"
                 )
                 game_args = ["gameroom", "move", game["gid"], game["side"]]
                 if config.has_option("postal", game["gid"]):
                     section = config.get("postal", game["gid"])
                     game_args += ["-b", section]
-                    log.info(
-                        "Using section %s for use with gid #%s" % (section, game["gid"])
-                    )
+                    log.info(f"Using section {section} for use with gid #{game['gid']}")
                 elif config.has_option("postal", game["player"]):
                     section = config.get("postal", game["player"])
                     game_args += ["-b", section]
                     log.info(
-                        "Using section %s for use against %s"
-                        % (section, game["player"])
+                        f"Using section {section} for use against {game['player']}"
                     )
                 gmoptions = gameroom.parseargs(game_args)
                 res = gameroom.run_game(gmoptions, config)
                 if res is not None and res != 0:
-                    log.warning("Error result from gameroom run %d." % (res,))
+                    log.warning(f"Error result from gameroom run {res}.")
         else:
             log.info("No postal games with a turn found, sleeping.")
             time.sleep(300)

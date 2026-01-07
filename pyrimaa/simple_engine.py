@@ -1,23 +1,4 @@
 #!/usr/bin/env python
-# Copyright (c) 2009-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
 
 import sys
 import time
@@ -59,7 +40,7 @@ class AEIException(Exception):
     pass
 
 
-class AEIEngine(object):
+class AEIEngine:
     def __init__(self, controller):
         self.strict_checks = True
         self.move_delay = None
@@ -70,7 +51,7 @@ class AEIEngine(object):
         except Empty:
             raise AEIException("Timed out waiting for aei header") from None
         if header != "aei":
-            raise AEIException("Did not receive aei header, instead (%s)" % (header))
+            raise AEIException(f"Did not receive aei header, instead ({header})")
         controller.send("protocol-version 1")
         controller.send("id name Sample Engine")
         controller.send("id author Janzert")
@@ -109,13 +90,13 @@ class AEIEngine(object):
         elif name == "delaymove":
             self.move_delay = float(value)
         elif name not in std_opts:
-            self.log("Warning: Received unrecognized option, %s" % (name))
+            self.log(f"Warning: Received unrecognized option, {name}")
 
     def makemove(self, move_str):
         try:
             self.position = self.position.do_move_str(move_str, self.strict_checks)
         except IllegalMove:
-            self.log("Error: received illegal move %s" % (move_str,))
+            self.log(f"Error: received illegal move {move_str}")
             return False
         if self.insetup and self.position.color == Color.GOLD:
             self.insetup = False
@@ -140,14 +121,7 @@ class AEIEngine(object):
             time.sleep(self.move_delay)
         move_time = time.time() - start_time
         self.total_move_time += move_time
-        self.info(
-            "time %d"
-            % (
-                int(
-                    round(move_time),
-                )
-            )
-        )
+        self.info(f"time {round(move_time):.0f}")
         self.bestmove(move_str)
 
     def info(self, msg):
@@ -192,7 +166,7 @@ class AEIEngine(object):
             elif msg == "quit":
                 self.log("Debug: Exiting after receiving quit message.")
                 if self.total_move_time > 0:
-                    self.info("move gen time %f" % (self.total_move_time,))
+                    self.info(f"move gen time {self.total_move_time}")
                 return
 
 

@@ -1,23 +1,4 @@
 #!/usr/bin/env python
-# Copyright 2008-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
 """Interface to the arimaa gameserver.
 
 Usage: gameroom.py [play|move opponent_name or game_number] [side to play]
@@ -107,7 +88,7 @@ def post(url, values, logname="network"):
                 else:
                     raise
             except OSError as err:
-                netlog.debug("OSError from connection: %s %s" % (str(err), repr(err)))
+                netlog.debug(f"OSError from connection: {str(err)} {repr(err)}")
                 body = ""
             if body != "" or try_num == 5:
                 break
@@ -127,7 +108,7 @@ def post(url, values, logname="network"):
             "error"
         ].startswith("Gameserver: Invalid Session Id"):
             raise ValueError(
-                "Game server did not recognize game session: %s" % (info["error"],)
+                f"Game server did not recognize game session: {info['error']}"
             )
     return info
 
@@ -165,7 +146,7 @@ def log_response(response, unexpected=None):
             enginelog.info("%s", response.message)
     elif unexpected is not None:
         if response.type not in ["info", "log"]:
-            log.warning("Unexpected response %s (%s)." % (unexpected, response.type))
+            log.warning(f"Unexpected response {unexpected} ({response.type}).")
 
 
 class Table:
@@ -198,7 +179,7 @@ class Table:
             return response
         except socket.timeout:
             raise
-        except socket.error as exc:
+        except OSError as exc:
             if hasattr(exc, "args") and len(exc.args) > 0 and exc.args[0] == 32:
                 raise EngineCrashException("Socket reset") from exc
             else:
@@ -306,7 +287,7 @@ class Table:
             opside = "b"
         else:
             opside = "w"
-        opmove_re = re.compile(r"\b(\d+%s [^\n]+)\n[^\n]*$" % (opside))
+        opmove_re = re.compile(rf"\b(\d+{opside} [^\n]+)\n[^\n]*$")
         opplayer = opside + "player"
         state = self.updatestate()
         if int(state.get("postal", "0")) and (
@@ -339,7 +320,7 @@ class Table:
                     sendto = -1
                 for move in moves[:sendto]:
                     steps = move.split()[1:]
-                    log.debug("sending move to engine: %s" % " ".join(steps))
+                    log.debug(f"sending move to engine: {' '.join(steps)}")
                     engine.makemove(" ".join(steps))
                     resps = engine.isready()
                     for response in resps:
@@ -366,7 +347,7 @@ class Table:
                 # server with new requests never wait less than a quarter of
                 # the move time. Otherwise wait till the end of the opponents
                 # regular turn time.
-                tused_key = "%sused" % ("wb"[("wb".index(self.side) + 1) % 2],)
+                tused_key = f"{'wb'[('wb'.index(self.side) + 1) % 2]}used"
                 if tused_key in state:
                     moveused = int(state[tused_key])
                 else:
@@ -432,7 +413,7 @@ class Table:
                         self._check_engine(0)
                 except socket.timeout:
                     pass
-                tused_key = "%sused" % (self.side,)
+                tused_key = f"{self.side}used"
                 if tused_key in state:
                     moveused = int(state[tused_key])
                 else:
@@ -463,7 +444,7 @@ class Table:
                     engine.setoption("lastmoveused", state["lastmoveused"])
                 engine.go()
                 stopsent = False
-                myreserve = "tc%sreserve2" % (self.side,)
+                myreserve = f"tc{self.side}reserve2"
                 stoptime = starttime + int(state["tcmove"]) + int(state[myreserve])
                 if "turntime" in state and (starttime + state["turntime"]) < stoptime:
                     stoptime = int(starttime + state["turntime"])
@@ -563,7 +544,7 @@ class GameRoom:
             rated = 0
 
         if (side != "b") and (side != "w"):
-            raise ValueError("Invalid value for side, %s" % (side))
+            raise ValueError(f"Invalid value for side, {side}")
 
         values = {
             "timecontrol": timecontrol,
@@ -646,9 +627,9 @@ def parseargs(args):
 def touch_run_file(run_dir, rfile):
     filename = os.path.join(run_dir, rfile)
     run_file = open(filename, "w")
-    run_file.write("%d\n" % os.getpid())
+    run_file.write(f"{os.getpid()}\n")
     run_file.close()
-    log.info("Created run file at %s" % filename)
+    log.info(f"Created run file at {filename}")
 
 
 def remove_run_file(run_dir, rfile):
@@ -657,7 +638,7 @@ def remove_run_file(run_dir, rfile):
         os.remove(filename)
     except OSError:
         pass
-    log.info("Removed run file at %s" % filename)
+    log.info(f"Removed run file at {filename}")
 
 
 def how_many_bots(run_dir):
@@ -665,7 +646,7 @@ def how_many_bots(run_dir):
     count = 0
     for filename in files:
         if filename.endswith(".bot"):
-            with open(os.path.join(run_dir, filename), "r") as run_file:
+            with open(os.path.join(run_dir, filename)) as run_file:
                 try:
                     pid = int(run_file.read())
                     if sys.platform == "win32":
@@ -683,9 +664,9 @@ def how_many_bots(run_dir):
 
 def already_playing(run_dir, gameid, side):
     isplaying = False
-    runfn = os.path.join(run_dir, "%s%s.bot" % (gameid, side))
+    runfn = os.path.join(run_dir, f"{gameid}{side}.bot")
     try:
-        with open(runfn, "r") as run_file:
+        with open(runfn) as run_file:
             try:
                 pid = int(run_file.read())
                 if sys.platform == "win32":
@@ -698,11 +679,10 @@ def already_playing(run_dir, gameid, side):
                         pass
             except ValueError:
                 pass
-    except IOError:
+    except OSError:
         pass
     log.info(
-        "The file %s indicates we are already playing at %s on side %s"
-        % (runfn, gameid, side)
+        f"The file {runfn} indicates we are already playing at {gameid} on side {side}"
     )
     return isplaying
 
@@ -724,7 +704,7 @@ def str_loglevel(strlevel):
 def shutdown_engine(engine_ctl):
     try:
         engine_ctl.quit()
-    except (socket.error, IOError):
+    except OSError:
         pass
     for _ in range(30):
         if engine_ctl.engine.proc.poll() is not None:
@@ -740,7 +720,7 @@ def shutdown_engine(engine_ctl):
                 ctypes.windll.kernel32.TerminateProcess(handle, 0)
             else:
                 os.kill(engine_ctl.engine.proc.pid, signal.SIGTERM)
-        except os.error:
+        except OSError:
             # don't worry about errors when trying to kill the engine
             pass
     engine_ctl.cleanup()
@@ -752,12 +732,9 @@ def init_logging(config):
     if config.has_section("Logging"):
         logdir = config.get("Logging", "directory")
         if not os.path.exists(logdir):
-            print("Log directory '%s' not found, attempting to create it." % (logdir))
+            print(f"Log directory '{logdir}' not found, attempting to create it.")
             os.makedirs(logdir)
-        logfilename = "%s-%s" % (
-            time.strftime("%Y%m%d-%H%M"),
-            str(os.getpid()),
-        )
+        logfilename = f"{time.strftime('%Y%m%d-%H%M')}-{str(os.getpid())}"
         logfilename = os.path.join(logdir, logfilename)
         if config.has_option("Logging", "level"):
             loglevel = str_loglevel(config.get("Logging", "level"))
@@ -813,8 +790,8 @@ def init_logging(config):
             netlog.addHandler(nethandler)
             netlog.propagate = False
             log.info(
-                "Created net log file %s at level %s"
-                % (logfilename + "-net.log", logging.getLevelName(netlevel))
+                f"Created net log file {logfilename}-net.log at level "
+                f"{logging.getLevelName(netlevel)}"
             )
 
 
@@ -822,14 +799,14 @@ def run_game(options, config):
     run_dir = config.get("global", "run_dir")
     if not os.path.exists(run_dir):
         log.warning(
-            "Run file directory '%s' not found, attempting to create it." % (run_dir)
+            f"Run file directory '{run_dir}' not found, attempting to create it."
         )
         os.makedirs(run_dir)
     bot_count = how_many_bots(run_dir)
     if bot_count >= config.getint("global", "max_bots"):
         log.info(
-            "Max number of bot limit %d reached, need to wait until some bots finish."
-            % (config.getint("global", "max_bots"))
+            f"Max number of bot limit {config.getint('global', 'max_bots')} "
+            f"reached, need to wait until some bots finish."
         )
         return
 
@@ -890,9 +867,7 @@ def run_game(options, config):
                     side = "b"
                 timecontrol = config.get(bot_section, "timecontrol")
                 rated = config.getboolean(bot_section, "rated")
-                log.info(
-                    "Will play on side %s, using timecontrol %s" % (side, timecontrol)
-                )
+                log.info(f"Will play on side {side}, using timecontrol {timecontrol}")
                 table = gameroom.newgame(side, timecontrol, rated)
             else:
                 # look through my games for correct opponent and side
@@ -940,15 +915,14 @@ def run_game(options, config):
             gameid_or_opponent = table.gid
 
             if options["against"] != "":
-                joinmsg = "Joined game gid=%s side=%s; against %s" % (
-                    table.gid,
-                    table.side,
-                    options["against"],
+                joinmsg = (
+                    f"Joined game gid={table.gid} side={table.side}; "
+                    f"against {options['against']}"
                 )
             else:
-                joinmsg = "Created game gid=%s side=%s; waiting for opponent" % (
-                    table.gid,
-                    table.side,
+                joinmsg = (
+                    f"Created game gid={table.gid} side={table.side}; "
+                    f"waiting for opponent"
                 )
             log.info(joinmsg)
             if console is None:
@@ -973,9 +947,7 @@ def run_game(options, config):
                 table.min_move_time = 5
             if config.has_option("global", "min_time_left"):
                 table.min_timeleft = config.getint("global", "min_time_left")
-                log.info(
-                    "Setting emergency stop time to %d seconds" % table.min_timeleft
-                )
+                log.info(f"Setting emergency stop time to {table.min_timeleft} seconds")
             else:
                 table.min_timeleft = 5
         except:
@@ -990,13 +962,13 @@ def run_game(options, config):
                 table.updatestate()
                 engine_ctl.setoption("rated", table.state.get("rated", 1))
                 try:
-                    touch_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
+                    touch_run_file(run_dir, f"{table.gid}{table.side}.bot")
                     time.sleep(1)  # Give the server a small break.
                     log.info("Starting play")
                     table.playgame(engine_ctl, bot_greeting, options["onemove"])
                 finally:
                     log.info("Leaving game")
-                    remove_run_file(run_dir, "%s%s.bot" % (table.gid, table.side))
+                    remove_run_file(run_dir, f"{table.gid}{table.side}.bot")
                     table.leave()
                 break
             finally:
@@ -1012,13 +984,12 @@ def run_game(options, config):
             unknowns_caught += 1
             if unknowns_caught > 5:
                 log.error(
-                    "Caught 6 unknown exceptions, giving up.\n%s"
-                    % (traceback.format_exc(),)
+                    f"Caught 6 unknown exceptions, giving up.\n{traceback.format_exc()}"
                 )
                 return 2
             log.error(
-                "Caught unkown exception #%d, restarting.\n%s"
-                % (unknowns_caught, traceback.format_exc())
+                f"Caught unkown exception #{unknowns_caught}, restarting.\n"
+                f"{traceback.format_exc()}"
             )
             time.sleep(2)
 
@@ -1035,14 +1006,14 @@ def main(args=sys.argv):
     try:
         options = parseargs(args)
     except ValueError:
-        print("Command not understood '%s'" % (" ".join(args[1:])))
+        print(f"Command not understood '{' '.join(args[1:])}'")
         return 2
 
     config = ConfigParser()
     config_filename = options["config"]
     files_read = config.read(config_filename)
     if len(files_read) == 0:
-        print("Could not open '%s'" % (config_filename,))
+        print(f"Could not open '{config_filename}'")
         print("this file must be readable and contain the configuration")
         print("for connecting to the gameroom.")
         return 1

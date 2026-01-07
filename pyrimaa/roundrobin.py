@@ -1,25 +1,5 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2009-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import logging
 import sys
 import time
@@ -60,10 +40,10 @@ def format_time(seconds):
     seconds -= minutes * 60
     fmt_tm = []
     if hours:
-        fmt_tm.append("%dh" % hours)
+        fmt_tm.append(f"{hours}h")
     if minutes or fmt_tm:
-        fmt_tm.append("%dm" % minutes)
-    fmt_tm.append("%ds" % seconds)
+        fmt_tm.append(f"{minutes}m")
+    fmt_tm.append(f"{seconds}s")
     return "".join(fmt_tm)
 
 
@@ -102,7 +82,7 @@ def get_config(args=None):
 
     config = ConfigParser()
     if config.read(args.config) != [args.config]:
-        raise ConfigError("Could not open '%s'" % (args.config,))
+        raise ConfigError(f"Could not open '{args.config}'")
     args.ini = config
     args.bot_sections = set(config.sections())
     if "global" not in args.bot_sections:
@@ -119,7 +99,7 @@ def get_config(args=None):
     if loglevel is not None:
         loglevel = logging.getLevelName(loglevel)
         if not isinstance(loglevel, int):
-            print("Bad log level %s, use ERROR, WARNING, INFO or DEBUG." % (loglevel,))
+            print(f"Bad log level {loglevel}, use ERROR, WARNING, INFO or DEBUG.")
         logging.basicConfig(level=loglevel)
 
     if args.pgn is None:
@@ -173,7 +153,7 @@ def main(args=None):
         return 1
 
     if cfg.rounds:
-        print("Number of rounds: %d" % (cfg.rounds,))
+        print(f"Number of rounds: {cfg.rounds}")
     else:
         print("Number of rounds not specified, running 1 round.")
         cfg.rounds = 1
@@ -184,14 +164,14 @@ def main(args=None):
             timecontrol = None
         else:
             timecontrol = TimeControl(tctl_str)
-            print("At timecontrol %s" % (tctl_str,))
+            print(f"At timecontrol {tctl_str}")
     except NoOptionError:
         timecontrol = None
 
     if cfg.global_options:
         print("Giving these settings to all bots:")
         for name, value in cfg.global_options:
-            print("  %s: %s" % (name, value))
+            print(f"  {name}: {value}")
 
     print("Playing bots: ", end="")
     for bot in cfg.bots:
@@ -203,10 +183,10 @@ def main(args=None):
     if cfg.pgn is not None:
         try:
             pgn_file = open(cfg.pgn, "a+")
-        except IOError:
-            print("Could not open pgn file %s" % (cfg.pgn,))
+        except OSError:
+            print(f"Could not open pgn file {cfg.pgn}")
             return 1
-        print("Writing results to pgn file: %s" % (cfg.pgn,))
+        print(f"Writing results to pgn file: {cfg.pgn}")
         write_pgn = True
 
     bots = []
@@ -231,12 +211,12 @@ def main(args=None):
                         tc = None
                     else:
                         tc = TimeControl(tctl_str)
-                        print("bot %s at timecontrol %s" % (bsection, tctl_str))
+                        print(f"bot {bsection} at timecontrol {tctl_str}")
                     bot["timecontrol"] = tc
                 bots.append(bot)
                 break
         else:
-            print("Did not find a bot section for %s" % (bname))
+            print(f"Did not find a bot section for {bname}")
             return 1
 
     start_time = time.time()
@@ -271,11 +251,11 @@ def main(args=None):
                 loser = [gbot, sbot][wside ^ 1]
 
                 # Display result of game
-                print("%d%s" % (game.movenumber, "gs"[game.position.color]))
+                print(f"{game.movenumber}{'gs'[game.position.color]}")
                 print(game.position.board_to_str())
                 print(
-                    "%s beat %s because of %s playing side %s"
-                    % (winner["name"], loser["name"], reason, "gs"[wside])
+                    f"{winner['name']} beat {loser['name']} because of "
+                    f"{reason} playing side {'gs'[wside]}"
                 )
 
                 # Record game result stats
@@ -292,17 +272,17 @@ def main(args=None):
                     else:
                         ply_count -= 2
                     results = ["1-0", "0-1"]
-                    pgn_file.write('[White "%s"]\n' % (gbot["name"],))
-                    pgn_file.write('[Black "%s"]\n' % (sbot["name"],))
+                    pgn_file.write(f'[White "{gbot["name"]}"]\n')
+                    pgn_file.write(f'[Black "{sbot["name"]}"]\n')
                     if timecontrol:
-                        pgn_file.write('[TimeControl "%s"]\n' % (tctl_str,))
-                    pgn_file.write('[PlyCount "%s"]\n' % (ply_count,))
-                    pgn_file.write('[ResultCode "%s"]\n' % (reason,))
-                    pgn_file.write('[Result "%s"]\n' % (results[wside],))
+                        pgn_file.write(f'[TimeControl "{tctl_str}"]\n')
+                    pgn_file.write(f'[PlyCount "{ply_count}"]\n')
+                    pgn_file.write(f'[ResultCode "{reason}"]\n')
+                    pgn_file.write(f'[Result "{results[wside]}"]\n')
                     pgn_file.write("\n")
                     for move in game.moves:
-                        pgn_file.write("%s\n" % (move,))
-                    pgn_file.write("%s\n\n" % (results[wside]))
+                        pgn_file.write(f"{move}\n")
+                    pgn_file.write(f"{results[wside]}\n\n")
                     pgn_file.flush()
 
                 # give the engines up to 30 more seconds to exit normally
@@ -314,14 +294,13 @@ def main(args=None):
                 sengine.cleanup()
         round_end = time.time()
         total_time = round_end - start_time
-        print("After round %d and %s:" % (round_num + 1, format_time(total_time)))
+        print(f"After round {round_num + 1} and {format_time(total_time)}:")
         for bot in bots:
             print(
-                "%s has %d wins and %d timeouts"
-                % (bot["name"], bot["wins"], bot["timeouts"])
+                f"{bot['name']} has {bot['wins']} wins and {bot['timeouts']} timeouts"
             )
             for name, value in bot["reasons"].items():
-                print("    %d by %s" % (value, name))
+                print(f"    {value} by {name}")
 
     return 0
 

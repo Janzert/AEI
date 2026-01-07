@@ -1,23 +1,3 @@
-# Copyright (c) 2008-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import logging
 import socket
 import sys
@@ -55,14 +35,14 @@ def _get_child_pids():
     kernel32.Process32First.argtypes = [ctypes.c_ulong, ctypes.POINTER(ProcessEntry)]
     if kernel32.Process32First(psnap, ctypes.byref(entry)) == 0:
         errno = kernel32.GetLastError()
-        raise OSError("Received error from Process32First, %d" % (errno,))
+        raise OSError(f"Received error from Process32First, {errno}")
     else:
         childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
     while kernel32.Process32Next(psnap, ctypes.pointer(entry)):
         childIDs[entry.th32ParentProcessID].append(entry.th32ProcessID)
     errno = kernel32.GetLastError()
     if errno != 18:
-        raise OSError("Received error from Process32Next, %d" % (errno,))
+        raise OSError(f"Received error from Process32Next, {errno}")
     kernel32.CloseHandle(psnap)
     return childIDs
 
@@ -79,7 +59,7 @@ def _kill_proc_tree(pid, cid_map=None):
         ctypes.windll.kernel32.TerminateProcess(handle, -1)
         ctypes.windll.kernel32.CloseHandle(handle)
     else:
-        raise OSError("Could not kill process, %d" % (pid,))
+        raise OSError(f"Could not kill process, {pid}")
 
 
 START_TIME = 5.0
@@ -111,15 +91,13 @@ class _ProcCom(Thread):
         while not self.stop.is_set() and self.proc.poll() is None:
             msg = self.proc.stdout.readline()
             if self.log:
-                self.log.debug("Received from bot: %s" % (repr(msg)))
+                self.log.debug(f"Received from bot: {repr(msg)}")
             self.outq.put(msg.strip())
 
 
 class StdioEngine:
     def __init__(self, cmdline, log=None):
-        proc = Popen(
-            cmdline, shell=True, stdin=PIPE, stdout=PIPE, universal_newlines=True
-        )
+        proc = Popen(cmdline, shell=True, stdin=PIPE, stdout=PIPE, text=True)
         self.proc = proc
         self.log = log
         self.proc_com = _ProcCom(proc, log)
@@ -138,7 +116,7 @@ class StdioEngine:
 
     def send(self, msg):
         if self.log:
-            self.log.debug("Sending to bot: %s" % repr(msg))
+            self.log.debug(f"Sending to bot: {repr(msg)}")
         self.proc.stdin.write(msg)
         self.proc.stdin.flush()
 
@@ -196,7 +174,7 @@ class SocketEngine:
                     listensock.listen(1)
                     listensock.settimeout(30)
                     break
-                except socket.error as exc:
+                except OSError as exc:
                     if hasattr(exc, "args") and (
                         exc.args[0] == 10048 or exc.args[0] == 98
                     ):
@@ -208,7 +186,7 @@ class SocketEngine:
             else:
                 botargs = con + " --server 127.0.0.1 --port " + str(address[1])
             if con == "listen":
-                print("Listening on %s:%s" % address)
+                print(f"Listening on {address[0]}:{address[1]}")
                 proc = None
             else:
                 proc = Popen(botargs, shell=True)
@@ -231,7 +209,7 @@ class SocketEngine:
 
     def send(self, msg):
         if self.log is not None:
-            self.log.debug("Sending to bot: %s" % repr(msg))
+            self.log.debug(f"Sending to bot: {repr(msg)}")
         self.sock.sendall(msg.encode("utf-8"))
 
     def readline(self, timeout=None):
@@ -262,13 +240,13 @@ class SocketEngine:
                     sock.settimeout(wait)
                 packet = sock.recv(4096).decode("utf-8")
                 if self.log:
-                    self.log.debug("Received from bot: %s" % (repr(packet)))
+                    self.log.debug(f"Received from bot: {repr(packet)}")
                 response += packet
                 if find_line_end(response) != -1:
                     break
             except socket.timeout:
                 pass
-            except socket.error as exc:
+            except OSError as exc:
                 if hasattr(exc, "args") and (exc.args[0] == 10035 or exc.args[0] == 11):
                     pass
                 else:
@@ -326,7 +304,7 @@ def get_engine(channel, cmd, logname=None):
     elif channel == "2008cc":
         engine = SocketEngine(cmd, legacy_mode=True, log=log)
     else:
-        raise ValueError("Unrecognized channel given to get_engine (%s)" % channel)
+        raise ValueError(f"Unrecognized channel given to get_engine ({channel})")
     return engine
 
 
@@ -340,7 +318,7 @@ class EngineController:
         self.engine = engine
         try:
             engine.send("aei\n")
-        except IOError as exc:
+        except OSError as exc:
             raise EngineException("Could not send initial message to engine.") from exc
         try:
             response = engine.waitfor("aeiok", START_TIME)
@@ -355,7 +333,7 @@ class EngineController:
             if engine.log:
                 if version != "1":
                     engine.log.warn(
-                        "Unrecognized protocol version from engine, %s." % (version,)
+                        f"Unrecognized protocol version from engine, {version}."
                     )
                 engine.log.info("Setting aei protocol to version 1")
 
@@ -394,9 +372,7 @@ class EngineController:
         self.engine.send("isready\n")
         rstrs = self.engine.waitfor("readyok", timeout)
         if rstrs[-1].strip().lower() != "readyok":
-            raise EngineException(
-                "Unexpected final response to isready (%s)" % (rstrs[-1],)
-            )
+            raise EngineException(f"Unexpected final response to isready ({rstrs[-1]})")
         responses = []
         for rstr in rstrs[:-1]:
             responses.append(self._parse_resp(rstr))
@@ -406,14 +382,14 @@ class EngineController:
         self.engine.send("newgame\n")
 
     def makemove(self, move):
-        self.engine.send("makemove %s\n" % (move))
+        self.engine.send(f"makemove {move}\n")
 
     def setposition(self, pos):
         side_colors = "wb"
         if self.protocol_version != 0:
             side_colors = "gs"
         self.engine.send(
-            "setposition %s %s\n" % (side_colors[pos.color], pos.board_to_str("short"))
+            f"setposition {side_colors[pos.color]} {pos.board_to_str('short')}\n"
         )
 
     def go(self, searchtype=None):
@@ -428,9 +404,9 @@ class EngineController:
         self.engine.send("stop\n")
 
     def setoption(self, name, value=None):
-        setoptcmd = "setoption name %s" % (name,)
+        setoptcmd = f"setoption name {name}"
         if value is not None:
-            setoptcmd += " value %s" % (value,)
+            setoptcmd += f" value {value}"
         self.engine.send(setoptcmd + "\n")
 
     def quit(self):

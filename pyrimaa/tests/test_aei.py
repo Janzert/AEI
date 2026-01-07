@@ -1,23 +1,3 @@
-# Copyright (c) 2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE
-
 import os.path
 import socket
 import sys
@@ -45,11 +25,11 @@ class MockEngine:
             self.event += 1
             raise expected[1]
         if expected[0] != "s":
-            raise Exception("Mock engine send called when expecting, %s" % (expected,))
+            raise Exception(f"Mock engine send called when expecting, {expected}")
         if msg.rstrip() != expected[1]:
             raise Exception(
-                "Mock engine send called with unexpected message (%s) expected (%s)."
-                % (msg, expected[1])
+                f"Mock engine send called with unexpected message ({msg}) "
+                f"expected ({expected[1]})."
             )
         self.event += 1
 
@@ -59,7 +39,7 @@ class MockEngine:
         expected = self.expected[self.event]
         if expected[0] != "r":
             raise Exception(
-                "Mock engine readline called when expecting, %s" % (expected[1],)
+                f"Mock engine readline called when expecting, {expected[1]}"
             )
         self.event += 1
         return expected[1]
@@ -70,9 +50,7 @@ class MockEngine:
         msg = msg.rstrip()
         expected = self.expected[self.event]
         if expected[0] not in ["r", "raise"]:
-            raise Exception(
-                "Mock engine waitfor called when expecting, %s" % (expected,)
-            )
+            raise Exception(f"Mock engine waitfor called when expecting, {expected}")
         responses = []
         while expected[0] == "r" and expected[1] != msg:
             responses.append(expected[1])
@@ -87,7 +65,7 @@ class MockEngine:
             raise expected[1]()
         else:
             raise Exception(
-                "Mock engine waitfor called with unexpected message (%s)" % (msg,)
+                f"Mock engine waitfor called with unexpected message ({msg})"
             )
         self.event += 1
         return responses
@@ -124,7 +102,8 @@ protocol0 = [
     ("s", "newgame"),
     (
         "s",
-        "setposition w [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
+        "setposition w "
+        "[rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
 ]
 
@@ -139,7 +118,8 @@ bad_protocol = [
     ("s", "newgame"),
     (
         "s",
-        "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
+        "setposition g "
+        "[rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
     ("s", "go"),
     ("s", "stop"),
@@ -161,7 +141,8 @@ protocol1 = [
     ("s", "newgame"),
     (
         "s",
-        "setposition g [rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
+        "setposition g "
+        "[rrrrrrrrdhcemchd                                DHCMECHDRRRRRRRR]",
     ),
     ("s", "go"),
     ("s", "stop"),
@@ -290,7 +271,7 @@ class EngineControllerTest(unittest.TestCase):
     def test_socketengine(self):
         path = os.path.dirname(__file__)
         adapter_path = os.path.join(path, "socketadapter.py")
-        adapter_cmd = "%s %s" % (sys.executable, adapter_path)
+        adapter_cmd = f"{sys.executable} {adapter_path}"
         eng = aei.get_engine("socket", adapter_cmd)
         self.assertIsInstance(eng, aei.SocketEngine)
         self._check_engine(eng)

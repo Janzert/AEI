@@ -1,23 +1,3 @@
-# Copyright (c) 2010-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import re
 
 
@@ -40,14 +20,14 @@ def _parse_timefield(full_field, start_unit="m"):
         else:
             sep = field[end]
         if sep not in units:
-            raise ValueError("Invalid time unit encountered %s" % (sep))
+            raise ValueError(f"Invalid time unit encountered {sep}")
         seconds += num * units[sep]
         if ":" in units:
             del units[":"]
         field = field[end + 1 :]
         nmatch = num_re.match(field)
     if field:
-        raise ValueError("Invalid time field encountered %s" % (full_field))
+        raise ValueError(f"Invalid time field encountered {full_field}")
     return seconds
 
 
@@ -57,10 +37,10 @@ def _time_str(seconds):
     for tag, length in units:
         span = seconds // length
         if span != 0:
-            out.append("%s%s" % (int(span), tag))
+            out.append(f"{int(span)}{tag}")
         seconds -= span * length
     if seconds != 0:
-        out.append("%gs" % (seconds,))
+        out.append(f"{seconds:g}s")
     if len(out) == 0:
         out = ["0"]
     return "".join(out)
@@ -69,7 +49,7 @@ def _time_str(seconds):
 field_re = re.compile("[^/]*")
 
 
-class TimeControl(object):
+class TimeControl:
     def __init__(self, tc_str):
         def _split_tc(tstr):
             fmatch = field_re.match(tc_str)
@@ -109,7 +89,7 @@ class TimeControl(object):
         out.append(str(self.percent))
         out.append(_time_str(self.max_reserve))
         if self.turn_limit:
-            out.append("%st" % (self.turn_limit,))
+            out.append(f"{self.turn_limit}t")
         else:
             out.append(_time_str(self.time_limit))
         out.append(_time_str(self.max_turntime))

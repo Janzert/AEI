@@ -1,23 +1,3 @@
-# Copyright (c) 2010-2015 Brian Haskin Jr.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE
-
 import logging
 import socket
 import time
@@ -28,7 +8,7 @@ from pyrimaa.board import BLANK_BOARD, Color, IllegalMove, Position
 log = logging.getLogger("game")
 
 
-class Game(object):
+class Game:
     def __init__(
         self,
         gold,
@@ -101,7 +81,7 @@ class Game(object):
                 if result:
                     break
             except IllegalMove as e:
-                log.info("Illegal move played: %s" % e)
+                log.info(f"Illegal move played: {e}")
                 result = (self.position.color ^ 1, "i")
                 break
         if not result:
@@ -207,13 +187,13 @@ class Game(object):
         move = resp.move
         if move.lower() == "resign":
             return (side ^ 1, "r")
-        self.moves.append("%d%s %s" % (self.movenumber, "gs"[position.color], move))
+        self.moves.append(f"{self.movenumber}{'gs'[position.color]} {move}")
         if self.insetup:
             position = position.do_move_str(move, strict_checks=self.strict_setup)
         else:
             position = position.do_move_str(move)
         if position.bitBoards == self.position.bitBoards:
-            raise IllegalMove("Tried move that did not change the position, %s" % move)
+            raise IllegalMove(f"Tried move that did not change the position, {move}")
         self.repetition_count[position] += 1
         if self.repetition_count[position] > 2:
             raise IllegalMove("Tried move resulting in a 3rd time repetition")
