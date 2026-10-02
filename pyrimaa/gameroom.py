@@ -46,6 +46,10 @@ enginelog = logging.getLogger("gameroom.engine")
 console = None
 
 
+class LoginError(Exception):
+    """The gameroom refused a login."""
+
+
 class EngineCrashException(Exception):
     pass
 
@@ -523,6 +527,8 @@ class GameRoom:
     def login(self, username, password):
         values = {"username": username, "password": password, "action": "login"}
         response = post(self.url, values, "GameRoom.login")
+        if "sid" not in response:
+            raise LoginError(response.get("error", "no session id in reply"))
         self.sid = response["sid"]
         log.info("Logged into gameroom as %s", username)
 
@@ -855,7 +861,12 @@ def run_game(options, config):
             bot_greeting = config.get(bot_section, "greeting")
 
             gameroom = GameRoom(config.get("global", "gameroom_url"))
-            gameroom.login(bot_username, bot_password)
+            try:
+                gameroom.login(bot_username, bot_password)
+            except LoginError as exc:
+                log.error("Could not log in as %s: %s", bot_username, exc)
+                shutdown_engine(engine_ctl)
+                return 1
             side = options["side"]
             if side == "g":
                 side = "w"
