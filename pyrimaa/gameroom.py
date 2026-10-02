@@ -30,7 +30,7 @@ import sys
 import time
 import traceback
 from configparser import ConfigParser, NoOptionError
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request as URLRequest
 from urllib.request import urlopen
@@ -81,13 +81,26 @@ def post(url, values, logname="network"):
                     netlog.debug("Socket timed out to server")
                     body = ""
                     timedout = True
+            except HTTPError as err:
+                # The server answers requests it won't allow with 404.
+                log.error(
+                    "The gameroom returned HTTP %d %s for %s; the server may be "
+                    "refusing the request.",
+                    err.code,
+                    err.reason,
+                    url,
+                )
+                raise
             except URLError as err:
                 if isinstance(err.reason, socket.timeout):
                     # time out probably in urlopen
                     netlog.debug("Socket timed out with URLError: %s", err)
                     body = ""
                     timedout = True
-                elif isinstance(err.reason, socket.gaierror) and err.reason[0] == 10060:
+                elif (
+                    isinstance(err.reason, socket.gaierror)
+                    and getattr(err.reason, "errno", None) == 10060
+                ):
                     netlog.debug("URLError: getaddressinfo connection timed out")
                     body = ""
                 else:
@@ -680,17 +693,19 @@ def already_playing(run_dir, gameid, side):
                     isplaying = True
                 else:
                     try:
-                        if os.kill(pid, signal.SIGCONT) > 0:
-                            isplaying = True
+                        os.kill(pid, 0)
+                        isplaying = True
                     except OSError:
                         pass
             except ValueError:
                 pass
     except OSError:
         pass
-    log.info(
-        f"The file {runfn} indicates we are already playing at {gameid} on side {side}"
-    )
+    if isplaying:
+        log.info(
+            f"The file {runfn} indicates we are already playing at {gameid} "
+            f"on side {side}"
+        )
     return isplaying
 
 
@@ -962,6 +977,10 @@ def run_game(options, config):
                 log.info(f"Setting emergency stop time to {table.min_timeleft} seconds")
             else:
                 table.min_timeleft = 5
+        except HTTPError:
+            # Already logged by post(); retrying won't help.
+            shutdown_engine(engine_ctl)
+            return 1
         except:
             shutdown_engine(engine_ctl)
             raise
