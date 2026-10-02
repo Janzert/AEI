@@ -1,7 +1,9 @@
+import errno
 import os.path
 import socket
 import sys
 import unittest
+from unittest import mock
 
 from pyrimaa import aei, board
 from pyrimaa.aei import EngineController, EngineException, EngineResponse
@@ -279,4 +281,22 @@ class EngineControllerTest(unittest.TestCase):
         self.assertIsInstance(eng, aei.SocketEngine)
         self._check_engine(eng)
         eng = aei.get_engine("2008cc", adapter_cmd + " --legacy")
+        self._check_engine(eng)
+
+    def test_socketengine_port_in_use(self):
+        # SocketEngine listens on 40015 and moves to the next port while the
+        # address is in use. The error number for that differs by platform.
+        path = os.path.dirname(__file__)
+        adapter_cmd = f"{sys.executable} {os.path.join(path, 'socketadapter.py')}"
+        real_socket = socket.socket
+
+        class FirstPortInUse(real_socket):
+            def bind(self, address):
+                if address[1] == 40015:
+                    raise OSError(errno.EADDRINUSE, os.strerror(errno.EADDRINUSE))
+                return super().bind(address)
+
+        with mock.patch.object(aei.socket, "socket", FirstPortInUse):
+            eng = aei.get_engine("socket", adapter_cmd)
+        self.assertNotEqual(eng.sock.getsockname()[1], 40015)
         self._check_engine(eng)

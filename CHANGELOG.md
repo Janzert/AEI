@@ -15,6 +15,12 @@ history.
   request; publishing a GitHub release builds the package, attaches it to
   the release and uploads it to PyPI with trusted publishing.
 
+### Fixed
+
+- aei: a socket engine failed to start on macOS when port 40015 was in
+  use, instead of trying the next port, because only the Linux and Windows
+  "address in use" error numbers were recognized.
+
 ## [1.4.1] - 2026-10-02
 
 ### Fixed

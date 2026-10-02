@@ -1,3 +1,4 @@
+import errno
 import logging
 import socket
 import sys
@@ -175,9 +176,8 @@ class SocketEngine:
                     listensock.settimeout(30)
                     break
                 except OSError as exc:
-                    if hasattr(exc, "args") and (
-                        exc.args[0] == 10048 or exc.args[0] == 98
-                    ):
+                    # 10048 is WSAEADDRINUSE on Windows.
+                    if exc.errno in (errno.EADDRINUSE, 10048):
                         address = (address[0], address[1] + 1)
                     else:
                         raise
@@ -201,7 +201,8 @@ class SocketEngine:
         self.active = True
 
     def __del__(self):
-        if self.active:
+        # __init__ may have failed before setting active.
+        if getattr(self, "active", False):
             self.cleanup()
 
     def is_running(self):
