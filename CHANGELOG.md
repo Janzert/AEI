@@ -31,6 +31,10 @@ history.
 ### Changed
 
 - roundrobin: elapsed times are printed in whole seconds.
+- Development: the `dev` extra installs pre-commit only on Python 3.10 and
+  newer, and `uv.lock` now pins virtualenv 21.14.4 and filelock 4.0.9,
+  which fix the advisories Dependabot reported. Neither is a dependency of
+  AEI itself.
 
 ### Added
 
