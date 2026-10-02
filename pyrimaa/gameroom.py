@@ -53,7 +53,8 @@ class EngineCrashException(Exception):
 def post(url, values, logname="network"):
     """Send a post request to the specified url."""
     data = urlencode(values).encode("utf-8")
-    req = URLRequest(url, data)
+    # The gameroom now returns 404 unless the Referer is a gameroom page.
+    req = URLRequest(url, data, headers={"Referer": url})
     oldtimeout = socket.getdefaulttimeout()
     if values.get("wait", 0) != 0:
         stimeout = max(5, values["maxwait"] + 2)
