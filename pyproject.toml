@@ -29,6 +29,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://arimaa.janzert.com/aei"
 "Source Code" = "https://github.com/janzert/aei"
+Changelog = "https://github.com/janzert/aei/blob/master/CHANGELOG.md"
 
 [project.scripts]
 analyze = "pyrimaa.analyze:main"
