@@ -8,6 +8,13 @@ history.
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions workflows: CI runs the tests on Python 3.8 to 3.14 (plus
+  Windows and macOS), ruff, and package checks on every push and pull
+  request; publishing a GitHub release builds the package, attaches it to
+  the release and uploads it to PyPI with trusted publishing.
+
 ## [1.4.1] - 2026-10-02
 
 ### Fixed
