@@ -3,7 +3,6 @@ import os
 import sys
 import unittest
 from contextlib import contextmanager
-from importlib import reload
 from io import StringIO
 from tempfile import NamedTemporaryFile
 
@@ -27,16 +26,26 @@ def save_stdio():
     org_stdin = sys.stdin
     org_stdout = sys.stdout
     org_stderr = sys.stderr
+    # analyze.main() configures logging with basicConfig, which does nothing
+    # once the root logger has handlers. Remove them so its handler writes to
+    # the captured stderr, and put them back afterwards.
+    root = logging.getLogger()
+    org_handlers = root.handlers[:]
+    org_level = root.level
     try:
         out = StringIO()
         err = StringIO()
         sys.stdout, sys.stderr = out, err
-        logging.shutdown()
-        reload(logging)
-        analyze.logging = logging
-        analyze.log = logging.getLogger("analyze")
+        for handler in org_handlers:
+            root.removeHandler(handler)
         yield (out, err)
     finally:
+        for handler in root.handlers[:]:
+            root.removeHandler(handler)
+            handler.close()
+        for handler in org_handlers:
+            root.addHandler(handler)
+        root.setLevel(org_level)
         sys.stdin = org_stdin
         sys.stdout = org_stdout
         sys.stderr = org_stderr
