@@ -8,6 +8,8 @@ history.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-02
+
 ### Fixed
 
 - gameroom: arimaa.com now rejects gameroom requests (with a 404) unless
@@ -163,7 +165,8 @@ Few protocol changes, but a much more robust implementation.
 
 First tagged release.
 
-[Unreleased]: https://github.com/Janzert/AEI/compare/1.4...HEAD
+[Unreleased]: https://github.com/Janzert/AEI/compare/1.4.1...HEAD
+[1.4.1]: https://github.com/Janzert/AEI/compare/1.4...1.4.1
 [1.4]: https://github.com/Janzert/AEI/compare/1.3...1.4
 [1.3]: https://github.com/Janzert/AEI/compare/1.2...1.3
 [1.2]: https://github.com/Janzert/AEI/compare/1.1...1.2
