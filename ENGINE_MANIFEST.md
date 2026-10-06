@@ -6,7 +6,9 @@ Status: draft, version 1.
 
 An engine manifest is a small JSON file that describes one release of an
 AEI engine: what it is, where to download it for each platform, how to start
-it, and what options it takes. A controller (a GUI or another program that
+it, and what options it takes. Downloads are optional: a manifest without
+them describes an engine installed some other way, such as a developer's
+own build, and a controller simply offers no download for it. A controller (a GUI or another program that
 runs engines) can read a manifest to offer the engine for download, install
 it, and show its options, without the user finding binaries and typing
 paths.
@@ -46,7 +48,7 @@ versions can add keys without breaking older readers.
 | `license` | no | The license of the release, as an SPDX identifier where there is one (e.g. `MIT`, `BSD-3-Clause`). |
 | `update_url` | no | Where the newest manifest is published, e.g. the GitHub `releases/latest/download/engine.json` URL above. A controller that loaded the manifest from a URL may use that URL instead. |
 | `args` | no | Command line arguments to start the engine in AEI mode, as a list of strings. Default: none. |
-| `downloads` | yes | The files for each platform (see "Downloads"). At least one entry. |
+| `downloads` | no | The files for each platform (see "Downloads"). Without it (or with no entry for its platform), a controller offers no download. |
 | `options` | no | The engine's options (see "Options"). |
 
 ### Downloads
@@ -86,15 +88,31 @@ entry is an object:
 
 | Key | Required | Meaning |
 |---|---|---|
-| `name` | yes | The option's name, as sent in `setoption name <name>`. One word. |
-| `type` | yes | `check` (true or false), `spin` (an integer), `combo` (one of `choices`), or `string`. |
-| `default` | no | The engine's default: a boolean for `check`, an integer for `spin`, a string otherwise. |
-| `min`, `max` | no | Bounds for a `spin`. |
+| `name` | yes | The option's name, as sent in `setoption name <name>`. One word, matched exactly (case matters). |
+| `type` | yes | One of the types below. |
+| `default` | no | The engine's default, as a JSON value of the type's kind. |
+| `min`, `max` | no | Bounds for a `spin` or a `float`. |
 | `choices` | for `combo` | The allowed values, as strings. |
-| `description` | no | What the option does, for people. |
+| `description` | no | What the option does, for people, including any limits on when it can be changed (for example, not during a search). |
 
-Values are sent as text: `check` as `true` or `false`, `spin` as a decimal
-integer. Options are documentation for controllers: an engine must still
+The types, and how their values are sent in `setoption name <name> value <value>`:
+
+| Type | Value | Default | Meaning |
+|---|---|---|---|
+| `check` | `true` or `false`, exactly | boolean | On or off. |
+| `spin` | a decimal integer | integer | A whole number. |
+| `float` | a decimal number, such as `0.75` | number | A number with a fraction. |
+| `combo` | one of `choices` | string | A choice from a list. |
+| `string` | the text | string | Free text. |
+| `file` | a file's path | string | Like `string`; a controller can offer a file picker (an opening book, say). |
+| `path` | a directory's path | string | Like `string`; a controller can offer a directory picker (tablebases, say). |
+| `button` | none | none | An action: sent as `setoption name <name>` with no value. Only engines that declare a button need to accept a `setoption` without a value. |
+
+A value is the rest of the `setoption` line after `value`, so it may
+contain spaces, but not line breaks; engines may trim it and collapse runs
+of spaces, so values shouldn't depend on them.
+
+Options are documentation for controllers: an engine must still
 handle an unrecognized option or value as the protocol says (log a
 warning), and the engine's own report of its options, where the protocol
 gives one, takes precedence over the manifest's.
