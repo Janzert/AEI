@@ -125,7 +125,7 @@ gives one, takes precedence over the manifest's.
   "id": "github.com/Janzert/OpFor",
   "name": "OpFor",
   "version": "2026.10.1",
-  "author": "Brian Haskin Jr.",
+  "author": "Brian Haskin (Janzert)",
   "description": "An alpha-beta Arimaa engine.",
   "homepage": "https://github.com/Janzert/OpFor",
   "license": "MIT",
