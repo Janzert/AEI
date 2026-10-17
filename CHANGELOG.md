@@ -14,6 +14,11 @@ history.
   Windows and macOS), ruff, and package checks on every push and pull
   request; publishing a GitHub release builds the package, attaches it to
   the release and uploads it to PyPI with trusted publishing.
+- invite_controller: keeps a bot logged in to the arimaa.com gameroom
+  lobby so players can invite it, accepts invitations whose time control
+  and rated setting are allowed in an `[invites]` section of
+  `gameroom.cfg` (or a per-bot `[<bot>.invites]` section), declines the
+  rest with a reason, and plays each accepted game with `gameroom`.
 
 ### Fixed
 

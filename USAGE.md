@@ -188,3 +188,32 @@ settings or specific bot sections to use in certain games, see the
 
 To cleanly exit the controller after the current move is played create a file
 called `stop_postal` in the directory `postal_controller` was run from.
+
+## invite_controller
+
+Keeps a bot logged in to the arimaa.com gameroom lobby and plays the games
+other players invite it to.
+
+Add an `[invites]` section to `gameroom.cfg` listing the time controls the
+bot accepts (see `gameroom_example.cfg`), then run:
+
+```bash
+invite_controller [-b BOT]
+```
+
+The bot is the `-b` section, or `default_engine` without it. Settings for
+one bot can go in a section named after it, such as
+`[bot_example.invites]`; each setting there overrides the one in
+`[invites]`.
+
+It logs in the way the web gameroom does and asks the lobby for its state
+every 20 to 30 seconds. That keeps the bot listed as online, which clients
+such as Howdah require before they offer to invite it. Invitations with an
+allowed time control and rated setting are accepted, up to `max_games` at a
+time, and each game is played by running `gameroom play <game number>
+<side>` with the same configuration (so `max_bots` in `[global]` should be
+at least `max_games`). Other invitations are declined with a reason the
+inviter sees.
+
+To exit the controller create a file called `stop_invites` in the directory
+it was run from. Games already started keep playing.

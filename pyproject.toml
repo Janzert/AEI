@@ -34,6 +34,7 @@ Changelog = "https://github.com/janzert/aei/blob/master/CHANGELOG.md"
 [project.scripts]
 analyze = "pyrimaa.analyze:main"
 gameroom = "pyrimaa.gameroom:main"
+invite_controller = "pyrimaa.invite_controller:main"
 postal_controller = "pyrimaa.postal_controller:main"
 pyrimaa_tests = "pyrimaa.test_runner:main"
 roundrobin = "pyrimaa.roundrobin:main"
