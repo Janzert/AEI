@@ -18,6 +18,7 @@ from pyrimaa.invite_controller import (
     LobbyError,
     Policy,
     entries,
+    invites_on,
     normalize_tc,
 )
 
@@ -115,6 +116,24 @@ class HelpersTest(unittest.TestCase):
         self.assertEqual(entries({"a": ""}, "a"), [])
         self.assertEqual(entries({}, "a"), [])
 
+    def test_invites_on(self):
+        def state(inviteme, **me):
+            online = [
+                {"id": "1", "username": "Other", "inviteme": "1"},
+                {"id": "19377", "username": "bot_A", "inviteme": inviteme},
+            ]
+            return {"online": online, **({"me": me} if me else {})}
+
+        self.assertTrue(invites_on(state("1"), "bot_a"))
+        self.assertTrue(invites_on(state("1 "), "bot_a"))
+        self.assertTrue(invites_on(state("2 "), "bot_a"))
+        self.assertFalse(invites_on(state(""), "bot_a"))
+        self.assertFalse(invites_on(state("x"), "bot_a"))
+        # The login name may be an email address; "me" names the user.
+        self.assertFalse(invites_on(state("", id="19377"), "bot@example.com"))
+        self.assertIsNone(invites_on(state("1"), "bot@example.com"))
+        self.assertIsNone(invites_on({}, "bot_a"))
+
     def test_normalize_tc(self):
         self.assertEqual(normalize_tc(" 30S/2m/100/0/10M "), "30s/2m/100/0/10m")
 
@@ -197,6 +216,17 @@ class LobbyTest(unittest.TestCase):
         lobby = fake_lobby({"declineInvite.cgi": "<p>Error</p>"})
         with self.assertRaisesRegex(LobbyError, "decline failed"):
             lobby.decline("1", "2", "r")
+
+    def test_set_invites(self):
+        lobby = fake_lobby({"inviteMe.cgi": "<b>Currently  not seeking invites.</b>"})
+        lobby.set_invites(False)
+        self.assertEqual(lobby.opener.form(0), {"noinvite": "Update"})
+        lobby = fake_lobby({"inviteMe.cgi": "<b>Currently  seeking invites.</b>"})
+        lobby.set_invites(True)
+        self.assertEqual(lobby.opener.form(0), {"yesinvite": "Update"})
+        lobby = fake_lobby({"inviteMe.cgi": "<b>Currently  seeking invites.</b>"})
+        with self.assertRaisesRegex(LobbyError, "setting invitations failed"):
+            lobby.set_invites(False)
 
 
 class PolicyTest(unittest.TestCase):
@@ -331,6 +361,80 @@ class ControllerTest(unittest.TestCase):
         self.assertEqual(list(self.ctl.games), ["1"])
 
 
+def online_state(inviteme):
+    return {"online": [{"username": "bot_A", "inviteme": inviteme}]}
+
+
+class InviteFlagTest(unittest.TestCase):
+    def setUp(self):
+        self.ctl = Controller(make_config(), "bot.cfg", None, "bot_A", "pw")
+        self.ctl.lobby = mock.Mock(spec=Lobby)
+        self.ctl.lobby.sid = "abc"
+
+    def test_no_change_while_flag_matches(self):
+        self.ctl.update_invites(online_state("1"))
+        self.ctl.games["5"] = FakeProc()
+        self.ctl.update_invites(online_state("1 "))
+        self.ctl.lobby.set_invites.assert_not_called()
+
+    def test_off_when_full_and_on_when_free(self):
+        self.ctl.games = {"5": FakeProc()}
+        self.ctl.accepted = {"100": ("Inviter", 0)}
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.update_invites(online_state("1"))
+        self.ctl.lobby.set_invites.assert_called_once_with(False)
+        self.ctl.lobby.set_invites.reset_mock()
+        self.ctl.update_invites(online_state(""))
+        self.ctl.lobby.set_invites.assert_not_called()
+        del self.ctl.games["5"]
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.update_invites(online_state(""))
+        self.ctl.lobby.set_invites.assert_called_once_with(True)
+
+    def test_turns_on_flag_found_off(self):
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.update_invites(online_state(""))
+        self.ctl.lobby.set_invites.assert_called_once_with(True)
+
+    def test_not_listed(self):
+        self.ctl.update_invites({"online": []})
+        self.ctl.lobby.set_invites.assert_not_called()
+        self.ctl.restore_invites()
+        self.ctl.lobby.set_invites.assert_not_called()
+
+    def test_restore(self):
+        self.ctl.games = {"5": FakeProc(), "6": FakeProc()}
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.update_invites(online_state("1"))
+        self.ctl.lobby.set_invites.reset_mock()
+        self.ctl.lobby.sid = None
+
+        def login(user, password):
+            self.ctl.lobby.sid = "abc"
+
+        self.ctl.lobby.login.side_effect = login
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.restore_invites()
+        self.ctl.lobby.login.assert_called_once_with("bot_A", "pw")
+        self.ctl.lobby.set_invites.assert_called_once_with(True)
+        # Already as found: nothing to send.
+        self.ctl.restore_invites()
+        self.ctl.lobby.set_invites.assert_called_once_with(True)
+
+    def test_restore_unchanged_flag_sends_nothing(self):
+        self.ctl.update_invites(online_state("1"))
+        self.ctl.restore_invites()
+        self.ctl.lobby.set_invites.assert_not_called()
+
+    def test_restore_failure_is_logged(self):
+        with self.assertLogs("invites", "INFO"):
+            self.ctl.update_invites(online_state(""))
+        self.ctl.lobby.set_invites.side_effect = LobbyError("down")
+        with self.assertLogs("invites", "WARNING") as logs:
+            self.ctl.restore_invites()
+        self.assertIn("Could not restore", logs.output[-1])
+
+
 class LaunchTest(unittest.TestCase):
     def test_launch_args(self):
         for bot, extra in [(None, []), ("bot_b", ["-b", "bot_b"])]:
@@ -394,6 +498,29 @@ class RunTest(unittest.TestCase):
         self.assertEqual(self.ctl.lobby.login.call_count, 4)
         self.assertEqual(len(logs.records), 4)
         self.assertEqual(self.sleeps, [25, 25, 30, 25, 60, 25])
+
+    def test_flag_follows_slots_and_is_restored(self):
+        self.ctl.lobby.sid = "abc"
+        state = {"invitedmegames": [invitation("100")], **online_state("1")}
+        after = {
+            "mygames": [{"id": "8", "createdts": "100", "wusername": "x"}],
+            **online_state("1"),
+        }
+        self.ctl.policy.max_games = 1
+        self.ctl.lobby.state.side_effect = [state, after]
+        self.ctl.launch.side_effect = lambda gid, side: self.ctl.games.update(
+            {gid: FakeProc()}
+        )
+        with self.assertLogs("invites", "INFO"):
+            self.run_polls(1)
+        self.ctl.lobby.set_invites.assert_called_once_with(False)
+        with mock.patch("os.path.exists", return_value=True):
+            with self.assertLogs("invites", "INFO"):
+                self.assertEqual(self.ctl.run(), 0)
+        self.assertEqual(
+            self.ctl.lobby.set_invites.call_args_list,
+            [mock.call(False), mock.call(True)],
+        )
 
     def test_stop_file(self):
         tmpdir = tempfile.mkdtemp()

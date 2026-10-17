@@ -139,6 +139,20 @@ class Lobby:
         if status not in (301, 302, 303) and "declined" not in page.lower():
             raise LobbyError(f"decline failed: {_page_text(page)}")
 
+    def set_invites(self, on):
+        """Turns the account's invitation flag on or off.
+
+        This is the form on the lobby's 'Invite Me Status' page; a GET of
+        the page only shows it. The flag is the account's, kept across
+        logins, and shows as 'inviteme' in the state's online list.
+        """
+        field = "yesinvite" if on else "noinvite"
+        status, page = self._request(self.base + "inviteMe.cgi", form={field: "Update"})
+        text = " ".join(_page_text(page).lower().split())
+        expected = "currently seeking" if on else "currently not seeking"
+        if expected not in text:
+            raise LobbyError(f"setting invitations failed: {_page_text(page)}")
+
 
 def entries(state, key):
     """A list from the state reply, which may come as a list or an object."""
@@ -146,6 +160,25 @@ def entries(state, key):
     if isinstance(value, dict):
         value = list(value.values())
     return [v for v in value if isinstance(v, dict)]
+
+
+def invites_on(state, username):
+    """Whether the user's invitation flag is on, from the state's online
+    list, or None if they aren't listed.
+
+    The lobby treats inviteme as a number ("1", "1 ", or "" when off).
+    """
+    me = state.get("me")
+    my_id = str(me.get("id", "")) if isinstance(me, dict) else ""
+    for player in entries(state, "online"):
+        if (my_id and str(player.get("id", "")) == my_id) or str(
+            player.get("username", "")
+        ).lower() == username.lower():
+            try:
+                return float(str(player.get("inviteme", "")).strip() or 0) > 0
+            except ValueError:
+                return False
+    return None
 
 
 def normalize_tc(tc):
@@ -205,6 +238,10 @@ class Controller:
         self.games = {}  # gid -> Popen
         self.handled = set()  # (inviter id, createdts)
         self.accepted = {}  # createdts -> (inviter username, time accepted)
+        # The invitation flag as first seen, restored on exit, and as of
+        # the latest state or change.
+        self.invites_found = None
+        self.invites_now = None
 
     def reap(self):
         for gid, proc in list(self.games.items()):
@@ -271,11 +308,45 @@ class Controller:
             self.lobby.accept(inviter_id, created)
             self.accepted[created] = (inviter, time.time())
 
+    def slots_free(self):
+        return len(self.games) + len(self.accepted) < self.policy.max_games
+
+    def update_invites(self, state):
+        """Turns the invitation flag off while every game slot is taken and
+        on while one is free, sending a change only when it's needed."""
+        found = invites_on(state, self.username)
+        if found is None:
+            return
+        if self.invites_found is None:
+            self.invites_found = found
+        self.invites_now = found
+        wanted = self.slots_free()
+        if wanted != found:
+            log.info("Turning invitations %s", "on" if wanted else "off")
+            self.lobby.set_invites(wanted)
+            self.invites_now = wanted
+
+    def restore_invites(self):
+        """Leaves the invitation flag as it was found."""
+        if self.invites_found is None or self.invites_now == self.invites_found:
+            return
+        try:
+            if self.lobby.sid is None:
+                self.lobby.login(self.username, self.password)
+            log.info(
+                "Turning invitations %s again", "on" if self.invites_found else "off"
+            )
+            self.lobby.set_invites(self.invites_found)
+            self.invites_now = self.invites_found
+        except LobbyError as exc:
+            log.warning("Could not restore the invitation setting: %s", exc)
+
     def run(self):
         failures = 0
         while True:
             if os.path.exists("stop_invites"):
                 log.info("Exiting after finding the stop file 'stop_invites'")
+                self.restore_invites()
                 return 0
             try:
                 if self.lobby.sid is None:
@@ -286,7 +357,9 @@ class Controller:
                 if self.accepted:
                     # The game is made when the invitation is accepted.
                     time.sleep(3)
-                    self.start_accepted(self.lobby.state())
+                    state = self.lobby.state()
+                    self.start_accepted(state)
+                self.update_invites(state)
                 failures = 0
             except LobbyError as exc:
                 failures += 1
@@ -362,6 +435,7 @@ def main(args=sys.argv):
         return controller.run()
     except KeyboardInterrupt:
         log.info("Stopped; games already started keep playing.")
+        controller.restore_invites()
         return 0
 
 

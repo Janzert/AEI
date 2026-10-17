@@ -215,5 +215,10 @@ time, and each game is played by running `gameroom play <game number>
 at least `max_games`). Other invitations are declined with a reason the
 inviter sees.
 
+While all `max_games` games are being played the controller turns off the
+account's "invite me" setting, so the lobby stops offering to invite it,
+and turns it back on when a game ends. On exit it leaves the setting as it
+found it.
+
 To exit the controller create a file called `stop_invites` in the directory
 it was run from. Games already started keep playing.
