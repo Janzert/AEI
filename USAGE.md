@@ -206,6 +206,16 @@ one bot can go in a section named after it, such as
 `[bot_example.invites]`; each setting there overrides the one in
 `[invites]`.
 
+Each entry in `timecontrols` is a time control whose fields can also be
+ranges or wildcards: `-1m/-10m/*/*/-2h/*` accepts any move time up to a
+minute and reserve up to ten minutes for games with a limit of at most two
+hours. A range's bounds are inclusive (`30s-2m`, `-2m` for at most, `2m-`
+for at least), `*` accepts anything, and values are compared as times, so
+`1m` matches `60s`. As in a time control, 0 in the last three fields means
+no limit (larger than any bound), fields left off the end take their
+defaults (`100/0/0/0`), and a game limit in turns (`80t`, `-80t`) only
+matches invitations with a turn limit.
+
 It logs in the way the web gameroom does and asks the lobby for its state
 every 20 to 30 seconds. That keeps the bot listed as online, which clients
 such as Howdah require before they offer to invite it. Invitations with an

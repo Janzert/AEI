@@ -17,10 +17,12 @@ from pyrimaa.invite_controller import (
     Lobby,
     LobbyError,
     Policy,
+    TimeControlSpec,
     entries,
     invites_on,
     normalize_tc,
 )
+from pyrimaa.util import TimeControl
 
 GR_URL = "http://arimaa.example/arimaa/gameroom"
 
@@ -136,6 +138,57 @@ class HelpersTest(unittest.TestCase):
 
     def test_normalize_tc(self):
         self.assertEqual(normalize_tc(" 30S/2m/100/0/10M "), "30s/2m/100/0/10m")
+
+
+class TimeControlSpecTest(unittest.TestCase):
+    def check(self, spec, accepted, refused):
+        spec = TimeControlSpec(spec)
+        for tc in accepted:
+            self.assertTrue(spec.matches(TimeControl(tc)), f"{spec.text} {tc}")
+        for tc in refused:
+            self.assertFalse(spec.matches(TimeControl(tc)), f"{spec.text} {tc}")
+
+    def test_exact_compares_values(self):
+        self.check(
+            "30s/2m/100/0/10m",
+            ["30s/2m/100/0/10m", "0:30/120s/100/0/0:10", "30s/2m/100/0/10m/0"],
+            ["30s/2m/100/0/11m", "30s/2m/75/0/10m", "30s/2m/100/0/10m/1m"],
+        )
+
+    def test_omitted_fields_are_defaults(self):
+        self.check("1m/5m", ["1m/5m", "1m/5m/100/0/0/0"], ["1m/5m/100/0/2h"])
+
+    def test_at_most(self):
+        self.check(
+            "-1m/-10m/*/*/*/*",
+            ["30s/2m/100/0/10m", "1m/10m/75/20m/2h/5m", "0/0/0/0/80t"],
+            ["61s/2m", "30s/11m/100/0/10m"],
+        )
+
+    def test_ranges_and_unlimited(self):
+        spec = "15s-1m/*/*/-30m/-4h/*"
+        self.check(
+            spec,
+            ["15s/5m/100/30m/4h", "1m/5m/100/0:10/2:30"],
+            # 0 is no limit, larger than any bound.
+            ["10s/5m/100/30m/4h", "30s/5m/100/0/4h", "30s/5m/100/10m/0"],
+        )
+        self.check("30s/2m/100/0/1h-", ["30s/2m/100/0/1h", "30s/2m/100/0/0"], [])
+
+    def test_turn_limits(self):
+        self.check("30s/2m/100/0/-80t", ["30s/2m/100/0/80t"], ["30s/2m/100/0/1h"])
+        self.check("30s/2m/100/0/-4h", [], ["30s/2m/100/0/80t"])
+        self.check("30s/2m/100/0/80t", ["30s/2m/100/0/80t"], ["30s/2m/100/0/81t"])
+        self.check("30s/2m/100/0/*", ["30s/2m/100/0/80t", "30s/2m/100/0/0"], [])
+
+    def test_bad_specs(self):
+        for text in ["30s", "1/2/3/4/5/6/7", "x/2m", "30s/2m/-/0", "1/2/3/4/1h-80t"]:
+            with self.assertRaises(ValueError, msg=text):
+                TimeControlSpec(text)
+
+    def test_bad_spec_in_config(self):
+        with self.assertRaisesRegex(ValueError, "bad time control"):
+            Policy(make_config("[invites]\ntimecontrols = 1m/x\n"), "bot_a")
 
 
 class LobbyTest(unittest.TestCase):
@@ -277,6 +330,16 @@ class PolicyTest(unittest.TestCase):
         both = Policy(make_config(), "bot_b")
         self.assertIsNone(both.refusal(invitation("1", "2m/2m/100/0/20m", "1")))
         self.assertIsNone(both.refusal(invitation("1", "2m/2m/100/0/20m", "0")))
+        self.assertIn("I only play at", policy.refusal(invitation("1", "garbage")))
+
+    def test_refusal_with_ranges(self):
+        config = make_config("[invites]\ntimecontrols = -1m/-10m/*/*/*/*\n")
+        policy = Policy(config, "bot_a")
+        self.assertIsNone(policy.refusal(invitation("1", "45s/5m/100/0/2h")))
+        self.assertEqual(
+            policy.refusal(invitation("1", "2m/5m")),
+            "I only play at -1m/-10m/*/*/*/*.",
+        )
 
 
 class FakeProc:

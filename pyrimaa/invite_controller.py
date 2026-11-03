@@ -17,6 +17,7 @@ declined with a reason. See gameroom_example.cfg for the settings.
 import http.cookiejar
 import json
 import logging
+import math
 import optparse
 import os
 import random
@@ -29,6 +30,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, build_opener
 from urllib.request import Request as URLRequest
+
+from pyrimaa.util import TimeControl, _parse_timefield
 
 log = logging.getLogger("invites")
 
@@ -185,6 +188,108 @@ def normalize_tc(tc):
     return "".join(str(tc).split()).lower()
 
 
+# The fields of a time control, in order, with the unit a bare number is
+# in. A 0 in the last three means no limit.
+TC_FIELDS = [
+    ("move", "m"),
+    ("reserve", "m"),
+    ("percent", None),
+    ("max_reserve", "m"),
+    ("limit", "h"),
+    ("max_turntime", "m"),
+]
+TC_DEFAULTS = ["100", "0", "0", "0"]
+UNLIMITED_ZERO = ("max_reserve", "limit", "max_turntime")
+
+
+def _tc_values(tc):
+    """The fields of a TimeControl as comparable values: seconds (or a
+    percent), infinity for no limit, and ("t", n) for a turn limit."""
+    return {
+        "move": tc.move,
+        "reserve": tc.reserve,
+        "percent": tc.percent,
+        "max_reserve": tc.max_reserve or math.inf,
+        "limit": ("t", tc.turn_limit) if tc.turn_limit else tc.time_limit or math.inf,
+        "max_turntime": tc.max_turntime or math.inf,
+    }
+
+
+class TimeControlSpec:
+    """A time control to accept, with exact values, ranges or wildcards.
+
+    Each '/' field of the time control can be a value ('2m'), a range
+    with inclusive bounds ('30s-2m', '-2m' for at most, '2m-' for at
+    least) or '*' for any value. Values are read as in a time control,
+    so '1m' and '60s' are the same. A 0 in the last three fields means no
+    limit, as in a time control, and counts as larger than any bound. The
+    game limit can be in turns ('80t', '-80t'); a turn range only matches
+    turn limits and a time range only time limits. Fields left off the
+    end are the time control defaults (100/0/0/0), so 'at most' for
+    every field needs them all: '-1m/-10m/*/*/*/*'.
+    """
+
+    def __init__(self, text):
+        self.text = normalize_tc(text)
+        fields = self.text.split("/")
+        if not 2 <= len(fields) <= len(TC_FIELDS):
+            raise ValueError(f"invites: bad time control {text!r}")
+        fields += TC_DEFAULTS[len(fields) - 2 :]
+        try:
+            self.ranges = [
+                self._parse_field(name, unit, field)
+                for (name, unit), field in zip(TC_FIELDS, fields)
+            ]
+        except ValueError as exc:
+            raise ValueError(f"invites: bad time control {text!r}: {exc}") from None
+
+    @staticmethod
+    def _parse_value(name, unit, value):
+        if name == "limit" and value.endswith("t"):
+            return ("t", int(value[:-1]))
+        if unit is None:
+            return int(value)
+        return _parse_timefield(value, unit)
+
+    @classmethod
+    def _parse_field(cls, name, unit, field):
+        """(low, high) for the field, either None for no bound."""
+        if field == "*":
+            return (None, None)
+        if "-" not in field:
+            value = cls._parse_value(name, unit, field)
+            if value == 0 and name in UNLIMITED_ZERO:
+                value = math.inf
+            return (value, value)
+        low, high = field.split("-", 1)
+        if not low and not high:
+            raise ValueError(f"empty range in {name}")
+        low = cls._parse_value(name, unit, low) if low else None
+        high = cls._parse_value(name, unit, high) if high else None
+        if name == "limit":
+            turns = {isinstance(b, tuple) for b in (low, high) if b is not None}
+            if len(turns) > 1:
+                raise ValueError("game limit range mixes turns and time")
+        return (low, high)
+
+    def matches(self, tc):
+        """Whether the TimeControl tc is one this spec accepts."""
+        values = _tc_values(tc)
+        for (name, _), (low, high) in zip(TC_FIELDS, self.ranges):
+            value = values[name]
+            bound = low if low is not None else high
+            if bound is None:
+                continue
+            # Turns only compare with turns, time only with time.
+            if isinstance(value, tuple) != isinstance(bound, tuple):
+                return False
+            if low is not None and value < low:
+                return False
+            if high is not None and value > high:
+                return False
+        return True
+
+
 class Policy:
     """Which invitations to accept, for one bot.
 
@@ -202,7 +307,8 @@ class Policy:
             return default
 
         tcs = re.split(r"[,\n]", get("timecontrols", ""))
-        self.timecontrols = [normalize_tc(tc) for tc in tcs if tc.strip()]
+        self.tc_specs = [TimeControlSpec(tc) for tc in tcs if tc.strip()]
+        self.timecontrols = [spec.text for spec in self.tc_specs]
         self.rated = get("rated", "unrated").strip().lower()
         if self.rated not in ("rated", "unrated", "both"):
             raise ValueError(
@@ -213,8 +319,11 @@ class Policy:
 
     def refusal(self, invitation):
         """Why the invitation can't be accepted, or None if it can."""
-        tc = normalize_tc(invitation.get("timecontrol", ""))
-        if tc not in self.timecontrols:
+        try:
+            tc = TimeControl(normalize_tc(invitation.get("timecontrol", "")))
+        except ValueError:
+            tc = None
+        if tc is None or not any(spec.matches(tc) for spec in self.tc_specs):
             return f"I only play at {', '.join(self.timecontrols)}."
         rated = str(invitation.get("rated", "0")) == "1"
         if rated and self.rated == "unrated":

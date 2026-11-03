@@ -17,7 +17,9 @@ history.
 - invite_controller: keeps a bot logged in to the arimaa.com gameroom
   lobby so players can invite it, accepts invitations whose time control
   and rated setting are allowed in an `[invites]` section of
-  `gameroom.cfg` (or a per-bot `[<bot>.invites]` section), declines the
+  `gameroom.cfg` (or a per-bot `[<bot>.invites]` section; each time
+  control field there can be a value, a range such as `-1m` or `30s-2m`,
+  or `*`), declines the
   rest with a reason, and plays each accepted game with `gameroom`. It
   turns the account's invitation setting off while all its game slots are
   taken and on when one frees up, and leaves it as it found it on exit.
