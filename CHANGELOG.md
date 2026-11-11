@@ -26,6 +26,9 @@ history.
 
 ### Fixed
 
+- gameroom: a refused or reset connection to the server (as while it
+  restarts) ended the game instead of being retried like a timeout, so a
+  short outage left the bot's game to run out on time.
 - aei: a socket engine failed to start on macOS when port 40015 was in
   use, instead of trying the next port, because only the Linux and Windows
   "address in use" error numbers were recognized.

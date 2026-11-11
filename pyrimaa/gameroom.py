@@ -103,6 +103,10 @@ def post(url, values, logname="network"):
                 ):
                     netlog.debug("URLError: getaddressinfo connection timed out")
                     body = ""
+                elif isinstance(err.reason, ConnectionError):
+                    # Refused or reset, as while the server restarts: retry.
+                    netlog.debug("URLError: connection failed: %s", err.reason)
+                    body = ""
                 else:
                     raise
             except OSError as err:

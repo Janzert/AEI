@@ -146,6 +146,19 @@ class PostTest(unittest.TestCase):
         with mock.patch("pyrimaa.gameroom.urlopen", urlopen):
             self.assertEqual(gameroom.post(LOBBY_URL, {"action": "x"}), {"ok": "1"})
 
+    def test_refused_connection_retried(self, _sleep):
+        refused = URLError(ConnectionRefusedError(10061, "refused"))
+        replies = iter([refused, refused, FakeResponse("ok=1\n")])
+
+        def urlopen(req):
+            reply = next(replies)
+            if isinstance(reply, Exception):
+                raise reply
+            return reply
+
+        with mock.patch("pyrimaa.gameroom.urlopen", urlopen):
+            self.assertEqual(gameroom.post(LOBBY_URL, {"action": "x"}), {"ok": "1"})
+
     def test_other_lookup_error_raised(self, _sleep):
         err = URLError(socket.gaierror(-2, "Name or service not known"))
         server = FakeServer({"x": err})
