@@ -10,6 +10,14 @@ history.
 
 ### Added
 
+- Protocol: two new info types. `winrate <p>` is the side to move's
+  chance of winning (0 to 1), sent beside `score`; an engine that thinks
+  in chances can derive its score as 300 ln(p / (1 - p)). `proven win
+  [<n>]` / `proven loss [<n>]` says the result is proven, optionally
+  with the turns to the end. The spec also now says controllers ignore
+  info types they don't recognize. Both are additions; the protocol
+  version stays 1.
+
 - GitHub Actions workflows: CI runs the tests on Python 3.8 to 3.14 (plus
   Windows and macOS), ruff, and package checks on every push and pull
   request; publishing a GitHub release builds the package, attaches it to

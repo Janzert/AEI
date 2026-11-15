@@ -205,6 +205,10 @@ differently:
 - **pv <variation>** - The current primary variation. After the first move, subsequent moves are prefixed by the color to move (e.g. pv Ed2n Ed3n b ee7s ee6s w Ed4n).
 - **time <seconds>** - Time in seconds the current search has lasted.
 - **currmovenumber <n>** - The number of the root move currently, or just finished, being searched.
+- **winrate <p>** - The engine's estimate of the chance that the side to move wins, as a decimal from 0 to 1 (e.g. "info winrate 0.637"). Arimaa games can't be drawn, so one number gives the whole estimate. An engine that sends winrate should still send score. An engine whose evaluation is a chance of winning rather than material can derive its score from it as 300 ln(p / (1 - p)), clamping p to a range such as 0.001 to 0.999 first, so that controllers showing either one show the same evaluation.
+- **proven win [<n>]** or **proven loss [<n>]** - The engine has proven the game's result from the current position: a win or a loss for the side to move. The optional n counts the side to move's turns to the end, starting with the current turn as 1, for a win; for a loss it counts the opponent's turns. For example "info proven win 1" means the side to move can win with this turn, and "info proven loss 2" that the opponent wins on its second turn from now. The engine should send it once the result is proven and keep sending its usual score, which a controller that knows proven results should not let replace the proven result for the rest of the search.
+
+A controller should ignore info types it doesn't recognize.
 
 ### log <string>
 
