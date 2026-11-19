@@ -505,6 +505,21 @@ class GameTest(unittest.TestCase):
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (1, "t"))
         self.assertEqual(p.stopCount, 1)
+        # check setup overtime comes out of the reserve, and unused setup
+        # time isn't added to it
+        tc = TimeControl("1s/1s/100")
+        p = MockEngine(delay=[1.5, 0, 1.6])
+        pyrimaa.game.time = MockTime(p)
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (1, "t"))
+        p = MockEngine(delay=[1.5, 0, 1.4])
+        pyrimaa.game.time = MockTime(p)
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (0, "g"))
+        p = MockEngine(delay=[0, 0, 2.1])
+        pyrimaa.game.time = MockTime(p)
+        game = Game(p, p, tc)
+        self.assertEqual(game.play(), (1, "t"))
         # check reserve is correctly added when not 100%
         tc = TimeControl("1s/0s/50")
         p = MockEngine(delay=[0, 0, 0, 0, 1.6])

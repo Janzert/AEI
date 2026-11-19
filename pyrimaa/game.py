@@ -175,8 +175,12 @@ class Game:
         if not resp or resp.type != "bestmove":  # pragma: no cover
             raise RuntimeError("Stopped waiting without a timeout or a move")
         if tc:
-            if not self.insetup:
-                reserve_change = tc.move - (moveend - movestart)
+            reserve_change = tc.move - (moveend - movestart)
+            if self.insetup:
+                # unused setup time is never added to the reserve, but
+                # time past the move time comes out of it
+                self.reserves[side] += min(reserve_change, 0)
+            else:
                 if reserve_change > 0:
                     # if we are adding to the reserve only apply the
                     # percentage specified by the time control

@@ -41,6 +41,9 @@ history.
 
 ### Fixed
 
+- Local games (`pyrimaa.game`) charge a setup's time past the move time
+  to the reserve, which they gave away before; unused setup time still
+  isn't added to it.
 - gameroom: on Windows, a run file left behind by a bot that died (a
   crash or a reboot mid-game) counted as a game in progress, so with
   `max_bots` reached the bot refused every game until the file was
