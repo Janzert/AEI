@@ -34,6 +34,11 @@ history.
 
 ### Fixed
 
+- gameroom: on Windows, a run file left behind by a bot that died (a
+  crash or a reboot mid-game) counted as a game in progress, so with
+  `max_bots` reached the bot refused every game until the file was
+  removed by hand. Run files now count only while their process is
+  running, as they already did elsewhere.
 - gameroom: a refused or reset connection to the server (as while it
   restarts) ended the game instead of being retried like a timeout, so a
   short outage left the bot's game to run out on time.

@@ -258,8 +258,7 @@ class RunFileTest(unittest.TestCase):
         self.write_run_file("2b.bot", f"{os.getpid()}\n")
         self.write_run_file("3w.bot", "not a pid\n")
         self.write_run_file("notes.txt", f"{os.getpid()}\n")
-        if sys.platform != "win32":
-            self.write_run_file("4w.bot", f"{dead_pid()}\n")
+        self.write_run_file("4w.bot", f"{dead_pid()}\n")
         self.assertEqual(gameroom.how_many_bots(self.run_dir), 2)
 
     def test_already_playing_live_process(self):
@@ -277,7 +276,6 @@ class RunFileTest(unittest.TestCase):
         self.write_run_file("7w.bot", "not a pid\n")
         self.assertFalse(gameroom.already_playing(self.run_dir, "7", "w"))
 
-    @unittest.skipIf(sys.platform == "win32", "process probe is POSIX only")
     def test_already_playing_dead_process(self):
         self.write_run_file("7w.bot", f"{dead_pid()}\n")
         with mock.patch.object(gameroom.log, "info") as info:

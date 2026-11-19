@@ -665,6 +665,35 @@ def remove_run_file(run_dir, rfile):
     log.info(f"Removed run file at {filename}")
 
 
+def process_alive(pid):
+    """Whether process `pid` is running, so a run file left by a bot that
+    died (a crash, a reboot) doesn't count as a game in progress."""
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not handle:
+            return ctypes.get_last_error() == 5  # access denied: it exists
+        try:
+            code = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(
+                ctypes.c_void_p(handle), ctypes.byref(code)
+            ):
+                return True
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(ctypes.c_void_p(handle))
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True  # someone else's process
+    except OSError:
+        return False
+    return True
+
+
 def how_many_bots(run_dir):
     files = os.listdir(run_dir)
     count = 0
@@ -672,15 +701,8 @@ def how_many_bots(run_dir):
         if filename.endswith(".bot"):
             with open(os.path.join(run_dir, filename)) as run_file:
                 try:
-                    pid = int(run_file.read())
-                    if sys.platform == "win32":
+                    if process_alive(int(run_file.read())):
                         count += 1
-                    else:
-                        try:
-                            os.kill(pid, 0)
-                            count += 1
-                        except OSError:
-                            pass
                 except ValueError:
                     pass
     return count
@@ -692,15 +714,7 @@ def already_playing(run_dir, gameid, side):
     try:
         with open(runfn) as run_file:
             try:
-                pid = int(run_file.read())
-                if sys.platform == "win32":
-                    isplaying = True
-                else:
-                    try:
-                        os.kill(pid, 0)
-                        isplaying = True
-                    except OSError:
-                        pass
+                isplaying = process_alive(int(run_file.read()))
             except ValueError:
                 pass
     except OSError:
