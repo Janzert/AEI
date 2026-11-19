@@ -39,6 +39,11 @@ from pyrimaa import aei
 
 _GR_CGI = "bot1gr.cgi"
 
+# arimaa.com gives a setup at least a minute of move time at every time
+# control (matchRules.html). The server's state doesn't say so, so it's
+# sent to engines as tcsetup.
+SETUP_MINIMUM = 60
+
 log = logging.getLogger("gameroom")
 netlog = logging.getLogger("gameroom.net")
 positionlog = logging.getLogger("gameroom.position")
@@ -190,6 +195,7 @@ class Table:
             "tctotal": None,
             "tcturns": None,
             "tcturntime": None,
+            "tcsetup": None,
         }
 
     def _check_engine(self, timeout=None):
@@ -222,6 +228,32 @@ class Table:
                 log.info("Sending %s of %s to engine.", var, state[var])
                 self.engine.setoption(var, state[var])
                 self.sent_tc[var] = state[var]
+        if self.sent_tc.get("tcsetup") != SETUP_MINIMUM:
+            log.info("Sending tcsetup of %s to engine.", SETUP_MINIMUM)
+            self.engine.setoption("tcsetup", SETUP_MINIMUM)
+            self.sent_tc["tcsetup"] = SETUP_MINIMUM
+
+    @staticmethod
+    def _turn_move_time(state):
+        """Move time for this turn: tcmove, but at least SETUP_MINIMUM
+        for a setup (plycount 0 and 1)."""
+        movetime = int(state["tcmove"])
+        if int(state.get("plycount", 0)) <= 1:
+            movetime = max(movetime, SETUP_MINIMUM)
+        return movetime
+
+    @classmethod
+    def _stop_time(cls, state, starttime, reserve):
+        """When the turn's time runs out: its move time plus the reserve,
+        cut short by a turn time limit, which doesn't cut a setup's
+        minimum short."""
+        movetime = cls._turn_move_time(state)
+        stoptime = starttime + movetime + reserve
+        if "turntime" in state:
+            turntime = max(int(state["turntime"]), movetime)
+            if starttime + turntime < stoptime:
+                stoptime = int(starttime + turntime)
+        return stoptime
 
     def reserveseat(self):
         gameroom = self.gameroom
@@ -467,9 +499,7 @@ class Table:
                 engine.go()
                 stopsent = False
                 myreserve = f"tc{self.side}reserve2"
-                stoptime = starttime + int(state["tcmove"]) + int(state[myreserve])
-                if "turntime" in state and (starttime + state["turntime"]) < stoptime:
-                    stoptime = int(starttime + state["turntime"])
+                stoptime = self._stop_time(state, starttime, int(state[myreserve]))
                 stoptime -= self.min_timeleft
                 waittime = 10
                 secondtimeupdate = False

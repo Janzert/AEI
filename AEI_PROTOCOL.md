@@ -112,6 +112,7 @@ The standard game state options are (all times are given in seconds):
 - **tctotal** - Time limit for the total length of the game.
 - **tcturns** - Maximum number of moves the game can last.
 - **tcturntime** - Maximum time a single move can last.
+- **tcsetup** - The least move time the setup gets. The setup's move time is the larger of tcmove and tcsetup, and a tcturntime limit doesn't cut it shorter than that. 0 means the setup gets the plain tcmove. Time the setup takes past its move time comes out of the reserve, but unused setup time is never added to the reserve.
 - **greserve** - Amount of reserve time for gold.
 - **sreserve** - Amount of reserve time for silver.
 - **gused** - Amount of time used on gold's last turn.
@@ -294,6 +295,7 @@ CTL: setoption name tcmax value 120
 CTL: setoption name tctotal value 7200
 CTL: setoption name tcturns value 0
 CTL: setoption name tcturntime value 0
+CTL: setoption name tcsetup value 60
 CTL: isready
 ENG: readyok
 CTL: setoption name rating value 1857

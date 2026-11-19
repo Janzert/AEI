@@ -233,6 +233,42 @@ class GameRoomTest(unittest.TestCase):
         self.assertRaises(ValueError, room.newgame, "g")
 
 
+class TableTimeTest(unittest.TestCase):
+    """The time control sent to the engine and the turn's stop time."""
+
+    def setUp(self):
+        self.table = gameroom.Table(None, {"gid": "1", "side": "w"})
+        self.table.engine = mock.Mock()
+
+    def test_sends_tcsetup_once(self):
+        state = {"tcmove": "15", "tcreserve": "60", "tcturntime": "0"}
+        self.table._update_timecontrol(state)
+        self.table._update_timecontrol(state)
+        calls = self.table.engine.setoption.call_args_list
+        self.assertEqual(calls.count(mock.call("tcsetup", 60)), 1)
+        self.assertIn(mock.call("tcmove", "15"), calls)
+        self.assertEqual(len(calls), 4)
+
+    def test_setup_gets_a_minute(self):
+        for ply in ("0", "1"):
+            state = {"tcmove": "15", "plycount": ply}
+            self.assertEqual(gameroom.Table._turn_move_time(state), 60)
+            self.assertEqual(gameroom.Table._stop_time(state, 1000, 30), 1090)
+        state = {"tcmove": "15", "plycount": "2"}
+        self.assertEqual(gameroom.Table._turn_move_time(state), 15)
+        self.assertEqual(gameroom.Table._stop_time(state, 1000, 30), 1045)
+        slow = {"tcmove": "120", "plycount": "0"}
+        self.assertEqual(gameroom.Table._turn_move_time(slow), 120)
+
+    def test_turntime_does_not_cut_the_setup_minute(self):
+        setup = {"tcmove": "15", "plycount": "0", "turntime": "30"}
+        self.assertEqual(gameroom.Table._stop_time(setup, 1000, 60), 1060)
+        setup["turntime"] = "90"
+        self.assertEqual(gameroom.Table._stop_time(setup, 1000, 60), 1090)
+        move = {"tcmove": "15", "plycount": "4", "turntime": "30"}
+        self.assertEqual(gameroom.Table._stop_time(move, 1000, 60), 1030)
+
+
 class RunFileTest(unittest.TestCase):
     def setUp(self):
         self.run_dir = tempfile.mkdtemp()

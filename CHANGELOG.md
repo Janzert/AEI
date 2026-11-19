@@ -10,6 +10,13 @@ history.
 
 ### Added
 
+- Protocol: a new standard option, `tcsetup`, the least move time the
+  setup gets, in seconds (0, the default, means the plain `tcmove`). A
+  `tcturntime` limit doesn't cut it short, and unused setup time is never
+  added to the reserve. arimaa.com gives every setup at
+  least a minute, so the gameroom sends `tcsetup 60`, and it no longer
+  stops an engine's setup at the plain move time. An addition; the
+  protocol version stays 1.
 - Protocol: two new info types. `winrate <p>` is the side to move's
   chance of winning (0 to 1), sent beside `score`; an engine that thinks
   in chances can derive its score as 300 ln(p / (1 - p)). `proven win
