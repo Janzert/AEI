@@ -19,6 +19,13 @@ def _parse_timefield(full_field, start_unit="m"):
             start_unit = unit_order[unit_order.find(start_unit) - 1]
         else:
             sep = field[end]
+            # A bare number after a unit takes the next smaller one, as
+            # arimaa.com reads it: 2m30 is 2m30s, 1h5 is 1h5m.
+            start_unit = (
+                unit_order[unit_order.find(sep) - 1]
+                if sep in unit_order
+                else start_unit
+            )
         if sep not in units:
             raise ValueError(f"Invalid time unit encountered {sep}")
         seconds += num * units[sep]
@@ -62,6 +69,7 @@ class TimeControl:
                 rest = tstr[end + 1 :]
             return (f_str, rest)
 
+        two_fields = tc_str.count("/") == 1
         f_str, tc_str = _split_tc(tc_str)
         self.move = _parse_timefield(f_str)
         f_str, tc_str = _split_tc(tc_str)
@@ -71,6 +79,10 @@ class TimeControl:
         f_str, tc_str = _split_tc(tc_str)
         if f_str:
             self.percent = int(f_str)
+        elif two_fields:
+            # arimaa.com adds nothing to the reserve for a time control of
+            # two fields (2/2): its game logs show it.
+            self.percent = 0
         else:
             self.percent = 100
         f_str, tc_str = _split_tc(tc_str)
@@ -94,9 +106,11 @@ class TimeControl:
             out.append(_time_str(self.time_limit))
         out.append(_time_str(self.max_turntime))
         defaults = (None, None, "100", "0", "0", "0")
-        while out[-1] == defaults[-1]:
+        while len(out) > 3 and out[-1] == defaults[len(out) - 1]:
             out = out[:-1]
-            defaults = defaults[:-1]
         if out == ["0", "0", "0"]:
             out = ["0", "0", "0", "0"]
+        elif len(out) == 3 and out[2] == "0":
+            # Two fields mean a percent of 0; 100 has to be written.
+            out = out[:2]
         return "/".join(out)

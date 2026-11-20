@@ -1102,6 +1102,15 @@ class GameTest(unittest.TestCase):
         game = Game(p, p, tc)
         self.assertEqual(game.play(), (0, "t"))
         self.assertEqual(p.stopCount, 1)
+        # a reserve starting over the limit isn't cut down to it: 3.5 s
+        # fits in the move time and the 3 s reserve, 4.5 s doesn't
+        tc = TimeControl("1s/3s/100/1s")
+        p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 3.5])
+        pyrimaa.game.time = MockTime(p)
+        self.assertEqual(Game(p, p, tc).play(), (0, "g"))
+        p = MockEngine(delay=[0, 0, 0, 0, 0, 0, 0, 4.5])
+        pyrimaa.game.time = MockTime(p)
+        self.assertEqual(Game(p, p, tc).play(), (0, "t"))
         # check game time limit
         tc = TimeControl("1s/1s/100/0/2s")
         p = MockEngine(delay=[0, 0, 1, 1, 0.1])

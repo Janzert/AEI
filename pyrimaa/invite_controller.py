@@ -225,7 +225,8 @@ class TimeControlSpec:
     limit, as in a time control, and counts as larger than any bound. The
     game limit can be in turns ('80t', '-80t'); a turn range only matches
     turn limits and a time range only time limits. Fields left off the
-    end are the time control defaults (100/0/0/0), so 'at most' for
+    end are the time control defaults (100/0/0/0, but a percent of 0 when
+    only two fields are given, as in a time control), so 'at most' for
     every field needs them all: '-1m/-10m/*/*/*/*'.
     """
 
@@ -234,7 +235,10 @@ class TimeControlSpec:
         fields = self.text.split("/")
         if not 2 <= len(fields) <= len(TC_FIELDS):
             raise ValueError(f"invites: bad time control {text!r}")
-        fields += TC_DEFAULTS[len(fields) - 2 :]
+        # As in a time control, two fields have a percent of 0 (arimaa.com
+        # adds nothing for 2/2).
+        defaults = ["0", "0", "0", "0"] if len(fields) == 2 else TC_DEFAULTS
+        fields += defaults[len(fields) - 2 :]
         try:
             self.ranges = [
                 self._parse_field(name, unit, field)

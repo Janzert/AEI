@@ -213,8 +213,9 @@ hours. A range's bounds are inclusive (`30s-2m`, `-2m` for at most, `2m-`
 for at least), `*` accepts anything, and values are compared as times, so
 `1m` matches `60s`. As in a time control, 0 in the last three fields means
 no limit (larger than any bound), fields left off the end take their
-defaults (`100/0/0/0`), and a game limit in turns (`80t`, `-80t`) only
-matches invitations with a turn limit.
+defaults (`100/0/0/0`, but a percent of 0 when only two fields are
+given, as for a time control), and a game limit in turns (`80t`, `-80t`)
+only matches invitations with a turn limit.
 
 It logs in the way the web gameroom does and asks the lobby for its state
 every 20 to 30 seconds. That keeps the bot listed as online, which clients

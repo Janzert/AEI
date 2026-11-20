@@ -156,7 +156,11 @@ class TimeControlSpecTest(unittest.TestCase):
         )
 
     def test_omitted_fields_are_defaults(self):
-        self.check("1m/5m", ["1m/5m", "1m/5m/100/0/0/0"], ["1m/5m/100/0/2h"])
+        self.check(
+            "1m/5m/100", ["1m/5m/100", "1m/5m/100/0/0/0"], ["1m/5m/100/0/2h", "1m/5m"]
+        )
+        # Two fields have a percent of 0, as a time control of two does.
+        self.check("1m/5m", ["1m/5m", "1m/5m/0"], ["1m/5m/100"])
 
     def test_at_most(self):
         self.check(

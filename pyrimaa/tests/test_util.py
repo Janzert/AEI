@@ -16,6 +16,13 @@ class TestTimeControl(TestCase):
         self.assertEqual(tc.move, 60 * 60 * 24)
         tc = TimeControl("1:30/1s")
         self.assertEqual(tc.move, 90)
+        # A bare number after a unit takes the next smaller one, as
+        # arimaa.com reads it.
+        self.assertEqual(TimeControl("2m30/0").move, 150)
+        self.assertEqual(TimeControl("15s/2m30").reserve, 150)
+        self.assertEqual(TimeControl("1s/0/100/1h5").max_reserve, 3900)
+        self.assertEqual(TimeControl("1s/0/100/0/1d2").time_limit, 93600)
+        self.assertRaises(ValueError, TimeControl, "1s30/0")
 
     def test_reservetime(self):
         self.assertRaises(ValueError, TimeControl, "30s")
@@ -25,7 +32,10 @@ class TestTimeControl(TestCase):
         self.assertEqual(tc.reserve, 90)
 
     def test_percentfill(self):
+        # Two fields add nothing, as arimaa.com reads them.
         tc = TimeControl("30s/10s")
+        self.assertEqual(tc.percent, 0)
+        tc = TimeControl("30s/10s/")
         self.assertEqual(tc.percent, 100)
         tc = TimeControl("30s/10s/100")
         self.assertEqual(tc.percent, 100)
@@ -76,7 +86,12 @@ class TestTimeControl(TestCase):
         tc = TimeControl("0/0/0")
         self.assertEqual(str(tc), "0/0/0/0")
         tc = TimeControl("1:30/5/100/0")
+        self.assertEqual(str(tc), "1m30s/5m/100")
+        tc = TimeControl("1:30/5/0")
         self.assertEqual(str(tc), "1m30s/5m")
+        tc = TimeControl("1:30/5")
+        self.assertEqual(str(tc), "1m30s/5m")
+        self.assertEqual(TimeControl(str(tc)).percent, 0)
         tc = TimeControl("60m/15h/50")
         self.assertEqual(str(tc), "1h/15h/50")
         tc = TimeControl("1/1/100/10/5/5")

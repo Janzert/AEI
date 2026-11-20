@@ -185,9 +185,14 @@ class Game:
                     # if we are adding to the reserve only apply the
                     # percentage specified by the time control
                     reserve_change *= tc.percent / 100.0
+                before = self.reserves[side]
                 self.reserves[side] += reserve_change
                 if tc.max_reserve:
-                    self.reserves[side] = min(self.reserves[side], tc.max_reserve)
+                    # Additions stop at the limit, but a reserve already
+                    # over it (30s/5m/100/3m) isn't cut down to it.
+                    self.reserves[side] = min(
+                        self.reserves[side], max(tc.max_reserve, before)
+                    )
         move = resp.move
         if move.lower() == "resign":
             return (side ^ 1, "r")

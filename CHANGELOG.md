@@ -39,6 +39,19 @@ history.
   turns the account's invitation setting off while all its game slots are
   taken and on when one frees up, and leaves it as it found it on exit.
 
+### Changed
+
+- pyrimaa reads time controls as arimaa.com does, which its game logs
+  show. A time control of two fields (`2/2`, `0:30/3`) adds nothing to
+  the reserve (a percent of 0, where it was 100), and `str()` writes
+  `100` out when that's the percent (`1m30s/5m/100`). A bare number
+  after a unit takes the next smaller unit: `2m30` is 2 min 30 s (it was
+  32 minutes) and `1h5` is 1 h 5 min. invite_controller's
+  `timecontrols` read two fields the same way.
+- Local games (`game.py`, as `roundrobin` plays them) no longer cut a
+  reserve that starts over its limit (`30s/5m/100/3m`) down to it;
+  additions just stop until it's under, as on arimaa.com.
+
 ### Fixed
 
 - Local games (`pyrimaa.game`) charge a setup's time past the move time
